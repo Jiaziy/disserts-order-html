@@ -46,7 +46,7 @@
 
 3. **配置项目**
    - 项目名称：可以保持默认或自定义
-   - Framework Preset：选择 "HTML"
+   - Framework Preset：选择 "fasthtml" 或 "Static HTML"（如果可用），或者选择 "Other" 然后使用我们提供的 vercel.json 配置文件
    - Root Directory：保持默认
    - Build and Output Settings：保持默认（我们已在 vercel.json 中配置）
 
@@ -58,7 +58,7 @@
 已创建的 `vercel.json` 配置文件包含以下关键设置：
 
 - **构建配置**：将所有 HTML 文件作为静态构建处理
-- **路由规则**：直接映射 URL 路径到对应的文件
+- **重写规则**：直接映射 URL 路径到对应的文件
 - **CORS 头信息**：配置了适当的跨域资源共享设置，确保与 Supabase 的 API 通信正常
 
 ## 部署后设置
