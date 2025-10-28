@@ -2,33 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "*.html",
+      "src": "**",
       "use": "@vercel/static"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Origin, Content-Type, Accept, Authorization"
-        }
-      ]
     }
   ]
 }
