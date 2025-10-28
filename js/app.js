@@ -1,14 +1,39 @@
+// 导入 Supabase 配置和工具
+import { initSupabase, getSupabase, auth, designs, orders } from './supabase.js';
+
 // 全局状态管理
 const appState = {
     currentUser: null,
-    designs: JSON.parse(localStorage.getItem('designs')) || [],
-    users: JSON.parse(localStorage.getItem('users')) || {}
+    designs: [],
+    users: {},
+    isSupabaseReady: false
 };
 
 // 页面初始化
-function initializeApp() {
+async function initializeApp() {
     console.log('开始初始化应用...');
-    initApp();
+    
+    // 初始化 Supabase
+    await initSupabase();
+    appState.isSupabaseReady = true;
+    
+    // 检查用户会话
+    const user = await auth.getCurrentUser();
+    if (user) {
+        appState.currentUser = user;
+    } else {
+        // 尝试从 localStorage 恢复用户（向后兼容）
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                appState.currentUser = JSON.parse(savedUser);
+                console.log('从 localStorage 恢复用户数据');
+            } catch (e) {
+                console.error('解析用户数据失败', e);
+            }
+        }
+    }
+    
     setupEventListeners();
     checkLoginStatus();
     console.log('应用初始化完成');
@@ -22,15 +47,6 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
     initializeApp();
-}
-
-// 初始化应用
-function initApp() {
-    // 检查是否有保存的用户登录状态
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        appState.currentUser = JSON.parse(savedUser);
-    }
 }
 
 // 设置事件监听器
@@ -308,21 +324,47 @@ function loginWithWechat() {
 }
 
 // 登录成功处理
-function loginSuccess(user) {
+async function loginSuccess(user) {
     appState.currentUser = user;
-    localStorage.setItem('currentUser', JSON.stringify(user));
     
-    showMainPage();
-    showToast(`欢迎回来，${user.name}！`);
+    try {
+        // 使用 Supabase 进行身份验证
+        if (appState.isSupabaseReady && user.email && user.password) {
+            // 这里可以根据登录类型进行相应的 Supabase 认证
+            // 例如：await auth.signIn({ email: user.email, password: user.password });
+        }
+        
+        // 保持向后兼容，仍然存储到本地存储
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        
+        showMainPage();
+        showToast(`欢迎回来，${user.name}！`);
+    } catch (error) {
+        console.error('登录成功处理错误:', error);
+        showToast('登录成功，但同步到 Supabase 失败');
+    }
 }
 
 // 退出登录
-function logout() {
-    appState.currentUser = null;
-    localStorage.removeItem('currentUser');
-    
-    showLoginPage();
-    showToast('已退出登录');
+async function logout() {
+    try {
+        if (appState.isSupabaseReady) {
+            await auth.signOut();
+        }
+        
+        appState.currentUser = null;
+        localStorage.removeItem('currentUser');
+        
+        showLoginPage();
+        showToast('已退出登录');
+    } catch (error) {
+        console.error('退出登录错误:', error);
+        // 即使 Supabase 退出失败，仍然清除本地状态
+        appState.currentUser = null;
+        localStorage.removeItem('currentUser');
+        showLoginPage();
+        showToast('已退出登录');
+    }
 }
 
 // 更新用户信息显示
@@ -374,22 +416,41 @@ function startCustomize(productType) {
 }
 
 // 加载设计列表
-function loadDesigns() {
+async function loadDesigns() {
     const designsList = document.getElementById('designs-list');
     if (!designsList) return;
     
-    if (appState.designs.length === 0) {
-        designsList.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无设计作品</p>';
-        return;
+    try {
+        // 从 Supabase 获取设计列表
+        if (appState.isSupabaseReady && appState.currentUser) {
+            const { data, error } = await designs.select('*')
+                .eq('user_id', appState.currentUser.id)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('获取设计列表失败:', error);
+                throw error;
+            }
+            
+            appState.designs = data;
+        }
+        
+        if (appState.designs.length === 0) {
+            designsList.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无设计作品</p>';
+            return;
+        }
+        
+        designsList.innerHTML = appState.designs.map((design, index) => `
+            <div class="design-item" onclick="viewDesign(${index})">
+                <img src="${design.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiNGOUY5RjkiLz4KICA8dGV4dCB4PSI2MCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+5pys56e75YqgPC90ZXh0Pgo8L3N2Zz4K'}" alt="设计作品">
+                <p>设计 ${index + 1}</p>
+                <small>${new Date(design.createTime || design.created_at).toLocaleDateString()}</small>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('加载设计列表错误:', error);
+        designsList.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">加载设计失败</p>';
     }
-    
-    designsList.innerHTML = appState.designs.map((design, index) => `
-        <div class="design-item" onclick="viewDesign(${index})">
-            <img src="${design.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiNGOUY5RjkiLz4KICA8dGV4dCB4PSI2MCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+5pys56e75YqgPC90ZXh0Pgo8L3N2Zz4K'}" alt="设计作品">
-            <p>设计 ${index + 1}</p>
-            <small>${new Date(design.createTime).toLocaleDateString()}</small>
-        </div>
-    `).join('');
 }
 
 // 查看设计

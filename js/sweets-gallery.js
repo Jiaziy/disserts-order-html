@@ -1,4 +1,4 @@
-// 作品库功能
+0// 作品库功能
 class SweetsGallery {
     constructor() {
         this.designs = [];

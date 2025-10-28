@@ -342,38 +342,95 @@ function updateDesignPreview() {
     }
 }
 
+// 导入 Supabase 订单工具
+import { orders } from './supabase.js';
+
 // 提交订单
-function submitOrder() {
+async function submitOrder() {
     if (!customizeState.selectedStyle) {
         showToast('请先选择产品样式');
         return;
     }
     
-    // 创建订单数据
-    const order = {
-        id: 'order_' + Date.now(),
-        productType: customizeState.productType,
-        selectedStyle: customizeState.selectedStyle,
-        flavorIndex: customizeState.flavorIndex,
-        customText: customizeState.customText,
-        quantity: customizeState.quantity,
-        selectedPackaging: customizeState.selectedPackaging,
-        designImage: customizeState.designImage,
-        createTime: new Date().toISOString(),
-        status: 'pending'
-    };
-    
-    // 保存订单到本地存储
-    let orders = JSON.parse(localStorage.getItem('orders')) || [];
-    orders.push(order);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    showToast('订单提交成功！');
-    
-    // 2秒后返回首页
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 2000);
+    try {
+        // 获取当前用户信息
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        
+        // 创建订单数据
+        const orderData = {
+            user_id: currentUser?.id || 'anonymous',
+            product_type: customizeState.productType,
+            selected_style: customizeState.selectedStyle,
+            flavor_index: customizeState.flavorIndex,
+            custom_text: customizeState.customText,
+            quantity: customizeState.quantity,
+            selected_packaging: customizeState.selectedPackaging,
+            design_image: customizeState.designImage,
+            total_price: calculateTotalPrice(),
+            customer_info: {
+                name: currentUser?.name || '',
+                email: currentUser?.email || ''
+            }
+        };
+        
+        // 使用 Supabase 创建订单
+        const newOrder = await orders.createOrder(orderData);
+        
+        if (newOrder) {
+            // 保持向后兼容，同时保存到本地存储
+            let localOrders = JSON.parse(localStorage.getItem('orders')) || [];
+            localOrders.push({
+                ...newOrder,
+                id: newOrder.id || 'order_' + Date.now(),
+                userId: newOrder.user_id,
+                selectedStyle: newOrder.selected_style,
+                flavorIndex: newOrder.flavor_index,
+                customText: newOrder.custom_text,
+                selectedPackaging: newOrder.selected_packaging,
+                designImage: newOrder.design_image,
+                createTime: newOrder.created_at || new Date().toISOString()
+            });
+            localStorage.setItem('orders', JSON.stringify(localOrders));
+            
+            showToast('订单提交成功！');
+            
+            // 2秒后返回首页
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2000);
+        } else {
+            showToast('订单提交失败，请稍后重试');
+        }
+    } catch (error) {
+        console.error('提交订单错误:', error);
+        // 即使 Supabase 失败，仍然尝试保存到本地
+        try {
+            const fallbackOrder = {
+                id: 'order_' + Date.now(),
+                productType: customizeState.productType,
+                selectedStyle: customizeState.selectedStyle,
+                flavorIndex: customizeState.flavorIndex,
+                customText: customizeState.customText,
+                quantity: customizeState.quantity,
+                selectedPackaging: customizeState.selectedPackaging,
+                designImage: customizeState.designImage,
+                createTime: new Date().toISOString(),
+                status: 'pending'
+            };
+            
+            let orders = JSON.parse(localStorage.getItem('orders')) || [];
+            orders.push(fallbackOrder);
+            localStorage.setItem('orders', JSON.stringify(orders));
+            
+            showToast('订单已保存到本地，网络恢复后将同步');
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2000);
+        } catch (fallbackError) {
+            showToast('订单保存失败，请检查网络连接');
+        }
+    }
 }
 
 // 改变数量

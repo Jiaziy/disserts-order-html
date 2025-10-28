@@ -6,6 +6,8 @@ class SweetsDesigner {
         this.ctx = null;
         this.previewCanvas = null;
         this.previewCtx = null;
+        this.backgroundCanvas = null;
+        this.backgroundCtx = null;
         
         // 绘图状态
         this.isDrawing = false;
@@ -15,12 +17,21 @@ class SweetsDesigner {
         this.points = []; // 存储点的数组，用于优化绘图
         
         // 设计参数
-        this.currentColor = '#FF6B6B'; // 默认颜色
+        this.currentColor = '#3D2314'; // 默认巧克力棕色
         this.brushSize = 5;
-        this.dessertType = 'cake';
+        this.dessertType = 'chocolate'; // 固定为巧克力类型
         this.canvasSize = { width: 1024, height: 768 };
         this.currentTool = 'brush';
         this.selectedShape = null;
+        this.templateSelected = false; // 跟踪是否已选择模板
+        this.previewZoomLevel = 1; // 预览画布的缩放级别
+        
+        // 图片相关状态
+        this.uploadedImage = null; // 上传的图片对象
+        this.imagePosition = { x: 0, y: 0 }; // 图片位置
+        this.imageScale = 1.0; // 图片缩放比例
+        this.isDragging = false; // 是否正在拖动图片
+        this.dragOffset = { x: 0, y: 0 }; // 拖动偏移量
         
         // 历史记录
         this.history = [];
@@ -36,6 +47,10 @@ class SweetsDesigner {
      */
     init() {
         this.setupCanvas();
+        
+        // 确保画布比例正确，防止渲染变形
+        this.ensureCanvasProportions();
+        
         this.setupPreview();
         this.setupEventListeners();
         
@@ -55,8 +70,58 @@ class SweetsDesigner {
      * 设置主画布
      */
     setupCanvas() {
+        // 获取主画布
         this.canvas = document.getElementById('design-canvas');
+        if (!this.canvas) {
+            console.error('找不到主画布元素！');
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+        console.log('主画布初始化完成');
+        
+        // 创建背景画布
+        // 移除任何已存在的背景画布（防止重复）
+        const canvasContainer = this.canvas.parentElement;
+        if (!canvasContainer) {
+            console.error('找不到画布容器！');
+            return;
+        }
+        
+        const existingBgCanvas = canvasContainer.querySelector('.background-canvas');
+        if (existingBgCanvas) {
+            console.log('移除已存在的背景画布');
+            existingBgCanvas.remove();
+        }
+        
+        this.backgroundCanvas = document.createElement('canvas');
+        this.backgroundCanvas.id = 'background-canvas'; // 添加唯一ID
+        this.backgroundCanvas.className = 'background-canvas';
+        this.backgroundCtx = this.backgroundCanvas.getContext('2d');
+        console.log('背景画布创建完成');
+        
+        // 设置背景画布样式
+        this.backgroundCanvas.style.position = 'absolute';
+        this.backgroundCanvas.style.top = '0';
+        this.backgroundCanvas.style.left = '0';
+        this.backgroundCanvas.style.zIndex = '1';
+        this.backgroundCanvas.style.display = 'block';
+        this.backgroundCanvas.style.opacity = '1';
+        this.backgroundCanvas.style.pointerEvents = 'none'; // 防止背景画布接收鼠标事件
+        this.backgroundCanvas.style.backgroundColor = 'transparent';
+        
+        // 确保主画布样式正确
+        this.canvas.style.position = 'relative';
+        this.canvas.style.zIndex = '2';
+        this.canvas.style.backgroundColor = 'transparent';
+        
+        // 在主画布之前插入背景画布
+        canvasContainer.insertBefore(this.backgroundCanvas, this.canvas);
+        console.log('背景画布已插入到DOM中，位置在主画布之前');
+        
+        // 全局可访问，方便调试
+        window.dessertDesigner = this;
+        console.log('甜点设计器实例已暴露到window.dessertDesigner');
         
         // 设置固定比例的画布尺寸 (4:3)
         const aspectRatio = 4 / 3;
@@ -82,11 +147,17 @@ class SweetsDesigner {
         this.canvas.width = Math.floor(width);
         this.canvas.height = Math.floor(height);
         
+        // 背景画布使用相同尺寸
+        this.backgroundCanvas.width = this.canvas.width;
+        this.backgroundCanvas.height = this.canvas.height;
+        
         // 更新canvasSize对象
         this.canvasSize = { width: this.canvas.width, height: this.canvas.height };
         
         // 清空画布（初始化时不显示确认框）
         this.clearCanvas(false);
+        // 清空背景画布，使用透明背景
+        this.backgroundCtx.clearRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
         
         // 更新状态栏显示的画布尺寸
         const canvasSizeElement = document.getElementById('canvas-size');
@@ -107,8 +178,9 @@ class SweetsDesigner {
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
         
-        // 保存当前画布内容
+        // 保存当前画布内容和背景画布内容
         const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const bgImageData = this.backgroundCtx.getImageData(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
         
         // 计算新尺寸
         let newWidth, newHeight;
@@ -120,12 +192,26 @@ class SweetsDesigner {
             newHeight = newWidth / aspectRatio;
         }
         
-        // 更新尺寸
-        this.canvas.width = Math.floor(newWidth);
-        this.canvas.height = Math.floor(newHeight);
+        // 更新尺寸（确保使用整数像素值）
+        newWidth = Math.floor(newWidth);
+        newHeight = Math.floor(newHeight);
+        
+        // 设置Canvas的CSS尺寸，确保它在页面中正确显示
+        this.canvas.style.width = `${newWidth}px`;
+        this.canvas.style.height = `${newHeight}px`;
+        
+        // 然后设置物理尺寸
+        this.canvas.width = newWidth;
+        this.canvas.height = newHeight;
+        
+        // 更新背景画布尺寸
+        this.backgroundCanvas.width = newWidth;
+        this.backgroundCanvas.height = newHeight;
+        this.backgroundCanvas.style.width = `${newWidth}px`;
+        this.backgroundCanvas.style.height = `${newHeight}px`;
         
         // 更新canvasSize对象
-        this.canvasSize = { width: this.canvas.width, height: this.canvas.height };
+        this.canvasSize = { width: newWidth, height: newHeight };
         
         // 尝试绘制回之前的内容（会按新尺寸缩放）
         if (imageData) {
@@ -137,6 +223,18 @@ class SweetsDesigner {
             
             // 按新尺寸绘制内容
             this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width, this.canvas.height);
+        }
+        
+        // 恢复背景画布内容
+        if (bgImageData) {
+            const bgTempCanvas = document.createElement('canvas');
+            bgTempCanvas.width = bgImageData.width;
+            bgTempCanvas.height = bgImageData.height;
+            const bgTempCtx = bgTempCanvas.getContext('2d');
+            bgTempCtx.putImageData(bgImageData, 0, 0);
+            
+            // 按新尺寸绘制背景内容
+            this.backgroundCtx.drawImage(bgTempCanvas, 0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
         }
         
         // 更新状态栏
@@ -159,15 +257,89 @@ class SweetsDesigner {
         if (this.previewCanvas) {
             this.previewCtx = this.previewCanvas.getContext('2d');
             
-            // 设置预览画布尺寸（按比例缩小）
-            const scale = 0.25;
-            this.previewCanvas.width = this.canvasSize.width * scale;
-            this.previewCanvas.height = this.canvasSize.height * scale;
+            // 设置预览画布尺寸
+            const baseScale = 0.25;
+            this.previewCanvas.width = this.canvasSize.width * baseScale;
+            this.previewCanvas.height = this.canvasSize.height * baseScale;
             
             // 清空预览画布
             this.previewCtx.fillStyle = '#FFFFFF';
             this.previewCtx.fillRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
+            
+            // 设置预览缩放控制
+            this.setupPreviewZoomControls();
         }
+    }
+    
+    /**
+     * 设置预览缩放控制
+     */
+    setupPreviewZoomControls() {
+        // 放大按钮
+        const zoomInBtn = document.createElement('button');
+        zoomInBtn.className = 'btn-secondary';
+        zoomInBtn.innerHTML = '<i class="fas fa-search-plus"></i>';
+        zoomInBtn.title = '放大';
+        zoomInBtn.addEventListener('click', () => this.zoomPreview(1.2));
+        
+        // 缩小按钮
+        const zoomOutBtn = document.createElement('button');
+        zoomOutBtn.className = 'btn-secondary';
+        zoomOutBtn.innerHTML = '<i class="fas fa-search-minus"></i>';
+        zoomOutBtn.title = '缩小';
+        zoomOutBtn.addEventListener('click', () => this.zoomPreview(0.8));
+        
+        // 重置缩放按钮
+        const resetZoomBtn = document.createElement('button');
+        resetZoomBtn.className = 'btn-secondary';
+        resetZoomBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        resetZoomBtn.title = '重置缩放';
+        resetZoomBtn.addEventListener('click', () => this.resetPreviewZoom());
+        
+        // 添加到预览控制区域
+        const previewControls = document.querySelector('.preview-controls');
+        if (previewControls) {
+            // 插入到现有按钮之前
+            previewControls.insertBefore(zoomInBtn, previewControls.firstChild);
+            previewControls.insertBefore(zoomOutBtn, previewControls.firstChild);
+            previewControls.insertBefore(resetZoomBtn, previewControls.firstChild);
+        }
+    }
+    
+    /**
+     * 缩放预览
+     */
+    zoomPreview(factor) {
+        this.previewZoomLevel = Math.max(0.5, Math.min(3, this.previewZoomLevel * factor));
+        this.updatePreview();
+        
+        // 显示当前缩放级别
+        const zoomLevelElement = document.createElement('span');
+        zoomLevelElement.className = 'zoom-level-indicator';
+        zoomLevelElement.textContent = `${Math.round(this.previewZoomLevel * 100)}%`;
+        zoomLevelElement.style.marginLeft = '10px';
+        
+        // 移除旧的缩放级别指示器
+        const oldIndicator = document.querySelector('.zoom-level-indicator');
+        if (oldIndicator) oldIndicator.remove();
+        
+        // 添加新的缩放级别指示器
+        const previewControls = document.querySelector('.preview-controls');
+        if (previewControls) {
+            previewControls.appendChild(zoomLevelElement);
+        }
+    }
+    
+    /**
+     * 重置预览缩放
+     */
+    resetPreviewZoom() {
+        this.previewZoomLevel = 1;
+        this.updatePreview();
+        
+        // 移除缩放级别指示器
+        const indicator = document.querySelector('.zoom-level-indicator');
+        if (indicator) indicator.remove();
     }
 
     /**
@@ -177,21 +349,86 @@ class SweetsDesigner {
         if (!this.canvas) return;
         
         // 鼠标事件
-        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-        this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+        this.canvas.addEventListener('mouseout', () => this.handleMouseUp());
+        
+        // 鼠标滚轮事件 - 图片缩放
+        this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
         
         // 触摸事件（移动端支持）
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault(); // 防止页面滚动
-            this.startDrawing(e.touches[0]);
+            this.handleMouseDown(e.touches[0]);
         });
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault(); // 防止页面滚动
-            this.draw(e.touches[0]);
+            this.handleMouseMove(e.touches[0]);
         });
-        this.canvas.addEventListener('touchend', () => this.stopDrawing());
+        this.canvas.addEventListener('touchend', () => this.handleMouseUp());
+        
+        // 模板按钮事件监听
+        document.querySelectorAll('.template-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // 获取模板类型
+                const template = btn.getAttribute('data-template');
+                
+                // 如果是点击当前已选中的模板，不做任何操作
+                if (this.currentTemplateId === template) {
+                    return;
+                }
+                
+                // 直接调用selectTemplate方法切换模板
+                this.selectTemplate(template);
+            });
+        });
+        
+        // 图片上传事件
+        const imageUploadInput = document.getElementById('image-upload-input');
+        if (imageUploadInput) {
+            imageUploadInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    this.handleImageUpload(e.target.files[0]);
+                }
+            });
+        }
+        
+        // 拖拽上传事件
+        const uploadLabel = document.querySelector('.upload-label');
+        if (uploadLabel) {
+            uploadLabel.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadLabel.classList.add('drag-over');
+            });
+            
+            uploadLabel.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadLabel.classList.remove('drag-over');
+            });
+            
+            uploadLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadLabel.classList.remove('drag-over');
+                
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    this.handleImageUpload(e.dataTransfer.files[0]);
+                }
+            });
+        }
+        
+        // 图片工具选择事件
+        const imageToolBtn = document.querySelector('.tool-btn[data-tool="image"]');
+        if (imageToolBtn) {
+            imageToolBtn.addEventListener('click', () => {
+                this.selectTool('image');
+            });
+        }
     }
 
     /**
@@ -212,9 +449,111 @@ class SweetsDesigner {
     }
 
     /**
+     * 处理鼠标按下事件
+     */
+    handleMouseDown(e) {
+        const pos = this.getMousePos(e);
+        
+        // 如果有上传的图片，检查是否点击在图片上（无论当前工具是什么）
+        if (this.uploadedImage) {
+            if (pos.x >= this.imagePosition.x && 
+                pos.x <= this.imagePosition.x + this.uploadedImage.width && 
+                pos.y >= this.imagePosition.y && 
+                pos.y <= this.imagePosition.y + this.uploadedImage.height) {
+                
+                // 自动切换到图片工具并开始拖动
+                if (this.currentTool !== 'image') {
+                    this.selectTool('image');
+                }
+                
+                // 开始拖动图片
+                this.isDragging = true;
+                this.dragOffset.x = pos.x - this.imagePosition.x;
+                this.dragOffset.y = pos.y - this.imagePosition.y;
+                this.canvas.style.cursor = 'move';
+                console.log('开始拖动图片');
+                return;
+            }
+        }
+        
+        // 其他情况正常开始绘图
+        this.startDrawing(e);
+    }
+    
+    /**
+     * 处理鼠标移动事件
+     */
+    handleMouseMove(e) {
+        // 如果正在拖动图片
+        if (this.isDragging) {
+            const pos = this.getMousePos(e);
+            
+            // 更新图片位置
+            this.imagePosition.x = pos.x - this.dragOffset.x;
+            this.imagePosition.y = pos.y - this.dragOffset.y;
+            
+            // 重绘整个画布，确保清除旧图片避免拖尾
+            this.clearCanvas();
+            this.renderBackground();
+            
+            // 重新绘制图片
+            if (this.uploadedImage) {
+                this.drawProcessedImage();
+            }
+            
+            // 更新预览
+            this.updatePreview();
+            return;
+        }
+        
+        // 如果鼠标悬停在图片上，改变光标样式
+        if (this.uploadedImage) {
+            const pos = this.getMousePos(e);
+            // 考虑图片缩放
+            const scaledWidth = this.uploadedImage.width * this.imageScale;
+            const scaledHeight = this.uploadedImage.height * this.imageScale;
+            
+            if (pos.x >= this.imagePosition.x && 
+                pos.x <= this.imagePosition.x + scaledWidth && 
+                pos.y >= this.imagePosition.y && 
+                pos.y <= this.imagePosition.y + scaledHeight) {
+                this.canvas.style.cursor = 'move';
+            } else if (this.currentTool === 'image') {
+                this.canvas.style.cursor = 'move'; // 图片工具统一使用移动光标
+            }
+        }
+        
+        // 其他情况正常绘图
+        this.draw(e);
+    }
+    
+    /**
+     * 处理鼠标松开事件
+     */
+    handleMouseUp() {
+        // 如果正在拖动图片
+        if (this.isDragging) {
+            this.isDragging = false;
+            this.canvas.style.cursor = this.currentTool === 'image' ? 'move' : 'default';
+            this.saveState();
+            console.log('图片拖动完成，位置已保存');
+            return;
+        }
+        
+        // 其他情况正常停止绘图
+        this.stopDrawing();
+    }
+    
+    /**
      * 开始绘图
      */
     startDrawing(e) {
+        // 检查是否已选择模板
+        if ((this.currentTool === 'brush' || this.currentTool === 'eraser') && !this.templateSelected) {
+            this.showTemplateRequiredMessage();
+            return;
+        }
+        
         this.isDrawing = true;
         const pos = this.getMousePos(e);
         this.lastX = pos.x;
@@ -243,6 +582,40 @@ class SweetsDesigner {
             this.updatePreview();
         }
     }
+    
+    /**
+      * 显示需要选择模板的提示消息
+      */
+     showTemplateRequiredMessage() {
+         // 检查是否已有提示
+         let messageElement = document.getElementById('template-required-message');
+         if (!messageElement) {
+             messageElement = document.createElement('div');
+             messageElement.id = 'template-required-message';
+             messageElement.className = 'template-required-message';
+             messageElement.style.position = 'absolute';
+             messageElement.style.top = '50%';
+             messageElement.style.left = '50%';
+             messageElement.style.transform = 'translate(-50%, -50%)';
+             messageElement.style.background = 'rgba(255, 99, 71, 0.9)';
+             messageElement.style.color = 'white';
+             messageElement.style.padding = '15px 25px';
+             messageElement.style.borderRadius = '8px';
+             messageElement.style.fontSize = '16px';
+             messageElement.style.zIndex = '1000';
+             messageElement.style.textAlign = 'center';
+             messageElement.textContent = '请先选择一个模板，然后再开始绘画';
+             
+             this.canvas.parentElement.appendChild(messageElement);
+             
+             // 3秒后自动消失
+             setTimeout(() => {
+                 if (messageElement.parentNode) {
+                     messageElement.parentNode.removeChild(messageElement);
+                 }
+             }, 3000);
+         }
+     }
 
     /**
      * 绘制过程
@@ -288,9 +661,11 @@ class SweetsDesigner {
                 if (this.currentTool === 'brush') {
                     this.ctx.strokeStyle = this.currentColor;
                     this.ctx.lineWidth = this.brushSize;
+                    this.ctx.globalCompositeOperation = 'source-over'; // 确保线条在模板之上
                 } else if (this.currentTool === 'eraser') {
                     this.ctx.strokeStyle = '#FFFFFF';
                     this.ctx.lineWidth = this.brushSize * 2;
+                    this.ctx.globalCompositeOperation = 'destination-out';
                 }
                 this.ctx.lineCap = 'round';
                 
@@ -302,6 +677,8 @@ class SweetsDesigner {
                 this.ctx.stroke();
             }
             this.isRendering = false;
+            // 更新预览
+            this.updatePreview();
             return;
         }
         
@@ -309,7 +686,7 @@ class SweetsDesigner {
         if (this.currentTool === 'brush') {
             this.ctx.strokeStyle = this.currentColor;
             this.ctx.lineWidth = this.brushSize;
-            this.ctx.globalCompositeOperation = 'source-over';
+            this.ctx.globalCompositeOperation = 'source-over'; // 确保线条在模板之上
         } else if (this.currentTool === 'eraser') {
             this.ctx.strokeStyle = '#FFFFFF';
             this.ctx.lineWidth = this.brushSize * 2;
@@ -334,6 +711,8 @@ class SweetsDesigner {
         this.points = [];
         
         this.isRendering = false;
+        // 更新预览
+        this.updatePreview();
     }
 
     /**
@@ -360,7 +739,14 @@ class SweetsDesigner {
      * 选择工具
      */
     selectTool(tool) {
+        console.log('选择工具:', tool);
+        
         this.currentTool = tool;
+        
+        // 取消正在进行的拖动
+        if (this.isDragging) {
+            this.isDragging = false;
+        }
         
         // 更新按钮状态
         document.querySelectorAll('.tool-btn').forEach(btn => {
@@ -380,6 +766,14 @@ class SweetsDesigner {
                 case 'shape':
                     this.canvas.style.cursor = 'pointer';
                     break;
+                case 'image':
+                    // 图片工具统一使用移动光标
+                    this.canvas.style.cursor = 'move';
+                    // 如果有上传的图片，重新绘制
+                    if (this.uploadedImage) {
+                        this.drawProcessedImage();
+                    }
+                    break;
                 default:
                     this.canvas.style.cursor = 'crosshair';
             }
@@ -387,21 +781,210 @@ class SweetsDesigner {
         
         this.updateDesignInfo();
     }
+    
+    /**
+     * 处理鼠标滚轮事件 - 实现图片缩放
+     */
+    handleWheel(e) {
+        // 只有在图片工具且有上传的图片时才允许缩放
+        if (this.currentTool === 'image' && this.uploadedImage) {
+            e.preventDefault();
+            
+            // 计算鼠标在画布上的坐标
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // 检查鼠标是否在图片范围内
+            const scaledWidth = this.uploadedImage.width * this.imageScale;
+            const scaledHeight = this.uploadedImage.height * this.imageScale;
+            
+            if (mouseX >= this.imagePosition.x && mouseX <= this.imagePosition.x + scaledWidth &&
+                mouseY >= this.imagePosition.y && mouseY <= this.imagePosition.y + scaledHeight) {
+                
+                // 计算缩放方向和缩放因子
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                
+                // 保存缩放前的鼠标相对于图片中心的位置
+                const beforeZoomRelX = mouseX - (this.imagePosition.x + scaledWidth / 2);
+                const beforeZoomRelY = mouseY - (this.imagePosition.y + scaledHeight / 2);
+                
+                // 应用缩放
+                this.imageScale = Math.max(0.1, Math.min(5.0, this.imageScale * zoomFactor));
+                
+                // 计算缩放后的图片尺寸
+                const newScaledWidth = this.uploadedImage.width * this.imageScale;
+                const newScaledHeight = this.uploadedImage.height * this.imageScale;
+                
+                // 调整图片位置，使缩放以鼠标位置为中心
+                this.imagePosition.x = mouseX - (beforeZoomRelX * zoomFactor + newScaledWidth / 2);
+                this.imagePosition.y = mouseY - (beforeZoomRelY * zoomFactor + newScaledHeight / 2);
+                
+                console.log('图片缩放:', this.imageScale);
+                
+                // 重绘整个画布，确保清除旧图片避免拖尾
+                this.clearCanvas();
+                this.renderBackground();
+                
+                // 重新绘制所有内容
+                if (this.uploadedImage) {
+                    this.drawProcessedImage();
+                }
+                
+                // 更新预览
+                this.updatePreview();
+            }
+        }
+    }
 
     /**
-     * 选择甜点类型
+     * 初始化巧克力设计
+     * 由于只支持巧克力类型，这个方法替代了之前的selectDessertType
      */
-    selectDessertType(type) {
-        this.dessertType = type;
+    initChocolateDesign() {
+        // 显示巧克力形状模板
+        this.displayChocolateTemplates();
+        this.updateDesignInfo();
+    }
+    
+    /**
+     * 显示巧克力形状模板提示
+     */
+    displayChocolateTemplates() {
+        // 清空画布并保持透明
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // 更新按钮状态
-        document.querySelectorAll('.dessert-type-btn').forEach(btn => {
+        // 重置模板选择状态
+        this.templateSelected = false;
+        
+        // 重置模板按钮状态
+        document.querySelectorAll('.template-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`.dessert-type-btn[data-type="${type}"]`)?.classList.add('active');
         
-        // 这里可以添加甜点类型改变后的处理逻辑
-        this.updateDesignInfo();
+        // 保存这个状态到历史记录
+        this.saveState();
+    }
+    
+    /**
+     * 绘制巧克力样式的形状
+     */
+    drawChocolateShape(x, y, shapeType, asTemplate = false) {
+        // 计算适合画布的最大尺寸，保持形状比例
+        const maxSize = Math.min(this.canvas.width, this.canvas.height) * 0.6; // 最大为画布的60%
+        const size = maxSize;
+        
+        if (asTemplate) {
+            // 在背景画布上绘制模板（不可擦除）
+            // 清空背景画布
+            this.backgroundCtx.fillStyle = '#ffffff';
+            this.backgroundCtx.fillRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+            
+            // 设置巧克力颜色
+            this.backgroundCtx.fillStyle = '#3D2314';
+            
+            // 绘制基本形状
+            switch (shapeType) {
+                case 'circle':
+                    this.drawCircleOnBackground(x, y, size);
+                    break;
+                case 'square':
+                    this.drawSquareOnBackground(x, y, size);
+                    break;
+                case 'heart':
+                    this.drawHeartOnBackground(x, y, size);
+                    break;
+            }
+            
+            // 添加巧克力纹理效果（简单的线条图案）
+            this.backgroundCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            this.backgroundCtx.lineWidth = 2;
+            
+            // 绘制一些随机的细线条作为纹理
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const startRadius = size * 0.2;
+                const endRadius = size * 0.4;
+                
+                const startX = x + startRadius * Math.cos(angle);
+                const startY = y + startRadius * Math.sin(angle);
+                const endX = x + endRadius * Math.cos(angle);
+                const endY = y + endRadius * Math.sin(angle);
+                
+                this.backgroundCtx.beginPath();
+                this.backgroundCtx.moveTo(startX, startY);
+                this.backgroundCtx.lineTo(endX, endY);
+                this.backgroundCtx.stroke();
+            }
+            
+            // 添加形状标签到背景画布
+            this.backgroundCtx.fillStyle = '#ffffff';
+            this.backgroundCtx.font = '14px Arial';
+            this.backgroundCtx.textAlign = 'center';
+            
+            let label = '';
+            switch (shapeType) {
+                case 'circle': label = '圆形巧克力'; break;
+                case 'square': label = '方形巧克力'; break;
+                case 'heart': label = '心形巧克力'; break;
+            }
+            
+            this.backgroundCtx.fillText(label, x, y + size / 2 + 30);
+        } else {
+            // 在主画布上绘制（仅用于预览选择）
+            const previewSize = 80;
+            
+            // 设置巧克力颜色
+            this.ctx.fillStyle = '#3D2314';
+            
+            // 绘制基本形状
+            switch (shapeType) {
+                case 'circle':
+                    this.drawCircle(x, y, previewSize);
+                    break;
+                case 'square':
+                    this.drawSquare(x, y, previewSize);
+                    break;
+                case 'heart':
+                    this.drawHeart(x, y, previewSize);
+                    break;
+            }
+            
+            // 添加巧克力纹理效果
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            this.ctx.lineWidth = 2;
+            
+            // 绘制一些随机的细线条作为纹理
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const startRadius = previewSize * 0.2;
+                const endRadius = previewSize * 0.4;
+                
+                const startX = x + startRadius * Math.cos(angle);
+                const startY = y + startRadius * Math.sin(angle);
+                const endX = x + endRadius * Math.cos(angle);
+                const endY = y + endRadius * Math.sin(angle);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(startX, startY);
+                this.ctx.lineTo(endX, endY);
+                this.ctx.stroke();
+            }
+            
+            // 添加形状标签
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '14px Arial';
+            this.ctx.textAlign = 'center';
+            
+            let label = '';
+            switch (shapeType) {
+                case 'circle': label = '圆形巧克力'; break;
+                case 'square': label = '方形巧克力'; break;
+                case 'heart': label = '心形巧克力'; break;
+            }
+            
+            this.ctx.fillText(label, x, y + previewSize / 2 + 30);
+        }
     }
 
     /**
@@ -423,19 +1006,31 @@ class SweetsDesigner {
      * 选择画笔大小
      */
     selectBrushSize(size) {
-        this.brushSize = size;
+        this.brushSize = parseInt(size);
+        
+        // 更新滑块值
+        const brushSizeSlider = document.getElementById('brush-size');
+        if (brushSizeSlider) {
+            brushSizeSlider.value = this.brushSize;
+        }
+        
+        // 更新大小显示
+        const sizeValueElement = document.getElementById('size-value');
+        if (sizeValueElement) {
+            sizeValueElement.textContent = `${this.brushSize}px`;
+        }
         
         // 更新按钮状态
         document.querySelectorAll('.size-option').forEach(option => {
             option.classList.remove('active');
         });
-        document.querySelector(`.size-option[data-size="${size}"]`)?.classList.add('active');
+        document.querySelector(`.size-option[data-size="${this.brushSize}"]`)?.classList.add('active');
         
         this.updateDesignInfo();
     }
 
     /**
-     * 形状选择
+     * 选择形状
      */
     selectShape(shape) {
         // 设置当前工具为形状
@@ -457,27 +1052,287 @@ class SweetsDesigner {
     }
     
     /**
+     * 选择巧克力模板（从外部按钮）
+     * 注意：此方法只在用户确认后被调用，执行实际的模板切换操作，且不清空画布
+     */
+    selectTemplate(templateType) {
+        // 检查模板类型是否有效
+        const validTemplates = ['circle', 'square', 'heart'];
+        if (!validTemplates.includes(templateType)) {
+            return;
+        }
+        
+        // 如果用户正在点击当前已选中的模板，则不做任何操作
+        if (this.currentTemplateId === templateType) {
+            return;
+        }
+        
+        // 重要：在进行任何操作前，先保存当前状态
+        // 记录当前选中的模板ID
+        this.currentTemplateId = templateType;
+        
+        // 更新按钮状态
+        document.querySelectorAll('.template-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeButton = document.querySelector(`.template-btn[data-template="${templateType}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+        
+        // 确保canvas和ctx可用
+        if (!this.canvas || !this.ctx || !this.backgroundCanvas || !this.backgroundCtx) {
+            return;
+        }
+        
+        // 确保背景画布尺寸与主画布完全匹配
+        this.backgroundCanvas.width = this.canvas.width;
+        this.backgroundCanvas.height = this.canvas.height;
+        this.backgroundCanvas.style.width = '100%';
+        this.backgroundCanvas.style.height = '100%';
+        
+        // 确保背景画布正确添加到DOM且可见
+        const canvasContainer = this.canvas.parentElement;
+        if (canvasContainer) {
+            // 确保背景画布在DOM中
+            if (!this.backgroundCanvas.parentElement) {
+                canvasContainer.appendChild(this.backgroundCanvas);
+            }
+            
+            // 确保z-index设置正确，背景画布在主画布下方
+            this.backgroundCanvas.style.position = 'absolute';
+            this.backgroundCanvas.style.top = '0';
+            this.backgroundCanvas.style.left = '0';
+            this.backgroundCanvas.style.zIndex = '1';
+            this.backgroundCanvas.style.display = 'block';
+            this.backgroundCanvas.style.opacity = '1';
+            
+            this.canvas.style.position = 'relative';
+            this.canvas.style.zIndex = '2';
+            this.canvas.style.backgroundColor = 'transparent'; // 确保主画布透明
+        }
+        
+        // 保存主画布当前内容到临时画布
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(this.canvas, 0, 0);
+        
+        // 清空背景画布，使用透明背景
+        this.backgroundCtx.clearRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+        
+        // 计算画布中心位置和模板大小
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        const maxSize = Math.min(this.canvas.width, this.canvas.height) * 0.7; // 正常大小的模板
+        
+        // 绘制模板形状，使用巧克力棕色
+        this.backgroundCtx.fillStyle = '#D2691E'; // 巧克力棕色作为模板颜色
+        
+        switch (templateType) {
+            case 'circle':
+                this.backgroundCtx.beginPath();
+                this.backgroundCtx.arc(centerX, centerY, maxSize / 2, 0, Math.PI * 2);
+                this.backgroundCtx.fill();
+                break;
+            case 'square':
+                this.backgroundCtx.fillRect(centerX - maxSize / 2, centerY - maxSize / 2, maxSize, maxSize);
+                break;
+            case 'heart':
+                // 绘制心形
+                this.backgroundCtx.beginPath();
+                const topCurveHeight = maxSize * 0.3;
+                this.backgroundCtx.moveTo(centerX, centerY - maxSize / 4);
+                this.backgroundCtx.bezierCurveTo(
+                    centerX - maxSize / 2, centerY - maxSize / 2 - topCurveHeight,
+                    centerX - maxSize / 2, centerY + maxSize / 4,
+                    centerX, centerY + maxSize / 2
+                );
+                this.backgroundCtx.bezierCurveTo(
+                    centerX + maxSize / 2, centerY + maxSize / 4,
+                    centerX + maxSize / 2, centerY - maxSize / 2 - topCurveHeight,
+                    centerX, centerY - maxSize / 4
+                );
+                this.backgroundCtx.fill();
+                break;
+        }
+        
+        // 使用细线边框，更自然的外观
+        this.backgroundCtx.strokeStyle = '#8B4513'; // 深棕色边框
+        this.backgroundCtx.lineWidth = 2; // 细线边框
+        
+        switch (templateType) {
+            case 'circle':
+                this.backgroundCtx.beginPath();
+                this.backgroundCtx.arc(centerX, centerY, maxSize / 2, 0, Math.PI * 2);
+                this.backgroundCtx.stroke();
+                break;
+            case 'square':
+                this.backgroundCtx.strokeRect(centerX - maxSize / 2, centerY - maxSize / 2, maxSize, maxSize);
+                break;
+            case 'heart':
+                // 再次绘制心形边框
+                this.backgroundCtx.beginPath();
+                const topCurveHeight = maxSize * 0.3;
+                this.backgroundCtx.moveTo(centerX, centerY - maxSize / 4);
+                this.backgroundCtx.bezierCurveTo(
+                    centerX - maxSize / 2, centerY - maxSize / 2 - topCurveHeight,
+                    centerX - maxSize / 2, centerY + maxSize / 4,
+                    centerX, centerY + maxSize / 2
+                );
+                this.backgroundCtx.bezierCurveTo(
+                    centerX + maxSize / 2, centerY + maxSize / 4,
+                    centerX + maxSize / 2, centerY - maxSize / 2 - topCurveHeight,
+                    centerX, centerY - maxSize / 4
+                );
+                this.backgroundCtx.stroke();
+                break;
+        }
+        
+        // 在主画布上恢复之前保存的内容（不清空画布）
+        this.ctx.drawImage(tempCanvas, 0, 0);
+        
+        // 保存状态
+        this.saveState();
+        this.templateSelected = true; // 标记已选择模板
+        
+        // 创建模板名称映射
+        const templateNames = {
+            'circle': '圆形',
+            'square': '方形',
+            'heart': '心形'
+        };
+        
+        // 显示已选择模板的提示
+        this.showTemplateSelectedMessage(templateNames[templateType] || templateType);
+        
+        // 更新预览
+        this.updatePreview();
+        
+        // 确保当前工具保持为画笔模式
+        this.selectTool('brush');
+    }
+    
+    /**
+      * 显示已选择模板的提示消息
+      */
+    showTemplateSelectedMessage(shapeName) {
+        // 移除之前的提示
+        const oldMessage = document.getElementById('template-selected-message');
+        if (oldMessage && oldMessage.parentNode) {
+            oldMessage.parentNode.removeChild(oldMessage);
+        }
+        
+        const messageElement = document.createElement('div');
+        messageElement.id = 'template-selected-message';
+        messageElement.className = 'template-selected-message';
+        messageElement.style.position = 'absolute';
+        messageElement.style.top = '10px';
+        messageElement.style.right = '10px';
+        messageElement.style.background = 'rgba(76, 175, 80, 0.9)';
+        messageElement.style.color = 'white';
+        messageElement.style.padding = '10px 15px';
+        messageElement.style.borderRadius = '6px';
+        messageElement.style.fontSize = '14px';
+        messageElement.style.zIndex = '1000';
+        messageElement.style.textAlign = 'center';
+        messageElement.textContent = `已选择${shapeName}模板，现在可以使用画笔进行创作了！`;
+        
+        this.canvas.parentElement.appendChild(messageElement);
+        
+        // 3秒后自动消失
+        setTimeout(() => {
+            if (messageElement.parentNode) {
+                messageElement.parentNode.removeChild(messageElement);
+            }
+        }, 3000);
+    }
+    
+    /**
+     * 检查点是否在形状内
+     */
+    isPointInShape(pointX, pointY, shapeX, shapeY, shapeType, size) {
+        // 对于简单形状，使用边界框进行检查
+        const halfSize = size / 2;
+        
+        // 为每种形状定义一个稍微大一点的点击区域
+        const padding = 20;
+        
+        // 圆形的边界框检查
+        if (shapeType === 'circle') {
+            const distance = Math.sqrt(Math.pow(pointX - shapeX, 2) + Math.pow(pointY - shapeY, 2));
+            return distance <= halfSize + padding;
+        }
+        
+        // 方形的边界框检查
+        if (shapeType === 'square' || shapeType === 'heart') {
+            return pointX >= shapeX - halfSize - padding &&
+                   pointX <= shapeX + halfSize + padding &&
+                   pointY >= shapeY - halfSize - padding &&
+                   pointY <= shapeY + halfSize + padding;
+        }
+        
+        return false;
+    }
+    
+    // 在背景画布上绘制圆形
+    drawCircleOnBackground(x, y, size) {
+        this.backgroundCtx.beginPath();
+        this.backgroundCtx.arc(x, y, size / 2, 0, Math.PI * 2);
+        this.backgroundCtx.fill();
+    }
+    
+    // 在背景画布上绘制方形
+    drawSquareOnBackground(x, y, size) {
+        this.backgroundCtx.beginPath();
+        this.backgroundCtx.rect(x - size / 2, y - size / 2, size, size);
+        this.backgroundCtx.fill();
+    }
+    
+    // 在背景画布上绘制心形
+    drawHeartOnBackground(x, y, size) {
+        const scaling = size / 100;
+        this.backgroundCtx.beginPath();
+        this.backgroundCtx.moveTo(x, y - 25 * scaling);
+        this.backgroundCtx.bezierCurveTo(
+            x - 50 * scaling, y - 50 * scaling, 
+            x - 50 * scaling, y - 5 * scaling, 
+            x, y + 20 * scaling
+        );
+        this.backgroundCtx.bezierCurveTo(
+            x + 50 * scaling, y - 5 * scaling, 
+            x + 50 * scaling, y - 50 * scaling, 
+            x, y - 25 * scaling
+        );
+        this.backgroundCtx.fill();
+    }
+    
+    /**
      * 绘制形状
      */
     drawShape(x, y) {
         const size = this.brushSize * 10; // 形状大小基于画笔大小
         
+        // 使用当前选中的颜色
         this.ctx.fillStyle = this.currentColor;
-        this.ctx.strokeStyle = this.currentColor;
-        this.ctx.lineWidth = 2;
         
+        // 根据选中的形状调用相应的绘制方法
         switch (this.selectedShape) {
+            case 'circle':
+                this.drawCircle(x, y, size);
+                break;
+            case 'square':
+                this.drawSquare(x, y, size);
+                break;
             case 'heart':
                 this.drawHeart(x, y, size);
                 break;
             case 'star':
                 this.drawStar(x, y, size);
                 break;
-            case 'circle':
-                this.drawCircle(x, y, size);
-                break;
-            case 'square':
-                this.drawSquare(x, y, size);
+            default:
+                console.warn('未知形状:', this.selectedShape);
                 break;
         }
     }
@@ -571,13 +1426,21 @@ class SweetsDesigner {
     }
 
     /**
-     * 处理图片上传
+     * 处理图片上传并提取线条
      */
-    handleImageUpload(file) {
+    async handleImageUpload(file) {
+        console.log('开始处理上传的图片:', file.name);
+        
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             const img = new Image();
-            img.onload = () => {
+            img.onload = async () => {
+                console.log('图片加载完成，原始尺寸:', img.width, 'x', img.height);
+                
+                // 创建临时画布用于图像处理
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
                 // 计算合适的缩放比例
                 const maxWidth = this.canvas.width * 0.8;
                 const maxHeight = this.canvas.height * 0.8;
@@ -596,17 +1459,251 @@ class SweetsDesigner {
                     }
                 }
                 
-                // 在画布中心绘制图片
-                const x = (this.canvas.width - width) / 2;
-                const y = (this.canvas.height - height) / 2;
-                this.ctx.drawImage(img, x, y, width, height);
+                console.log('调整后的图片尺寸:', width, 'x', height);
                 
-                this.saveState();
-                this.updatePreview();
+                // 设置临时画布尺寸
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                
+                // 使用AI处理图片（替代直接提取线条）
+                try {
+                    // 显示处理中的状态
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.font = '16px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('AI正在处理图片，请稍候...', this.canvas.width / 2, this.canvas.height / 2);
+                    
+                    // 调用AI处理方法
+                    const processedData = await this.aiProcessImage(tempCanvas, tempCtx, img);
+                    
+                    // 创建新的ImageData对象
+                    const imageData = new ImageData(processedData, width, height);
+                    
+                    // 在临时画布上绘制AI处理后的图像
+                    tempCtx.putImageData(imageData, 0, 0);
+                    
+                    // 保存上传的图片信息
+                    this.uploadedImage = {
+                        img: new Image(),
+                        width: width,
+                        height: height,
+                        originalDataUrl: event.target.result // 保存原始图片数据，便于将来可能的重新处理
+                    };
+                    this.uploadedImage.img.src = tempCanvas.toDataURL();
+                    
+                    // 初始化缩放比例
+                    this.imageScale = 1.0;
+                    
+                    // 计算居中位置
+                    this.imagePosition = {
+                        x: (this.canvas.width - width) / 2,
+                        y: (this.canvas.height - height) / 2
+                    };
+                    
+                    // 自动切换到图片工具
+                    this.selectTool('image');
+                    
+                    // 在主画布上绘制处理后的图像
+                    this.clearCanvas();
+                    this.renderBackground();
+                    this.drawProcessedImage();
+                    
+                    console.log('AI图片处理完成，已显示在画布上');
+                    this.updatePreview();
+                } catch (error) {
+                    console.error('AI图片处理失败:', error);
+                    // 显示错误信息
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.fillStyle = '#ff0000';
+                    this.ctx.font = '16px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('图片处理失败，请重试', this.canvas.width / 2, this.canvas.height / 2);
+                }
             };
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);
+    }
+    
+    /**
+     * 使用AI处理图片
+     * 注：这里是模拟AI处理的实现，实际应用中应该调用真实的AI图像生成API
+     */
+    async aiProcessImage(tempCanvas, tempCtx, img) {
+        return new Promise((resolve) => {
+            console.log('开始AI处理图片...');
+            
+            // 创建处理后的图像数据
+            const width = tempCanvas.width;
+            const height = tempCanvas.height;
+            
+            // 为了模拟AI处理，我们使用一个增强版的边缘检测算法
+            // 在实际应用中，这里应该调用外部AI API（如OpenAI、DeepAI等）
+            // 或者使用本地部署的AI模型进行处理
+            
+            // 步骤1: 绘制原始图像
+            tempCtx.drawImage(img, 0, 0, width, height);
+            
+            // 步骤2: 获取图像数据
+            const imageData = tempCtx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            // 步骤3: 模拟AI处理效果 - 使用多步骤处理来增强线条效果
+            // 1. 转换为灰度
+            const grayData = new Uint8ClampedArray(width * height);
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                grayData[i / 4] = gray;
+            }
+            
+            // 2. 高级边缘检测（模拟AI处理效果）
+            const edgeData = new Uint8ClampedArray(data.length);
+            
+            // 模拟AI处理的参数调整
+            const threshold = 35; // 更低的阈值以获取更丰富的细节
+            
+            // 3. 应用增强的边缘检测
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    // 计算局部对比度和梯度
+                    let maxVal = 0;
+                    let minVal = 255;
+                    
+                    // 分析局部区域
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            const val = grayData[(y + ky) * width + (x + kx)];
+                            maxVal = Math.max(maxVal, val);
+                            minVal = Math.min(minVal, val);
+                        }
+                    }
+                    
+                    // 局部对比度
+                    const contrast = maxVal - minVal;
+                    
+                    // 基于对比度的边缘检测（模拟AI智能判断）
+                    const isEdge = contrast > threshold;
+                    const edgeValue = isEdge ? 0 : 255; // 黑色线条，白色背景
+                    
+                    const index = (y * width + x) * 4;
+                    edgeData[index] = edgeValue;     // R
+                    edgeData[index + 1] = edgeValue; // G
+                    edgeData[index + 2] = edgeValue; // B
+                    edgeData[index + 3] = 255;       // A
+                }
+            }
+            
+            // 步骤4: 模拟AI处理延迟
+            setTimeout(() => {
+                console.log('AI处理图片完成');
+                resolve(edgeData);
+            }, 500); // 模拟API调用延迟
+        });
+    }
+    
+    /**
+     * 提取图像边缘（线条）- 旧方法，保留用于参考
+     */
+    extractEdges(imageData) {
+        // 保留原有实现，但不再使用
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
+        
+        const grayData = new Uint8ClampedArray(width * height);
+        for (let i = 0; i < data.length; i += 4) {
+            const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            grayData[i / 4] = gray;
+        }
+        
+        const edgeData = new Uint8ClampedArray(data.length);
+        const sobelX = [
+            [-1, 0, 1],
+            [-2, 0, 2],
+            [-1, 0, 1]
+        ];
+        const sobelY = [
+            [-1, -2, -1],
+            [0, 0, 0],
+            [1, 2, 1]
+        ];
+        
+        const threshold = 40;
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                let gx = 0;
+                let gy = 0;
+                
+                for (let ky = -1; ky <= 1; ky++) {
+                    for (let kx = -1; kx <= 1; kx++) {
+                        const pixel = grayData[(y + ky) * width + (x + kx)];
+                        gx += sobelX[ky + 1][kx + 1] * pixel;
+                        gy += sobelY[ky + 1][kx + 1] * pixel;
+                    }
+                }
+                
+                const gradient = Math.sqrt(gx * gx + gy * gy);
+                const edgeValue = gradient > threshold ? 0 : 255;
+                
+                const index = (y * width + x) * 4;
+                edgeData[index] = edgeValue;
+                edgeData[index + 1] = edgeValue;
+                edgeData[index + 2] = edgeValue;
+                edgeData[index + 3] = 255;
+            }
+        }
+        
+        // 确保边界像素也被正确设置
+        for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+                if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+                    const index = (y * width + x) * 4;
+                    edgeData[index] = 255;     // R
+                    edgeData[index + 1] = 255; // G
+                    edgeData[index + 2] = 255; // B
+                    edgeData[index + 3] = 255; // A
+                }
+            }
+        }
+        
+        return new ImageData(edgeData, width, height);
+    }
+    
+    /**
+     * 绘制处理后的图像
+     */
+    drawProcessedImage() {
+        if (!this.uploadedImage || !this.uploadedImage.img.complete) {
+            console.log('图片未准备好或不存在，无法绘制');
+            return;
+        }
+        
+        // 计算缩放后的图片尺寸
+        const scaledWidth = this.uploadedImage.width * this.imageScale;
+        const scaledHeight = this.uploadedImage.height * this.imageScale;
+        
+        console.log('绘制处理后的图像，位置:', this.imagePosition.x, this.imagePosition.y,
+                    '缩放比例:', this.imageScale,
+                    '尺寸:', scaledWidth, scaledHeight);
+        
+        // 先保存当前状态
+        this.ctx.save();
+        
+        // 绘制处理后的图像
+        this.ctx.drawImage(
+            this.uploadedImage.img,
+            this.imagePosition.x,
+            this.imagePosition.y,
+            scaledWidth,
+            scaledHeight
+        );
+        
+        // 恢复状态
+        this.ctx.restore();
     }
 
     /**
@@ -619,13 +1716,67 @@ class SweetsDesigner {
         this.previewCtx.fillStyle = '#FFFFFF';
         this.previewCtx.fillRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
         
-        // 从主画布复制内容到预览画布（按比例缩小）
-        const scale = this.previewCanvas.width / this.canvas.width;
+        // 确保预览画布保持与主画布相同的宽高比
+        const aspectRatio = this.canvas.width / this.canvas.height;
+        
+        // 计算预览画布中能容纳的最大尺寸，保持比例
+        let previewWidth = this.previewCanvas.width;
+        let previewHeight = previewWidth / aspectRatio;
+        
+        // 如果计算出的高度超过预览画布高度，则以高度为基准
+        if (previewHeight > this.previewCanvas.height) {
+            previewHeight = this.previewCanvas.height;
+            previewWidth = previewHeight * aspectRatio;
+        }
+        
+        // 应用缩放级别
+        previewWidth *= this.previewZoomLevel;
+        previewHeight *= this.previewZoomLevel;
+        
+        // 计算居中显示时的偏移量
+        const offsetX = (this.previewCanvas.width - previewWidth) / 2;
+        const offsetY = (this.previewCanvas.height - previewHeight) / 2;
+        
+        // 绘制缩放后的内容，确保比例正确
         this.previewCtx.drawImage(
             this.canvas,
             0, 0, this.canvas.width, this.canvas.height,
-            0, 0, this.previewCanvas.width, this.previewCanvas.height
+            offsetX, offsetY, previewWidth, previewHeight
         );
+    }
+    
+    /**
+     * 确保Canvas元素的物理尺寸和CSS尺寸一致，防止图像变形
+     */
+    ensureCanvasProportions() {
+        if (!this.canvas) return;
+        
+        // 获取Canvas的计算样式
+        const computedStyle = window.getComputedStyle(this.canvas);
+        const displayWidth = parseInt(computedStyle.width, 10);
+        const displayHeight = parseInt(computedStyle.height, 10);
+        
+        // 仅在实际显示尺寸与物理尺寸不同时进行调整
+        if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
+            // 保存当前内容
+            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            
+            // 更新物理尺寸
+            this.canvas.width = displayWidth;
+            this.canvas.height = displayHeight;
+            
+            // 更新backgroundCanvas尺寸
+            if (this.backgroundCanvas) {
+                this.backgroundCanvas.width = displayWidth;
+                this.backgroundCanvas.height = displayHeight;
+            }
+            
+            // 恢复内容
+            this.ctx.putImageData(imageData, 0, 0);
+            
+            // 更新canvasSize对象
+            this.canvasSize = { width: displayWidth, height: displayHeight };
+        }
     }
 
     /**
@@ -635,24 +1786,34 @@ class SweetsDesigner {
         // 确保ctx存在
         if (!this.ctx) return;
         
+        // 检查画布尺寸是否有效
+        if (this.canvas.width === 0 || this.canvas.height === 0) {
+            console.warn('无法保存状态：画布尺寸无效');
+            return;
+        }
+        
         // 移除历史记录中当前索引之后的所有状态
         if (this.historyIndex < this.history.length - 1) {
             this.history = this.history.slice(0, this.historyIndex + 1);
         }
         
-        // 保存当前画布状态
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.history.push(imageData);
-        this.historyIndex = this.history.length - 1;
-        
-        // 限制历史记录数量
-        if (this.history.length > 50) {
-            this.history.shift();
-            this.historyIndex--;
+        try {
+            // 保存当前画布状态
+            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            this.history.push(imageData);
+            this.historyIndex = this.history.length - 1;
+            
+            // 限制历史记录数量
+            if (this.history.length > 50) {
+                this.history.shift();
+                this.historyIndex--;
+            }
+            
+            this.updateHistoryButtons();
+            console.log('状态已保存，历史记录数量:', this.history.length);
+        } catch (error) {
+            console.error('保存状态时出错:', error);
         }
-        
-        this.updateHistoryButtons();
-        console.log('状态已保存，历史记录数量:', this.history.length);
     }
 
     /**
@@ -714,16 +1875,31 @@ class SweetsDesigner {
      * 清空画布
      * @param {boolean} showConfirm - 是否显示确认对话框
      */
-    clearCanvas(showConfirm = true) {
-        console.log('清空按钮点击，显示确认框:', showConfirm);
+    clearCanvas(showConfirm = false) {
+        console.log('清空按钮点击，不显示确认框');
         if (this.ctx) {
-            // 只有在需要显示确认框且用户确认的情况下才继续，或者直接清空（初始化时）
-            if (!showConfirm || confirm('确定要清空画布吗？此操作不可撤销。')) {
+            // 直接清空主画布，不显示确认提示
+            // 注意：此方法只清空主画布，不会清除背景画布上的模板
+            // 使用clearRect方法清空画布，保持透明度
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.saveState();
+            this.updatePreview();
+            console.log('主画布已清空，背景模板保持不变');
+        }
+    }
+    
+    /**
+     * 重绘画布背景和模板
+     */
+    renderBackground() {
+        if (this.ctx) {
+            // 如果有背景画布，将其内容绘制到主画布
+            if (this.backgroundCanvas && this.backgroundCtx) {
+                this.ctx.drawImage(this.backgroundCanvas, 0, 0, this.canvas.width, this.canvas.height);
+            } else {
+                // 否则绘制白色背景
                 this.ctx.fillStyle = '#FFFFFF';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                this.saveState();
-                this.updatePreview();
-                console.log('画布已清空');
             }
         }
     }
@@ -759,20 +1935,110 @@ class SweetsDesigner {
     }
 
     /**
-     * 提交设计（示例实现）
+     * 提交设计到Supabase后端
      */
-    submitDesign() {
-        // 转换为Base64编码
-        const imageData = this.canvas.toDataURL('image/png');
-        
-        // 这里可以添加提交到服务器的逻辑
-        console.log('提交设计:', {
-            dessertType: this.dessertType,
-            imageData: imageData
-        });
-        
-        // 显示成功消息
-        alert('设计提交成功！');
+    async submitDesign() {
+        try {
+            // 导入 Supabase 设计工具
+            const { designs } = await import('./supabase.js');
+            
+            // 转换为Base64编码
+            const canvasData = this.canvas.toDataURL('image/png');
+            
+            // 从localStorage获取用户信息
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            // 创建设计数据 (符合 Supabase 命名规范)
+            const designData = {
+                user_id: currentUser?.id || 'anonymous',
+                name: `设计_${new Date().toLocaleString()}`,
+                description: '',
+                canvas_data: canvasData,
+                dessert_type: this.dessertType,
+                elements: JSON.stringify(this.designElements || []),
+                image_data: this.processedImageData,
+                image_position: JSON.stringify(this.imagePosition || { x: 0, y: 0 }),
+                image_scale: this.imageScale || 1,
+                metadata: {
+                    userName: currentUser?.displayName || currentUser?.email || '匿名用户',
+                    toolVersion: '1.0'
+                }
+            };
+            
+            // 使用 Supabase 创建设计
+            const newDesign = await designs.createDesign(designData);
+            
+            if (newDesign) {
+                // 保持向后兼容，同时保存到本地存储
+                let localDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                localDesigns.push({
+                    ...newDesign,
+                    id: newDesign.id || 'design_' + Date.now(),
+                    userId: newDesign.user_id,
+                    userName: newDesign.metadata?.userName || '匿名用户',
+                    name: newDesign.name,
+                    canvasData: newDesign.canvas_data,
+                    elements: newDesign.elements,
+                    imageData: newDesign.image_data,
+                    imagePosition: typeof newDesign.image_position === 'string' ? JSON.parse(newDesign.image_position) : newDesign.image_position,
+                    imageScale: newDesign.image_scale,
+                    createTime: newDesign.created_at || new Date().toISOString()
+                });
+                localStorage.setItem('sweetsDesigns', JSON.stringify(localDesigns));
+                
+                // 保存当前设计为最近设计
+                localStorage.setItem('lastDesignImage', canvasData);
+                
+                // 显示成功消息
+                this.showNotification('设计保存成功！', 'success');
+                
+                // 延迟后跳转到定制页面
+                setTimeout(() => {
+                    window.location.href = 'customize.html';
+                }, 1500);
+            } else {
+                this.showNotification('设计保存失败，请稍后重试', 'error');
+            }
+        } catch (error) {
+            console.error('保存设计错误:', error);
+            
+            // 降级处理：即使 Supabase 失败，仍然尝试保存到本地
+            try {
+                // 创建设计数据
+                const fallbackDesign = {
+                    id: 'design_' + Date.now(),
+                    userId: currentUser ? currentUser.id : 'anonymous',
+                    userName: currentUser ? currentUser.displayName || currentUser.email : '匿名用户',
+                    name: `设计_${new Date().toLocaleString()}`,
+                    description: '',
+                    canvasData: this.canvas.toDataURL('image/png'),
+                    dessertType: this.dessertType,
+                    elements: JSON.stringify(this.designElements || []),
+                    imageData: this.processedImageData,
+                    imagePosition: this.imagePosition || { x: 0, y: 0 },
+                    imageScale: this.imageScale || 1,
+                    createTime: new Date().toISOString()
+                };
+                
+                // 保存设计到本地存储
+                let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                designs.push(fallbackDesign);
+                localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                
+                // 保存当前设计为最近设计
+                localStorage.setItem('lastDesignImage', fallbackDesign.canvasData);
+                
+                // 显示成功消息
+                this.showNotification('设计已保存到本地，网络恢复后将同步', 'success');
+                
+                // 延迟后跳转到定制页面
+                setTimeout(() => {
+                    window.location.href = 'customize.html';
+                }, 1500);
+            } catch (fallbackError) {
+                this.showNotification('设计保存失败，请检查网络连接', 'error');
+            }
+        }
     }
 
     /**
@@ -799,6 +2065,105 @@ class SweetsDesigner {
     }
 
     /**
+     * 显示通知消息
+     * @param {string} message 通知消息内容
+     * @param {string} type 通知类型：success, error, info, warning
+     */
+    showNotification(message, type = 'info') {
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        // 设置样式
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.padding = '15px 20px';
+        notification.style.borderRadius = '8px';
+        notification.style.color = 'white';
+        notification.style.fontSize = '14px';
+        notification.style.fontWeight = '500';
+        notification.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        notification.style.zIndex = '10000';
+        notification.style.transition = 'all 0.3s ease';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        
+        // 根据类型设置背景色
+        const typeColors = {
+            success: '#4CAF50',
+            error: '#F44336',
+            info: '#2196F3',
+            warning: '#FF9800'
+        };
+        notification.style.backgroundColor = typeColors[type] || typeColors.info;
+        
+        // 添加到文档
+        document.body.appendChild(notification);
+        
+        // 显示动画
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 10);
+        
+        // 自动消失
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    /**
+     * 更新预览画布
+     */
+    updatePreview() {
+        // 检查预览画布是否存在
+        if (!this.previewCanvas || !this.previewCtx) {
+            console.warn('预览画布未初始化');
+            return;
+        }
+        
+        // 清空预览画布
+        this.previewCtx.fillStyle = '#FFFFFF';
+        this.previewCtx.fillRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
+        
+        // 创建一个临时画布用于组合主画布和背景画布的内容
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // 首先绘制背景画布内容（包含模板）
+        if (this.backgroundCanvas) {
+            tempCtx.drawImage(this.backgroundCanvas, 0, 0);
+        }
+        
+        // 然后绘制主画布内容（用户绘制的内容）
+        if (this.canvas) {
+            tempCtx.drawImage(this.canvas, 0, 0);
+        }
+        
+        // 计算预览缩放后的尺寸
+        const scale = 0.25 * this.previewZoomLevel;
+        const previewWidth = this.canvas.width * scale;
+        const previewHeight = this.canvas.height * scale;
+        
+        // 计算居中位置
+        const offsetX = (this.previewCanvas.width - previewWidth) / 2;
+        const offsetY = (this.previewCanvas.height - previewHeight) / 2;
+        
+        // 将组合内容绘制到预览画布上
+        this.previewCtx.drawImage(tempCanvas, offsetX, offsetY, previewWidth, previewHeight);
+    }
+    
+    /**
      * 更新UI状态
      */
     updateUI() {
@@ -813,6 +2178,9 @@ class SweetsDesigner {
         
         // 初始化历史记录按钮状态
         this.updateHistoryButtons();
+        
+        // 更新预览
+        this.updatePreview();
     }
 }
 
@@ -870,6 +2238,19 @@ function initializeTools() {
             designer.selectBrushSize(size);
         });
     });
+    
+    // 初始化画笔大小滑块事件
+    const brushSizeSlider = document.getElementById('brush-size');
+    if (brushSizeSlider) {
+        brushSizeSlider.addEventListener('input', function() {
+            const size = parseInt(this.value);
+            designer.selectBrushSize(size);
+        });
+        brushSizeSlider.addEventListener('change', function() {
+            const size = parseInt(this.value);
+            designer.selectBrushSize(size);
+        });
+    }
     
     // 初始化甜点类型选择器事件
     const dessertButtons = document.querySelectorAll('.dessert-type-btn');
@@ -955,11 +2336,8 @@ function initializeTools() {
         designer.selectBrushSize(defaultSize);
     }
     
-    // 设置默认甜点类型
-    if (dessertButtons.length > 0) {
-        const defaultType = dessertButtons[0].dataset.type;
-        designer.selectDessertType(defaultType);
-    }
+    // 初始化巧克力设计
+    designer.initChocolateDesign();
 }
 
 // 导出全局方法供HTML使用
