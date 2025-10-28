@@ -134,7 +134,181 @@
             </div>
         </div>
 
-        <script src="/js/supabase.js"></script>
-        <script src="/js/login.js"></script>
+        <script>
+            // 直接内联的登录功能脚本
+            console.log('内联登录脚本已加载');
+            
+            // 为所有按钮添加点击事件处理
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM加载完成，开始绑定事件');
+                
+                // 登录/注册模式切换
+                const loginModeBtn = document.getElementById('login-mode');
+                const registerModeBtn = document.getElementById('register-mode');
+                const loginForm = document.getElementById('login-form-container');
+                const registerForm = document.getElementById('register-form-container');
+                
+                if (loginModeBtn) {
+                    loginModeBtn.onclick = function() {
+                        console.log('点击登录模式');
+                        if (loginForm) loginForm.style.display = 'block';
+                        if (registerForm) registerForm.style.display = 'none';
+                        this.classList.add('active');
+                        if (registerModeBtn) registerModeBtn.classList.remove('active');
+
+                    };
+                }
+                
+                if (registerModeBtn) {
+                    registerModeBtn.onclick = function() {
+                        console.log('点击注册模式');
+                        if (loginForm) loginForm.style.display = 'none';
+                        if (registerForm) registerForm.style.display = 'block';
+                        this.classList.add('active');
+                        if (loginModeBtn) loginModeBtn.classList.remove('active');
+
+                    };
+                }
+                
+                // 登录方式切换
+                const phoneTabBtn = document.querySelector('.tab-btn[data-tab="phone"]');
+                const emailTabBtn = document.querySelector('.tab-btn[data-tab="email"]');
+                const wechatTabBtn = document.querySelector('.tab-btn[data-tab="wechat"]');
+                const phoneTab = document.getElementById('phone-tab');
+                const emailTab = document.getElementById('email-tab');
+                const wechatTab = document.getElementById('wechat-tab');
+                
+                function setActiveTab(activeBtn, tabs, buttons) {
+                    // 隐藏所有标签页
+                    tabs.forEach(tab => {
+                        if (tab) tab.style.display = 'none';
+                    });
+                    
+                    // 移除所有按钮激活状态
+                    buttons.forEach(btn => {
+                        if (btn) btn.classList.remove('active');
+                    });
+                    
+                    // 显示选中的标签页并激活按钮
+                    const tabId = activeBtn.getAttribute('data-tab') + '-tab';
+                    const activeTab = document.getElementById(tabId);
+                    if (activeTab) activeTab.style.display = 'block';
+                    activeBtn.classList.add('active');
+                    
+                    
+                }
+                
+                if (phoneTabBtn) {
+                    phoneTabBtn.onclick = function() {
+                        console.log('点击手机登录');
+                        setActiveTab(this, [phoneTab, emailTab, wechatTab], [phoneTabBtn, emailTabBtn, wechatTabBtn]);
+                    };
+                }
+                
+                if (emailTabBtn) {
+                    emailTabBtn.onclick = function() {
+                        console.log('点击邮箱登录');
+                        setActiveTab(this, [phoneTab, emailTab, wechatTab], [phoneTabBtn, emailTabBtn, wechatTabBtn]);
+                    };
+                }
+                
+                if (wechatTabBtn) {
+                    wechatTabBtn.onclick = function() {
+                        console.log('点击微信登录');
+                        setActiveTab(this, [phoneTab, emailTab, wechatTab], [phoneTabBtn, emailTabBtn, wechatTabBtn]);
+                    };
+                }
+                
+                // 注册方式切换
+                const registerPhoneTabBtn = document.querySelector('.tab-btn[data-tab="register-phone"]');
+                const registerEmailTabBtn = document.querySelector('.tab-btn[data-tab="register-email"]');
+                const registerPhoneTab = document.getElementById('register-phone-tab');
+                const registerEmailTab = document.getElementById('register-email-tab');
+                
+                if (registerPhoneTabBtn) {
+                    registerPhoneTabBtn.onclick = function() {
+                        console.log('点击手机注册');
+                        if (registerPhoneTab) registerPhoneTab.style.display = 'block';
+                        if (registerEmailTab) registerEmailTab.style.display = 'none';
+                        this.classList.add('active');
+                        if (registerEmailTabBtn) registerEmailTabBtn.classList.remove('active');
+
+                    };
+                }
+                
+                if (registerEmailTabBtn) {
+                    registerEmailTabBtn.onclick = function() {
+                        console.log('点击邮箱注册');
+                        if (registerPhoneTab) registerPhoneTab.style.display = 'none';
+                        if (registerEmailTab) registerEmailTab.style.display = 'block';
+                        this.classList.add('active');
+                        if (registerPhoneTabBtn) registerPhoneTabBtn.classList.remove('active');
+
+                    };
+                }
+                
+                // 验证码按钮
+                const getSmsBtn = document.getElementById('get-sms');
+                const registerGetSmsBtn = document.getElementById('register-get-sms');
+                
+                if (getSmsBtn) {
+                    getSmsBtn.onclick = function() {
+                        console.log('获取登录验证码');
+
+                    };
+                }
+                
+                if (registerGetSmsBtn) {
+                    registerGetSmsBtn.onclick = function() {
+                        console.log('获取注册验证码');
+
+                    };
+                }
+                
+                // 登录/注册按钮
+                const phoneLoginBtn = document.getElementById('phone-login-btn');
+                const emailLoginBtn = document.getElementById('email-login-btn');
+                const wechatLoginBtn = document.getElementById('wechat-login-btn');
+                const phoneRegisterBtn = document.getElementById('phone-register-btn');
+                const emailRegisterBtn = document.getElementById('email-register-btn');
+                
+                if (phoneLoginBtn) {
+                    phoneLoginBtn.onclick = function() {
+                        console.log('执行手机登录');
+
+                    };
+                }
+                
+                if (emailLoginBtn) {
+                    emailLoginBtn.onclick = function() {
+                        console.log('执行邮箱登录');
+
+                    };
+                }
+                
+                if (wechatLoginBtn) {
+                    wechatLoginBtn.onclick = function() {
+                        console.log('执行微信登录');
+
+                    };
+                }
+                
+                if (phoneRegisterBtn) {
+                    phoneRegisterBtn.onclick = function() {
+                        console.log('执行手机注册');
+
+                    };
+                }
+                
+                if (emailRegisterBtn) {
+                    emailRegisterBtn.onclick = function() {
+                        console.log('执行邮箱注册');
+
+                    };
+                }
+                
+                console.log('事件绑定完成');
+            });
+        </script>
     </body>
 </html>
