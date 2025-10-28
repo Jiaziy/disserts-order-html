@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巧克力定制平台 - 登录</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div id="login-page" class="page active">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>巧克力定制平台</h1>
+                <p>个性化定制您的专属巧克力</p>
+            </div>
+            
+            <div class="login-form">
+                <div class="form-tabs">
+                    <button class="tab-btn active" data-tab="phone">手机登录</button>
+                    <button class="tab-btn" data-tab="email">邮箱登录</button>
+                    <button class="tab-btn" data-tab="wechat">微信登录</button>
+                </div>
+                
+                <!-- 手机登录 -->
+                <div id="phone-tab" class="tab-content active">
+                    <div class="input-group">
+                        <i class="fas fa-phone"></i>
+                        <input type="tel" id="phone" placeholder="请输入手机号" maxlength="11">
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-sms"></i>
+                        <input type="text" id="sms-code" placeholder="请输入验证码" maxlength="6">
+                        <button class="sms-btn" id="get-sms">获取验证码</button>
+                    </div>
+                    <button class="login-btn" id="phone-login-btn">登录</button>
+                </div>
+                
+                <!-- 邮箱登录 -->
+                <div id="email-tab" class="tab-content">
+                    <div class="input-group">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder="请输入邮箱地址">
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="email-password" placeholder="请输入密码">
+                    </div>
+                    <button class="login-btn" id="email-login-btn">登录</button>
+                </div>
+                
+                <!-- 微信登录 -->
+                <div id="wechat-tab" class="tab-content">
+                    <div class="wechat-login">
+                        <div class="qrcode-container">
+                            <div class="qrcode-placeholder">
+                                <i class="fab fa-weixin"></i>
+                                <p>微信扫码登录</p>
+                            </div>
+                        </div>
+                        <p class="wechat-tip">请使用微信扫描二维码登录</p>
+                        <button class="login-btn" id="wechat-login-btn">模拟微信登录</button>
+                    </div>
+                </div>
+                
+                <div class="login-footer">
+                    <p>登录即表示同意<a href="#">用户协议</a>和<a href="#">隐私政策</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设计界面 - 糖果定制平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/design.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 设计页面 -->
+    <div id="design-page" class="page active">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-content">
+                <button class="back-btn" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 id="page-title">设计界面</h1>
+                <div class="header-actions">
+                    <button class="save-btn" onclick="saveDesign()">保存</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 设计工具 -->
+        <div class="design-tools">
+            <div class="tool-group">
+                <button class="tool-btn active" data-tool="brush" onclick="selectTool('brush')">
+                    <i class="fas fa-paint-brush"></i>
+                    <span>画笔</span>
+                </button>
+                <button class="tool-btn" data-tool="eraser" onclick="selectTool('eraser')">
+                    <i class="fas fa-eraser"></i>
+                    <span>橡皮</span>
+                </button>
+                <button class="tool-btn" data-tool="text" onclick="selectTool('text')">
+                    <i class="fas fa-font"></i>
+                    <span>文字</span>
+                </button>
+            </div>
+            
+            <div class="tool-group">
+                <div class="color-picker">
+                    <label>颜色：</label>
+                    <input type="color" id="brush-color" value="#8B4513" onchange="changeColor(this.value)">
+                </div>
+                <div class="size-picker">
+                    <label>大小：</label>
+                    <input type="range" id="brush-size" min="1" max="20" value="5" onchange="changeSize(this.value)">
+                    <span id="size-value">5px</span>
+                </div>
+            </div>
+            
+            <div class="tool-group">
+                <button class="action-btn" onclick="clearCanvas()">
+                    <i class="fas fa-trash"></i>
+                    <span>清空</span>
+                </button>
+                <button class="action-btn" onclick="undoAction()">
+                    <i class="fas fa-undo"></i>
+                    <span>撤销</span>
+                </button>
+                <button class="action-btn" onclick="redoAction()">
+                    <i class="fas fa-redo"></i>
+                    <span>重做</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 设计区域 -->
+        <main class="design-area">
+            <div class="canvas-container">
+                <canvas id="design-canvas" width="800" height="600">
+                    您的浏览器不支持Canvas
+                </canvas>
+                <div class="canvas-overlay" id="canvas-overlay">
+                    <div class="upload-area" id="upload-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>拖拽图片到这里或点击上传</p>
+                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                        <button class="upload-btn" onclick="document.getElementById('image-upload').click()">选择图片</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 文字输入框 -->
+            <div class="text-input-container" id="text-input-container" style="display: none;">
+                <input type="text" id="text-input" placeholder="请输入文字" maxlength="50">
+                <button class="add-text-btn" onclick="addTextToCanvas()">添加文字</button>
+                <button class="cancel-text-btn" onclick="cancelTextInput()">取消</button>
+            </div>
+        </main>
+
+        <!-- 底部操作栏 -->
+        <div class="design-footer">
+            <button class="btn secondary-btn" onclick="goBack()">取消</button>
+            <button class="btn primary-btn" onclick="saveDesign()">完成设计</button>
+        </div>
+    </div>
+
+    <script src="js/design.js"></script>
+</body>
+</html>

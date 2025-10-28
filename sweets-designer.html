@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甜点设计师 - 定制您的专属甜点</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="css/sweets-designer.css">
+</head>
+<body>
+    <div class="designer-container">
+        <!-- 顶部导航栏 -->
+        <header class="designer-header">
+            <div class="header-left">
+                <h1><i class="fas fa-cookie"></i> 甜点设计师</h1>
+                <p>创造您的专属美味艺术</p>
+            </div>
+            <div class="header-right">
+                <div class="design-info">
+                    <span id="design-name">未命名设计</span>
+                    <button class="btn-secondary" id="rename-design"><i class="fas fa-edit"></i> 重命名</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要设计区域 -->
+        <main class="designer-main">
+            <!-- 左侧工具栏 -->
+            <aside class="tool-panel">
+                <div class="panel-section">
+                    <h3><i class="fas fa-tools"></i> 工具</h3>
+                    <div class="tool-buttons">
+                        <button class="tool-btn active" data-tool="brush"><i class="fas fa-paint-brush"></i> 画笔</button>
+                        <button class="tool-btn" data-tool="eraser"><i class="fas fa-eraser"></i> 橡皮擦</button>
+                        <button class="tool-btn" data-tool="shape"><i class="fas fa-shapes"></i> 形状</button>
+                        <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> 文字</button>
+                        <button class="tool-btn" data-tool="image"><i class="fas fa-image"></i> 图片</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-shapes"></i> 形状选择</h3>
+                    <div class="shape-options">
+                        <button class="shape-btn" data-shape="heart"><i class="fas fa-heart"></i> 心形</button>
+                        <button class="shape-btn" data-shape="star"><i class="fas fa-star"></i> 星形</button>
+                        <button class="shape-btn" data-shape="circle"><i class="fas fa-circle"></i> 圆形</button>
+                        <button class="shape-btn" data-shape="square"><i class="fas fa-square"></i> 方形</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-palette"></i> 颜色选择</h3>
+                    <div class="color-picker">
+                        <div class="color-options">
+                            <div class="color-swatch active" data-color="#FF6B6B"></div>
+                            <div class="color-swatch" data-color="#4ECDC4"></div>
+                            <div class="color-swatch" data-color="#45B7D1"></div>
+                            <div class="color-swatch" data-color="#96CEB4"></div>
+                            <div class="color-swatch" data-color="#FECA57"></div>
+                            <div class="color-swatch" data-color="#FF9FF3"></div>
+                            <div class="color-swatch" data-color="#A29BFE"></div>
+                            <div class="color-swatch" data-color="#FF7675"></div>
+                            <div class="color-swatch" data-color="#FD79A8"></div>
+                            <div class="color-swatch" data-color="#FDDA79"></div>
+                            <div class="color-swatch" data-color="#FDCB6E"></div>
+                            <div class="color-swatch" data-color="#6C5CE7"></div>
+                        </div>
+                        <input type="color" id="custom-color" value="#FF6B6B">
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-sliders-h"></i> 画笔大小</h3>
+                    <div class="brush-size-control">
+                        <input type="range" id="brush-size" min="1" max="50" value="5">
+                        <span id="size-value">5px</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-ice-cream"></i> 甜点类型</h3>
+                    <div class="dessert-types">
+                        <button class="dessert-type-btn active" data-type="cake"><i class="fas fa-birthday-cake"></i> 蛋糕</button>
+                        <button class="dessert-type-btn" data-type="cookie"><i class="fas fa-cookie"></i> 饼干</button>
+                        <button class="dessert-type-btn" data-type="cupcake"><i class="fas fa-birthday-cake"></i> 纸杯蛋糕</button>
+                        <button class="dessert-type-btn" data-type="chocolate"><i class="fas fa-chocolate-bar"></i> 巧克力</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 中央画布区域 -->
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="design-canvas" width="1024" height="768"></canvas>
+                    <div class="canvas-overlay">
+                        <div class="canvas-instructions">
+                            <p>使用左侧工具开始设计您的甜点</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-controls">
+                    <button id="reset-view-btn" class="canvas-control-btn"><i class="fas fa-sync"></i> 重置视图</button>
+                </div>
+                <div class="canvas-info">
+                    <span id="canvas-dimensions">画布尺寸: 1024×768</span>
+                    <span id="zoom-level">缩放: 100%</span>
+                </div>
+            </div>
+
+            <!-- 右侧预览和属性面板 -->
+            <aside class="preview-panel">
+                <div class="panel-section">
+                    <h3><i class="fas fa-eye"></i> 预览</h3>
+                    <div class="preview-container">
+                        <canvas id="preview-canvas" width="300" height="300"></canvas>
+                    </div>
+                    <div class="preview-controls">
+                        <button id="switch-3d-preview" class="btn-secondary"><i class="fas fa-cube"></i> 3D 预览</button>
+                        <button id="rotate-model" class="btn-secondary"><i class="fas fa-sync"></i> 旋转模型</button>
+                    </div>
+                </div>
+
+
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-file-upload"></i> 上传图片</h3>
+                    <div class="image-upload">
+                        <label for="image-upload-input" class="upload-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>拖放图片或点击上传</span>
+                            <input type="file" id="image-upload-input" accept="image/*" style="display: none;">
+                        </label>
+                        <p class="upload-note">支持 JPG, PNG, GIF 格式</p>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-align-left"></i> 文字输入</h3>
+                    <div class="text-input-container">
+                        <input type="text" id="text-input" placeholder="输入文字...">
+                        <select id="font-family">
+                            <option value="Arial">Arial</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Comic Sans MS">Comic Sans MS</option>
+                        </select>
+                        <select id="font-size">
+                            <option value="12">12px</option>
+                            <option value="16">16px</option>
+                            <option value="20">20px</option>
+                            <option value="24">24px</option>
+                            <option value="30">30px</option>
+                            <option value="36">36px</option>
+                        </select>
+                        <button id="add-text-btn" class="btn-primary"><i class="fas fa-plus"></i> 添加文字</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3><i class="fas fa-save"></i> 保存与导出</h3>
+                    <div class="action-buttons">
+                        <button id="save-design-btn" class="btn-primary"><i class="fas fa-save"></i> 保存设计</button>
+                        <button id="export-image-btn" class="btn-secondary"><i class="fas fa-download"></i> 导出图片</button>
+                        <button id="create-order-btn" class="btn-primary">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>提交订单</span>
+                        </button>
+                        <p class="action-note">保存后可进入订单页面进行后续操作</p>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- 底部状态栏 -->
+        <footer class="designer-footer">
+            <div class="status-info">
+                <span id="current-tool">当前工具: 画笔</span>
+                <span id="canvas-size">画布: 1024×768</span>
+            </div>
+            <div class="action-history">
+                <button id="undo-action-btn"><i class="fas fa-undo"></i>撤销</button>
+                <button id="redo-action-btn"><i class="fas fa-redo"></i>重做</button>
+                <button id="clear-canvas-action-btn"><i class="fas fa-trash"></i>清空</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/sweets-designer.js"></script>
+</body>
+</html>

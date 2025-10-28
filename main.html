@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巧克力定制平台 - 主页</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="top-navbar">
+        <div class="nav-brand">
+            <i class="fas fa-candy-cane"></i>
+            <h1>巧克力定制平台</h1>
+        </div>
+        
+        <div class="nav-menu">
+            <div class="nav-item active" data-page="home">首页</div>
+            <div class="nav-item" data-page="customize">定制中心</div>
+            <div class="nav-item" data-page="designs">我的设计</div>
+            <div class="nav-item" data-page="sweets-designer">甜点设计</div>
+            <div class="nav-item" data-page="profile">个人中心</div>
+        </div>
+        
+        <div class="user-info">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <span id="user-name">用户</span>
+            <button class="logout-btn" onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="sidebar-item active" data-page="home">
+                <i class="fas fa-home"></i>
+                <span>首页</span>
+            </li>
+            <li class="sidebar-item" data-page="customize">
+                <i class="fas fa-palette"></i>
+                <span>定制中心</span>
+            </li>
+            <li class="sidebar-item" data-page="designs">
+                <i class="fas fa-drafting-compass"></i>
+                <span>我的设计</span>
+            </li>
+            <li class="sidebar-item" data-page="sweets-designer">
+                <i class="fas fa-palette"></i>
+                <span>甜点设计器</span>
+            </li>
+            <li class="sidebar-item" data-page="sweets-gallery">
+                <i class="fas fa-images"></i>
+                <span>作品库</span>
+            </li>
+            <li class="sidebar-item" data-page="sweets-tutorial">
+                <i class="fas fa-graduation-cap"></i>
+                <span>使用教程</span>
+            </li>
+            <li class="sidebar-item" data-page="profile">
+                <i class="fas fa-user"></i>
+                <span>个人中心</span>
+            </li>
+            <li class="sidebar-item" data-page="orders">
+                <i class="fas fa-shopping-bag"></i>
+                <span>我的订单</span>
+            </li>
+            <li class="sidebar-item" data-page="settings">
+                <i class="fas fa-cog"></i>
+                <span>设置</span>
+            </li>
+            <li class="sidebar-item" data-page="tutorial">
+                <i class="fas fa-graduation-cap"></i>
+                <span>使用教程</span>
+            </li>
+            <li class="sidebar-item" data-page="help">
+                <i class="fas fa-question-circle"></i>
+                <span>帮助中心</span>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- 主内容区域 -->
+    <main class="main-content">
+        <!-- 首页 -->
+        <div id="home-page" class="page-content active">
+            <div class="banner">
+                <h2>个性化巧克力定制</h2>
+                <p>打造属于您的专属甜蜜体验，从口味到包装，完全由您定制</p>
+                <button class="start-btn" onclick="navigateToCustomize('chocolate')">开始定制</button>
+            </div>
+            
+            <div class="product-list">
+                <h3>产品分类</h3>
+                <div class="products">
+                    <div class="product-item" onclick="navigateToCustomize('chocolate')">
+                        <i class="fas fa-cookie-bite"></i>
+                        <span>巧克力定制</span>
+                    </div>
+                    <div class="product-item" onclick="navigateToCustomize('cake')">
+                        <i class="fas fa-birthday-cake"></i>
+                        <span>蛋糕定制</span>
+                    </div>
+                    <div class="product-item" onclick="navigateToCustomize('gift')">
+                        <i class="fas fa-gift"></i>
+                        <span>礼品套装</span>
+                    </div>
+                    <div class="product-item" onclick="navigateToCustomize('special')">
+                        <i class="fas fa-star"></i>
+                        <span>特色定制</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-list">
+                <h3>热门推荐</h3>
+                <div class="products">
+                    <div class="product-item">
+                        <i class="fas fa-heart"></i>
+                        <span>情人节定制</span>
+                    </div>
+                    <div class="product-item">
+                        <i class="fas fa-birthday-cake"></i>
+                        <span>生日定制</span>
+                    </div>
+                    <div class="product-item">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>毕业纪念</span>
+                    </div>
+                    <div class="product-item">
+                        <i class="fas fa-baby"></i>
+                        <span>宝宝定制</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 定制页面 -->
+        <div id="customize-page" class="page-content">
+            <div class="customize-container">
+                <h2>个性化定制中心</h2>
+                <p>选择您想要定制的产品类型，开始您的创意之旅</p>
+                <div class="products" style="margin-top: 30px;">
+                    <div class="product-item" onclick="navigateToCustomize('chocolate')">
+                        <i class="fas fa-cookie-bite"></i>
+                        <span>巧克力定制</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我的设计页面 -->
+        <div id="designs-page" class="page-content">
+            <div class="designs-container">
+                <h2>我的设计作品</h2>
+                <p>查看和管理您的所有定制设计</p>
+                <div id="designs-list" class="designs-list">
+                    <!-- 设计列表将动态生成 -->
+                    <div class="design-item">
+                        <div style="background: #f0f0f0; height: 150px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #999;">
+                            <i class="fas fa-image" style="font-size: 48px;"></i>
+                        </div>
+                        <div class="design-title">示例设计</div>
+                        <div style="font-size: 12px; color: #999;">2024-01-01</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人中心页面 -->
+        <div id="profile-page" class="page-content">
+            <div class="profile-container">
+                <h2>个人中心</h2>
+                <div class="profile-info">
+                    <div class="info-item">
+                        <span>用户名：</span>
+                        <span id="profile-name">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>手机号：</span>
+                        <span id="profile-phone">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>邮箱：</span>
+                        <span id="profile-email">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>会员等级：</span>
+                        <span>普通会员</span>
+                    </div>
+                    <div class="info-item">
+                        <span>注册时间：</span>
+                        <span>2024-01-01</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 甜点设计器页面 -->
+        <div id="sweets-designer-page" class="page-content">
+            <div class="sweets-designer-container">
+                <h2>甜点DIY设计平台</h2>
+                <p>创意设计，AI预览，打造属于您的专属甜点</p>
+                <div class="design-platform">
+                    <div class="platform-features">
+                        <div class="feature-card">
+                            <i class="fas fa-palette"></i>
+                            <h3>创意设计</h3>
+                            <p>丰富的绘图工具和素材库</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-eye"></i>
+                            <h3>实时预览</h3>
+                            <p>AI驱动的2D/3D预览功能</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-shapes"></i>
+                            <h3>多样形状</h3>
+                            <p>支持多种甜点基础形状</p>
+                        </div>
+                    </div>
+                    <div class="platform-actions">
+                        <button class="primary-btn" onclick="window.location.href='sweets-designer.html'">
+                            <i class="fas fa-play"></i> 开始设计
+                        </button>
+                        <button class="secondary-btn" onclick="navigateToPage('sweets-tutorial')">
+                            <i class="fas fa-graduation-cap"></i> 查看教程
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 作品库页面 -->
+        <div id="sweets-gallery-page" class="page-content">
+            <div class="sweets-gallery-container">
+                <h2>我的甜点作品库</h2>
+                <p>查看和管理您的所有甜点设计作品</p>
+                <div class="gallery-preview">
+                    <div class="preview-card">
+                        <i class="fas fa-images"></i>
+                        <h3>作品管理</h3>
+                        <p>查看、编辑和分享您的设计作品</p>
+                        <button class="primary-btn" onclick="window.location.href='sweets-gallery.html'">
+                            查看作品库
+                        </button>
+                    </div>
+                    <div class="preview-card">
+                        <i class="fas fa-plus"></i>
+                        <h3>新建设计</h3>
+                        <p>开始一个新的甜点设计项目</p>
+                        <button class="secondary-btn" onclick="window.location.href='sweets-designer.html'">
+                            开始设计
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用教程页面 -->
+        <div id="sweets-tutorial-page" class="page-content">
+            <div class="sweets-tutorial-container">
+                <h2>甜点设计使用教程</h2>
+                <p>学习如何使用甜点DIY设计平台</p>
+                <div class="tutorial-preview">
+                    <div class="tutorial-card">
+                        <i class="fas fa-play-circle"></i>
+                        <h3>平台介绍</h3>
+                        <p>了解平台功能和特色</p>
+                    </div>
+                    <div class="tutorial-card">
+                        <i class="fas fa-rocket"></i>
+                        <h3>快速开始</h3>
+                        <p>新手入门指南</p>
+                    </div>
+                    <div class="tutorial-card">
+                        <i class="fas fa-paint-brush"></i>
+                        <h3>工具使用</h3>
+                        <p>各种设计工具说明</p>
+                    </div>
+                    <div class="tutorial-actions">
+                        <button class="primary-btn" onclick="window.location.href='sweets-tutorial.html'">
+                            <i class="fas fa-graduation-cap"></i> 查看完整教程
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app-new.js"></script>
+</body>
+</html>
