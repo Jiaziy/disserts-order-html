@@ -1,10 +1,27 @@
 /**
  * Supabase 配置和工具函数
  * 提供认证和数据操作功能
- * 使用本地存储实现
+ * 优先使用Supabase，降级到本地存储
  */
 
-// 使用本地存储作为默认认证方式
+// 导入Supabase配置
+import SUPABASE_CONFIG from './supabase-config.js';
+
+// 尝试初始化Supabase客户端
+let supabaseClient = null;
+let usingLocalStorage = true;
+
+// 初始化Supabase客户端
+try {
+  // 动态导入Supabase SDK
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  supabaseClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  usingLocalStorage = false;
+  console.log('Supabase客户端初始化成功');
+} catch (error) {
+  console.warn('Supabase初始化失败，将使用本地存储:', error);
+  usingLocalStorage = true;
+}
 const localStorageAuth = {
   // 本地存储登录功能
   signIn(email, password) {
@@ -218,43 +235,137 @@ document.supabase = {
     // 用户登录
     async signIn(email, password) {
       try {
-        // 使用本地存储认证
-        return localStorageAuth.signIn(email, password);
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase登录
+          const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (error) {
+            console.error('Supabase登录失败:', error.message);
+            // 降级到本地存储
+            return localStorageAuth.signIn(email, password);
+          }
+          
+          return { success: true, user: {
+            id: data.user.id,
+            email: data.user.email,
+            displayName: data.user.user_metadata?.name || data.user.email.split('@')[0],
+            loginType: 'email'
+          }};
+        } else {
+          // 使用本地存储认证
+          return localStorageAuth.signIn(email, password);
+        }
       } catch (error) {
         console.error('登录失败:', error);
-        return { success: false, error: '登录失败，请稍后重试' };
+        // 降级到本地存储
+        return localStorageAuth.signIn(email, password);
       }
     },
 
     // 用户注册
     async signUp(email, password, userData = {}) {
       try {
-        // 使用本地存储注册
-        return localStorageAuth.signUp(email, password, userData);
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase注册
+          const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+              data: userData
+            }
+          });
+          
+          if (error) {
+            console.error('Supabase注册失败:', error.message);
+            // 降级到本地存储
+            return localStorageAuth.signUp(email, password, userData);
+          }
+          
+          return { 
+            success: true, 
+            user: {
+              id: data.user.id,
+              email: data.user.email,
+              displayName: data.user.user_metadata?.name || data.user.email.split('@')[0],
+              loginType: 'email'
+            },
+            message: '注册成功，请查收邮箱验证邮件'
+          };
+        } else {
+          // 使用本地存储注册
+          return localStorageAuth.signUp(email, password, userData);
+        }
       } catch (error) {
         console.error('注册失败:', error);
-        return { success: false, error: '注册失败，请稍后重试' };
+        // 降级到本地存储
+        return localStorageAuth.signUp(email, password, userData);
       }
     },
     
     // 退出登录
-    signOut() {
-      return localStorageAuth.signOut();
+    async signOut() {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          const { error } = await supabaseClient.auth.signOut();
+          if (error) {
+            console.error('Supabase退出登录失败:', error);
+          }
+        }
+        // 同时清理本地存储
+        return localStorageAuth.signOut();
+      } catch (error) {
+        console.error('退出登录失败:', error);
+        return { success: false, error: '退出登录失败' };
+      }
     },
     
     // 获取当前用户
-    getCurrentUser() {
-      return localStorageAuth.getCurrentUser();
+    async getCurrentUser() {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          if (user) {
+            return {
+              id: user.id,
+              email: user.email,
+              displayName: user.user_metadata?.name || user.email.split('@')[0],
+              loginType: 'email'
+            };
+          }
+        }
+        // 降级到本地存储
+        return localStorageAuth.getCurrentUser();
+      } catch (error) {
+        console.error('获取用户失败:', error);
+        return localStorageAuth.getCurrentUser();
+      }
     },
     
-    // 手机登录
-    signInWithPhone(phone, code) {
-      return localStorageAuth.signInWithPhone(phone, code);
+    // 手机登录（支持Supabase和本地存储）
+    async signInWithPhone(phone, code) {
+      try {
+        // 由于Supabase的手机登录需要先发送验证码，这里简化处理，使用本地存储
+        // 在实际项目中，应该先调用supabaseClient.auth.signInWithOtp({ phone })
+        return localStorageAuth.signInWithPhone(phone, code);
+      } catch (error) {
+        console.error('手机登录失败:', error);
+        return { success: false, error: '手机登录失败' };
+      }
     },
     
-    // 微信登录
-    signInWithWechat() {
-      return localStorageAuth.signInWithWechat();
+    // 模拟发送手机验证码
+    async sendPhoneVerification(phone) {
+      try {
+        console.log('发送验证码到手机:', phone);
+        // 模拟发送成功，实际应该调用Supabase的API
+        return { success: true, message: '验证码已发送，请注意查收' };
+      } catch (error) {
+        console.error('发送验证码失败:', error);
+        return { success: false, error: '发送验证码失败，请稍后重试' };
+      }
     }
   },
   
@@ -294,8 +405,19 @@ document.supabase = {
   
   // 初始化函数
   async init() {
-    console.log('Supabase 本地存储初始化成功');
-    return true;
+    try {
+      // 检查是否已有登录用户
+      const user = await this.auth.getCurrentUser();
+      if (user) {
+        console.log('检测到已登录用户:', user.displayName);
+      }
+      
+      console.log(`Supabase初始化成功，使用${usingLocalStorage ? '本地存储' : 'Supabase服务'}`);
+      return true;
+    } catch (error) {
+      console.error('初始化失败:', error);
+      return false;
+    }
   }
 };
 
