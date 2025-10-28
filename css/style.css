@@ -27,26 +27,283 @@ body {
     max-width: 400px;
     margin: 0 auto;
     padding: 40px 20px;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .login-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
+}
+
+/* 登录/注册模式切换样式 */
+.auth-mode-tabs {
+    display: flex;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.mode-btn.active {
+    color: #d97b59;
+    border-bottom-color: #d97b59;
+    font-weight: 600;
+}
+
+.mode-btn:hover:not(.active) {
+    color: #d97b59;
+}
+
+/* 认证容器样式 */
+.auth-container {
+    display: none;
+}
+
+.auth-container.active {
+    display: block;
+}
+
+/* 标签页样式 */
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    color: #d97b59;
+    font-weight: 600;
+    border-bottom: 2px solid #d97b59;
+}
+
+.tab-btn:hover:not(.active) {
+    color: #d97b59;
+}
+
+/* 标签页内容样式 */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 表单组样式 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #d97b59;
+    box-shadow: 0 0 0 3px rgba(217, 123, 89, 0.1);
+}
+
+/* 验证码输入组样式 */
+.code-input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.code-input-group input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.code-btn {
+    padding: 12px 20px;
+    background-color: #d97b59;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.code-btn:hover:not(:disabled) {
+    background-color: #c86a4b;
+}
+
+.code-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 记住我样式 */
+.remember-me {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+.remember-me input[type="checkbox"] {
+    margin-right: 8px;
+    width: auto;
+}
+
+/* 微信登录样式 */
+.wechat-qrcode {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.qrcode-placeholder {
+    display: inline-block;
+    width: 200px;
+    height: 200px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+    border: 2px dashed #ddd;
 }
 
 .login-header h1 {
-    font-size: 32px;
-    color: #8B4513;
-    margin-bottom: 10px;
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 8px;
 }
 
 .login-header p {
+    font-size: 14px;
     color: #666;
+}
+
+/* 表单样式 */
+.login-form {
+    width: 100%;
+}
+
+/* 登录按钮样式 */
+.get-code-btn {
+    padding: 10px 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.get-code-btn:hover {
+    background-color: #218838;
+}
+
+.get-code-btn.disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #d97b59;
+    color: white;
+    border: none;
+    border-radius: 8px;
     font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+    background-color: #c86a4b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(217, 123, 89, 0.3);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(217, 123, 89, 0.3);
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    border-radius: 21px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    color: #666;
+}
+
+.mode-btn.active {
+    background-color: #fff;
+    color: #8B4513;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 认证容器 */
+.auth-container {
+    display: none;
+}
+
+.auth-container.active {
+    display: block;
 }
 
 /* 表单标签页 */
@@ -121,11 +378,17 @@ body {
     border-radius: 15px;
     font-size: 12px;
     cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sms-btn:hover:not(:disabled) {
+    background: #A0522D;
 }
 
 .sms-btn:disabled {
     background: #ccc;
     cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* 登录按钮 */

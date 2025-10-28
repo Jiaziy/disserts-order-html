@@ -342,8 +342,7 @@ function updateDesignPreview() {
     }
 }
 
-// 导入 Supabase 订单工具
-import { orders } from './supabase.js';
+// 注意：使用全局对象 document.supabase
 
 // 提交订单
 async function submitOrder() {
@@ -373,8 +372,8 @@ async function submitOrder() {
             }
         };
         
-        // 使用 Supabase 创建订单
-        const newOrder = await orders.createOrder(orderData);
+        // 使用 document.supabase 创建订单
+        const newOrder = document.supabase.orders.createOrder(orderData);
         
         if (newOrder) {
             // 保持向后兼容，同时保存到本地存储

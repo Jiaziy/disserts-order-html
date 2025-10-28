@@ -1,24 +1,22 @@
-// 导入 Supabase 配置和工具
-import { initSupabase, getSupabase, auth, designs, orders } from './supabase.js';
+// 注意：supabase.js 已更新为使用全局对象 document.supabase
 
 // 全局状态管理
 const appState = {
     currentUser: null,
     designs: [],
     users: {},
-    isSupabaseReady: false
+    // 移除 isSupabaseReady 标志，因为现在使用全局对象
 };
 
 // 页面初始化
 async function initializeApp() {
     console.log('开始初始化应用...');
     
-    // 初始化 Supabase
-    await initSupabase();
-    appState.isSupabaseReady = true;
+    // 初始化应用
+    // 现在 supabase.js 会自动初始化并挂载到 document.supabase
     
     // 检查用户会话
-    const user = await auth.getCurrentUser();
+    const user = document.supabase.auth.getCurrentUser();
     if (user) {
         appState.currentUser = user;
     } else {
@@ -328,10 +326,17 @@ async function loginSuccess(user) {
     appState.currentUser = user;
     
     try {
-        // 使用 Supabase 进行身份验证
-        if (appState.isSupabaseReady && user.email && user.password) {
-            // 这里可以根据登录类型进行相应的 Supabase 认证
-            // 例如：await auth.signIn({ email: user.email, password: user.password });
+        // 使用 document.supabase.auth 进行身份验证
+        console.log('从 supabase 恢复用户状态');
+        // 手动更新 appState.currentUser
+        if (localStorage.currentUser) {
+            try {
+                appState.currentUser = JSON.parse(localStorage.currentUser);
+                console.log('从本地存储恢复用户:', appState.currentUser);
+            } catch (e) {
+                console.error('解析本地存储的用户数据失败:', e);
+                localStorage.removeItem('currentUser');
+            }
         }
         
         // 保持向后兼容，仍然存储到本地存储
@@ -348,9 +353,7 @@ async function loginSuccess(user) {
 // 退出登录
 async function logout() {
     try {
-        if (appState.isSupabaseReady) {
-            await auth.signOut();
-        }
+        await document.supabase.auth.signOut();
         
         appState.currentUser = null;
         localStorage.removeItem('currentUser');
@@ -421,18 +424,17 @@ async function loadDesigns() {
     if (!designsList) return;
     
     try {
-        // 从 Supabase 获取设计列表
-        if (appState.isSupabaseReady && appState.currentUser) {
-            const { data, error } = await designs.select('*')
-                .eq('user_id', appState.currentUser.id)
-                .order('created_at', { ascending: false });
-            
-            if (error) {
+        // 从 document.supabase 获取设计列表
+        if (appState.currentUser) {
+            try {
+                // 使用 document.supabase.designs 获取用户设计
+                const userDesigns = document.supabase.designs.getUserDesigns(appState.currentUser.id);
+                console.log('获取到用户设计:', userDesigns);
+                appState.designs = userDesigns;
+            } catch (error) {
                 console.error('获取设计列表失败:', error);
-                throw error;
+                showToast('获取设计列表失败');
             }
-            
-            appState.designs = data;
         }
         
         if (appState.designs.length === 0) {

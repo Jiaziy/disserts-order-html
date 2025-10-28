@@ -1939,8 +1939,7 @@ class SweetsDesigner {
      */
     async submitDesign() {
         try {
-            // 导入 Supabase 设计工具
-            const { designs } = await import('./supabase.js');
+            // 注意：现在使用全局对象 document.supabase
             
             // 转换为Base64编码
             const canvasData = this.canvas.toDataURL('image/png');
@@ -1965,8 +1964,8 @@ class SweetsDesigner {
                 }
             };
             
-            // 使用 Supabase 创建设计
-            const newDesign = await designs.createDesign(designData);
+            // 使用 document.supabase 创建设计
+const newDesign = document.supabase.designs.createDesign(designData);
             
             if (newDesign) {
                 // 保持向后兼容，同时保存到本地存储
@@ -2002,7 +2001,7 @@ class SweetsDesigner {
         } catch (error) {
             console.error('保存设计错误:', error);
             
-            // 降级处理：即使 Supabase 失败，仍然尝试保存到本地
+            // 降级处理：即使保存失败，仍然尝试保存到本地
             try {
                 // 创建设计数据
                 const fallbackDesign = {

@@ -3,74 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>巧克力定制平台 - 登录</title>
+    <title>巧克力定制平台 - 登录/注册</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- 登录页面 -->
-    <div id="login-page" class="page active">
+        <!-- 登录页面 -->
+        <div id="login-page" class="page active">
+            <!-- 错误消息显示区域 -->
+        <div id="error-message" style="color: #ff6b6b; text-align: center; padding: 10px; margin-bottom: 15px; background-color: #fff5f5; border-radius: 8px; display: none;"></div>
+        
         <div class="login-container">
-            <div class="login-header">
-                <h1>巧克力定制平台</h1>
-                <p>个性化定制您的专属巧克力</p>
-            </div>
-            
-            <div class="login-form">
-                <div class="form-tabs">
-                    <button class="tab-btn active" data-tab="phone">手机登录</button>
-                    <button class="tab-btn" data-tab="email">邮箱登录</button>
-                    <button class="tab-btn" data-tab="wechat">微信登录</button>
+                <div class="login-header">
+                    <h1>巧克力定制平台</h1>
+                    <p>个性化定制您的专属巧克力</p>
                 </div>
                 
-                <!-- 手机登录 -->
-                <div id="phone-tab" class="tab-content active">
-                    <div class="input-group">
-                        <i class="fas fa-phone"></i>
-                        <input type="tel" id="phone" placeholder="请输入手机号" maxlength="11">
+                <div class="login-form">
+                    <!-- 登录/注册切换 -->
+                    <div class="auth-mode-tabs">
+                        <button id="login-mode" class="mode-btn active">登录</button>
+                        <button id="register-mode" class="mode-btn">注册</button>
                     </div>
-                    <div class="input-group">
-                        <i class="fas fa-sms"></i>
-                        <input type="text" id="sms-code" placeholder="请输入验证码" maxlength="6">
-                        <button class="sms-btn" id="get-sms">获取验证码</button>
-                    </div>
-                    <button class="login-btn" id="phone-login-btn">登录</button>
-                </div>
-                
-                <!-- 邮箱登录 -->
-                <div id="email-tab" class="tab-content">
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="email" placeholder="请输入邮箱地址">
-                    </div>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="email-password" placeholder="请输入密码">
-                    </div>
-                    <button class="login-btn" id="email-login-btn">登录</button>
-                </div>
-                
-                <!-- 微信登录 -->
-                <div id="wechat-tab" class="tab-content">
-                    <div class="wechat-login">
-                        <div class="qrcode-container">
-                            <div class="qrcode-placeholder">
-                                <i class="fab fa-weixin"></i>
-                                <p>微信扫码登录</p>
-                            </div>
+                    
+                    <!-- 登录表单 -->
+                    <div id="login-form-container" class="auth-container active">
+                        <!-- 标签页切换 -->
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="phone">手机登录</button>
+                            <button class="tab-btn" data-tab="email">邮箱登录</button>
+                            <button class="tab-btn" data-tab="wechat">微信登录</button>
                         </div>
-                        <p class="wechat-tip">请使用微信扫描二维码登录</p>
-                        <button class="login-btn" id="wechat-login-btn">模拟微信登录</button>
+
+                        <!-- 手机登录标签页 -->
+                        <div id="phone-tab" class="tab-content active">
+                            <div class="form-group">
+                                <label for="phone">手机号</label>
+                                <input type="tel" id="phone" placeholder="请输入手机号" maxlength="11">
+                            </div>
+                            <div class="form-group">
+                                <label for="sms-code">验证码</label>
+                                <div class="code-input-group">
+                                    <input type="text" id="sms-code" placeholder="请输入验证码" maxlength="6">
+                                    <button id="get-sms" class="code-btn">获取验证码</button>
+                                </div>
+                            </div>
+                            <button id="phone-login-btn" class="login-btn">登录</button>
+                        </div>
+
+                        <!-- 邮箱登录标签页 -->
+                        <div id="email-tab" class="tab-content">
+                            <div class="form-group">
+                                <label for="email">邮箱</label>
+                                <input type="email" id="email" placeholder="请输入邮箱地址">
+                            </div>
+                            <div class="form-group">
+                                <label for="email-password">密码</label>
+                                <input type="password" id="email-password" placeholder="请输入密码">
+                            </div>
+                            <div class="remember-me">
+                                <input type="checkbox" id="remember">
+                                <label for="remember">记住我</label>
+                            </div>
+                            <button id="email-login-btn" class="login-btn">登录</button>
+                        </div>
+
+                        <!-- 微信登录标签页 -->
+                        <div id="wechat-tab" class="tab-content">
+                            <div class="wechat-qrcode">
+                                <div class="qrcode-placeholder">微信扫码登录</div>
+                            </div>
+                            <button id="wechat-login-btn" class="login-btn">确认登录</button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="login-footer">
-                    <p>登录即表示同意<a href="#">用户协议</a>和<a href="#">隐私政策</a></p>
+                    
+                    <!-- 注册表单 -->
+                    <div id="register-form-container" class="auth-container">
+                        <!-- 标签页切换 -->
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="register-phone">手机注册</button>
+                            <button class="tab-btn" data-tab="register-email">邮箱注册</button>
+                        </div>
+                         
+                        <!-- 手机注册标签页 -->
+                        <div id="register-phone-tab" class="tab-content active">
+                            <div class="form-group">
+                                <label for="register-phone">手机号</label>
+                                <input type="tel" id="register-phone" placeholder="请输入手机号" maxlength="11">
+                            </div>
+                            <div class="form-group">
+                                <label for="register-sms-code">验证码</label>
+                                <div class="code-input-group">
+                                    <input type="text" id="register-sms-code" placeholder="请输入验证码" maxlength="6">
+                                    <button id="register-get-sms" class="code-btn">获取验证码</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="register-phone-password">密码</label>
+                                <input type="password" id="register-phone-password" placeholder="请设置6-20位密码">
+                            </div>
+                            <div class="form-group">
+                                <label for="register-phone-confirm-password">确认密码</label>
+                                <input type="password" id="register-phone-confirm-password" placeholder="请再次输入密码">
+                            </div>
+                            <button id="phone-register-btn" class="login-btn">注册</button>
+                        </div>
+                         
+                        <!-- 邮箱注册标签页 -->
+                        <div id="register-email-tab" class="tab-content">
+                            <div class="form-group">
+                                <label for="register-email">邮箱</label>
+                                <input type="email" id="register-email" placeholder="请输入邮箱地址">
+                            </div>
+                            <div class="form-group">
+                                <label for="register-password">密码</label>
+                                <input type="password" id="register-password" placeholder="请设置6-20位密码">
+                            </div>
+                            <div class="form-group">
+                                <label for="register-confirm-password">确认密码</label>
+                                <input type="password" id="register-confirm-password" placeholder="请再次输入密码">
+                            </div>
+                            <button id="email-register-btn" class="login-btn">注册</button>
+                        </div>
+                        
+                        <div class="login-footer">
+                            <p>注册即表示同意<a href="#">用户协议</a>和<a href="#">隐私政策</a></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="/js/login.js"></script>
-</body>
+        <script src="/js/supabase.js"></script>
+        <script src="/js/login.js"></script>
+    </body>
 </html>

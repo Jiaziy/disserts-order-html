@@ -1,466 +1,154 @@
 /**
  * Supabase 配置和工具函数
- * 用于连接到 Supabase 数据库并提供数据操作接口
+ * 提供认证和数据操作功能
+ * 使用本地存储实现
  */
 
-// 导入 Supabase 配置
-import SUPABASE_CONFIG from './supabase-config.js';
-
-// 从配置中提取所需参数
-const SUPABASE_URL = SUPABASE_CONFIG.url;
-const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
-const ENABLE_DEBUG = SUPABASE_CONFIG.debug;
-const TABLES = SUPABASE_CONFIG.tables || {
-    users: 'users',
-    designs: 'designs',
-    orders: 'orders'
-};
-const FALLBACK_TO_LOCAL_STORAGE = SUPABASE_CONFIG.fallbackToLocalStorage !== false;
-
-// 初始化 Supabase 客户端
-const { createClient } = window.supabase || (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
-let supabaseClient = null;
-
-/**
- * 初始化 Supabase 客户端
- */
-export async function initSupabase() {
-  try {
-    // 动态加载 Supabase 客户端库
-    if (!window.supabase) {
-      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-      window.supabase = { createClient };
-    }
-    
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('Supabase 客户端初始化成功');
-    return supabaseClient;
-  } catch (error) {
-    console.error('Supabase 初始化失败:', error);
-    // 降级到 localStorage 模式
-    if (FALLBACK_TO_LOCAL_STORAGE) {
-      return null;
-    }
-    throw error;
-  }
-}
-
-/**
- * 获取 Supabase 客户端实例
- */
-export function getSupabase() {
-  if (!supabaseClient) {
-    console.warn('Supabase 客户端未初始化，返回 null');
-  }
-  return supabaseClient;
-}
-
-/**
- * 用户认证相关函数
- */
-export const auth = {
-  /**
-   * 用户登录
-   */
-  async signIn(email, password) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 模式登录');
-      // 降级到 localStorage 登录
-      return localStorageAuth.signIn(email, password);
-    }
-    
-    try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) throw error;
-      
-      // 保存用户信息到本地存储
-      const userData = {
-        id: data.user.id,
-        email: data.user.email,
-        displayName: data.user.user_metadata?.name || data.user.email.split('@')[0],
-        avatar: data.user.user_metadata?.avatar_url || ''
-      };
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      
-      // 同步用户到 users 表
-      try {
-        await supabaseClient
-          .from(TABLES.users)
-          .upsert({
-            id: data.user.id,
-            email: data.user.email,
-            name: userData.displayName,
-            avatar_url: userData.avatar,
-            last_login_at: new Date().toISOString()
-          });
-      } catch (syncError) {
-        console.error('同步用户信息失败:', syncError);
-      }
-      
-      return { success: true, user: data.user };
-    } catch (error) {
-      console.error('登录失败:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * 用户注册
-   */
-  async signUp(email, password, userData) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 模式注册');
-      // 降级到 localStorage 注册
-      return localStorageAuth.signUp(email, password, userData);
-    }
-    
-    try {
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData
-        }
-      });
-      
-      if (error) throw error;
-      
-      // 保存用户信息到本地存储
-      const userDataToSave = {
-        id: data.user.id,
-        email: data.user.email,
-        displayName: userData?.name || data.user.email.split('@')[0]
-      };
-      localStorage.setItem('currentUser', JSON.stringify(userDataToSave));
-      
-      // 创建用户记录
-      try {
-        await supabaseClient
-          .from(TABLES.users)
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            name: userDataToSave.displayName,
-            created_at: new Date().toISOString()
-          });
-      } catch (syncError) {
-        console.error('创建用户记录失败:', syncError);
-      }
-      
-      return { success: true, user: data.user };
-    } catch (error) {
-      console.error('注册失败:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * 用户登出
-   */
-  async signOut() {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 模式登出');
-      // 降级到 localStorage 登出
-      return localStorageAuth.signOut();
-    }
-    
-    try {
-      const { error } = await supabaseClient.auth.signOut();
-      
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      console.error('登出失败:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * 获取当前用户
-   */
-  async getCurrentUser() {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 获取用户');
-      // 降级到 localStorage 获取用户
-      return localStorageAuth.getCurrentUser();
-    }
-    
-    try {
-      const { data, error } = await supabaseClient.auth.getSession();
-      
-      if (error || !data.session) {
-        return null;
-      }
-      
-      return data.session.user;
-    } catch (error) {
-      console.error('获取用户失败:', error);
-      return null;
-    }
-  }
-};
-
-/**
- * 设计相关函数
- */
-export const designs = {
-  /**
-   * 获取用户的所有设计
-   */
-  async getUserDesigns(userId) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 获取设计');
-      // 降级到 localStorage 获取设计
-      return localStorageDesigns.getUserDesigns(userId);
-    }
-    
-    try {
-      const { data, error } = await supabaseClient
-        .from(TABLES.designs)
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('获取设计失败:', error);
-      return [];
-    }
-  },
-
-  /**
-   * 创建新设计
-   */
-  async createDesign(designData) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 创建设计');
-      // 降级到 localStorage 创建设计
-      return localStorageDesigns.createDesign(designData);
-    }
-    
-    try {
-      const { data, error } = await supabaseClient
-        .from(TABLES.designs)
-        .insert([{
-          ...designData,
-          created_at: new Date().toISOString()
-        }])
-        .select();
-      
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error('创建设计失败:', error);
-      return null;
-    }
-  },
-
-  /**
-   * 更新设计
-   */
-  async updateDesign(designId, updates) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 更新设计');
-      // 降级到 localStorage 更新设计
-      return localStorageDesigns.updateDesign(designId, updates);
-    }
-    
-    try {
-      const { data, error } = await supabaseClient
-        .from(TABLES.designs)
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', designId)
-        .select();
-      
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error('更新设计失败:', error);
-      return null;
-    }
-  },
-
-  /**
-   * 删除设计
-   */
-  async deleteDesign(designId) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 删除设计');
-      // 降级到 localStorage 删除设计
-      return localStorageDesigns.deleteDesign(designId);
-    }
-    
-    try {
-      const { error } = await supabaseClient
-        .from(TABLES.designs)
-        .delete()
-        .eq('id', designId);
-      
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('删除设计失败:', error);
-      return false;
-    }
-  }
-};
-
-/**
- * 订单相关函数
- */
-export const orders = {
-  /**
-   * 获取用户的所有订单
-   */
-  async getUserOrders(userId) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 获取订单');
-      // 降级到 localStorage 获取订单
-      const orders = JSON.parse(localStorage.getItem('orders')) || [];
-      return orders.filter(order => order.userId === userId);
-    }
-    
-    try {
-      const { data, error } = await supabaseClient
-        .from(TABLES.orders)
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('获取订单失败:', error);
-      return [];
-    }
-  },
-
-  /**
-   * 创建新订单
-   */
-  async createOrder(orderData) {
-    if (!supabaseClient && FALLBACK_TO_LOCAL_STORAGE) {
-      console.warn('使用 localStorage 创建订单');
-      // 降级到 localStorage 创建订单
-      const orders = JSON.parse(localStorage.getItem('orders')) || [];
-      const newOrder = {
-        ...orderData,
-        id: 'order_' + Date.now(),
-        userId: orderData.userId || 'anonymous',
-        createTime: new Date().toISOString(),
-        status: 'pending'
-      };
-      orders.push(newOrder);
-      localStorage.setItem('orders', JSON.stringify(orders));
-      return newOrder;
-    }
-    
-    try {
-      const { data, error } = await supabaseClient
-        .from(TABLES.orders)
-        .insert([{
-          ...orderData,
-          created_at: new Date().toISOString(),
-          status: 'pending'
-        }])
-        .select();
-      
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error('创建订单失败:', error);
-      return null;
-    }
-  }
-};
-
-// 调试日志
-function debugLog(message, data = null) {
-    if (ENABLE_DEBUG) {
-        console.log(`[Supabase] ${message}`, data || '');
-    }
-}
-
-// 添加重试机制函数
-async function withRetry(fn, maxAttempts = SUPABASE_CONFIG.retry?.maxAttempts || 3, delay = SUPABASE_CONFIG.retry?.delay || 1000) {
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-        try {
-            return await fn();
-        } catch (error) {
-            attempts++;
-            debugLog(`尝试 ${attempts}/${maxAttempts} 失败，${delay}ms 后重试`, error);
-            
-            if (attempts >= maxAttempts) {
-                throw error;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-}
-
-// 降级到 localStorage 的备用实现
+// 使用本地存储作为默认认证方式
 const localStorageAuth = {
+  // 本地存储登录功能
   signIn(email, password) {
     const users = JSON.parse(localStorage.getItem('users')) || {};
     const user = users[email];
     
     if (user && user.password === password) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      return { success: true, user };
+      // 更新登录时间
+      user.lastLoginAt = new Date().toISOString();
+      users[email] = user;
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      // 保存当前用户
+      const userData = {
+        id: user.id,
+        email: user.email,
+        displayName: user.name || email.split('@')[0],
+        loginType: user.loginType || 'email'
+      };
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      
+      return { success: true, user: userData };
     }
     
     return { success: false, error: '邮箱或密码错误' };
   },
   
-  signUp(email, password, userData) {
+  // 本地存储注册功能
+  signUp(email, password, userData = {}) {
     const users = JSON.parse(localStorage.getItem('users')) || {};
     
     if (users[email]) {
-      return { success: false, error: '该邮箱已被注册' };
+      return { success: false, error: 'User already registered' };
     }
     
-    const user = {
+    // 创建新用户
+    const newUser = {
+      id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       email,
       password,
-      ...userData,
-      id: 'user_' + Date.now()
+      name: userData.name || email.split('@')[0],
+      loginType: 'email',
+      createdAt: new Date().toISOString()
     };
     
-    users[email] = user;
+    users[email] = newUser;
     localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('currentUser', JSON.stringify(user));
     
-    return { success: true, user };
+    // 保存当前用户
+    const userDataToSave = {
+      id: newUser.id,
+      email: newUser.email,
+      displayName: newUser.name
+    };
+    localStorage.setItem('currentUser', JSON.stringify(userDataToSave));
+    
+    return { success: true, user: userDataToSave };
   },
   
+  // 退出登录
   signOut() {
     localStorage.removeItem('currentUser');
     return { success: true };
   },
   
+  // 获取当前用户
   getCurrentUser() {
     const userData = localStorage.getItem('currentUser');
     return userData ? JSON.parse(userData) : null;
+  },
+  
+  // 手机登录（模拟）
+  signInWithPhone(phone, code) {
+    // 模拟手机登录成功
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    const phoneUsers = Object.values(users).filter(user => user.phone === phone);
+    
+    if (phoneUsers.length > 0) {
+      const user = phoneUsers[0];
+      user.lastLoginAt = new Date().toISOString();
+      user.loginType = 'phone';
+      users[user.email] = user;
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      const userData = {
+        id: user.id,
+        phone: user.phone,
+        displayName: user.name || phone,
+        loginType: 'phone'
+      };
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      
+      return { success: true, user: userData };
+    } else {
+      // 创建新用户
+      const newUser = {
+        id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        phone,
+        email: phone + '@phone.user',
+        password: '',
+        name: phone,
+        loginType: 'phone',
+        createdAt: new Date().toISOString()
+      };
+      
+      users[newUser.email] = newUser;
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      const userDataToSave = {
+        id: newUser.id,
+        phone: newUser.phone,
+        displayName: newUser.name
+      };
+      localStorage.setItem('currentUser', JSON.stringify(userDataToSave));
+      
+      return { success: true, user: userDataToSave };
+    }
+  },
+  
+  // 微信登录（模拟）
+  signInWithWechat() {
+    // 模拟微信登录成功
+    const wechatId = 'wx_' + Date.now();
+    const userData = {
+      id: 'user_' + wechatId,
+      displayName: '微信用户' + wechatId.substr(-4),
+      loginType: 'wechat',
+      wechatId
+    };
+    
+    localStorage.setItem('currentUser', JSON.stringify(userData));
+    return { success: true, user: userData };
   }
 };
 
+// 本地存储设计功能
 const localStorageDesigns = {
+  // 获取用户设计列表
   getUserDesigns(userId) {
     const designs = JSON.parse(localStorage.getItem('designs')) || [];
     return designs.filter(design => design.userId === userId);
   },
   
+  // 创建设计
   createDesign(designData) {
     const designs = JSON.parse(localStorage.getItem('designs')) || [];
     const newDesign = {
@@ -468,15 +156,15 @@ const localStorageDesigns = {
       id: 'design_' + Date.now(),
       created_at: new Date().toISOString()
     };
-    
     designs.push(newDesign);
     localStorage.setItem('designs', JSON.stringify(designs));
     return newDesign;
   },
   
+  // 更新设计
   updateDesign(designId, updates) {
     const designs = JSON.parse(localStorage.getItem('designs')) || [];
-    const index = designs.findIndex(d => d.id === designId);
+    const index = designs.findIndex(design => design.id === designId);
     
     if (index !== -1) {
       designs[index] = {
@@ -487,17 +175,132 @@ const localStorageDesigns = {
       localStorage.setItem('designs', JSON.stringify(designs));
       return designs[index];
     }
-    
     return null;
   },
   
+  // 删除设计
   deleteDesign(designId) {
-    let designs = JSON.parse(localStorage.getItem('designs')) || [];
-    designs = designs.filter(d => d.id !== designId);
-    localStorage.setItem('designs', JSON.stringify(designs));
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const filteredDesigns = designs.filter(design => design.id !== designId);
+    localStorage.setItem('designs', JSON.stringify(filteredDesigns));
     return true;
   }
 };
 
-// 自动初始化 Supabase
-initSupabase();
+// 本地存储订单功能
+const localStorageOrders = {
+  // 创建订单
+  createOrder(orderData) {
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const newOrder = {
+      ...orderData,
+      id: 'order_' + Date.now(),
+      createdAt: new Date().toISOString(),
+      status: 'pending'
+    };
+    orders.push(newOrder);
+    localStorage.setItem('orders', JSON.stringify(orders));
+    return newOrder;
+  },
+  
+  // 获取用户订单
+  getUserOrders(userId) {
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    return orders.filter(order => order.userId === userId).sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }
+};
+
+// 全局对象
+document.supabase = {
+  auth: {
+    // 用户登录
+    async signIn(email, password) {
+      try {
+        // 使用本地存储认证
+        return localStorageAuth.signIn(email, password);
+      } catch (error) {
+        console.error('登录失败:', error);
+        return { success: false, error: '登录失败，请稍后重试' };
+      }
+    },
+
+    // 用户注册
+    async signUp(email, password, userData = {}) {
+      try {
+        // 使用本地存储注册
+        return localStorageAuth.signUp(email, password, userData);
+      } catch (error) {
+        console.error('注册失败:', error);
+        return { success: false, error: '注册失败，请稍后重试' };
+      }
+    },
+    
+    // 退出登录
+    signOut() {
+      return localStorageAuth.signOut();
+    },
+    
+    // 获取当前用户
+    getCurrentUser() {
+      return localStorageAuth.getCurrentUser();
+    },
+    
+    // 手机登录
+    signInWithPhone(phone, code) {
+      return localStorageAuth.signInWithPhone(phone, code);
+    },
+    
+    // 微信登录
+    signInWithWechat() {
+      return localStorageAuth.signInWithWechat();
+    }
+  },
+  
+  designs: {
+    // 获取用户设计列表
+    getUserDesigns(userId) {
+      return localStorageDesigns.getUserDesigns(userId);
+    },
+    
+    // 创建设计
+    createDesign(designData) {
+      return localStorageDesigns.createDesign(designData);
+    },
+    
+    // 更新设计
+    updateDesign(designId, updates) {
+      return localStorageDesigns.updateDesign(designId, updates);
+    },
+    
+    // 删除设计
+    deleteDesign(designId) {
+      return localStorageDesigns.deleteDesign(designId);
+    }
+  },
+  
+  orders: {
+    // 创建订单
+    createOrder(orderData) {
+      return localStorageOrders.createOrder(orderData);
+    },
+    
+    // 获取用户订单
+    getUserOrders(userId) {
+      return localStorageOrders.getUserOrders(userId);
+    }
+  },
+  
+  // 初始化函数
+  async init() {
+    console.log('Supabase 本地存储初始化成功');
+    return true;
+  }
+};
+
+// 初始化
+if (window && typeof window !== 'undefined') {
+  // 确保不会与其他代码冲突
+  window.Supabase = document.supabase;
+}
