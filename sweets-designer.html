@@ -6,6 +6,150 @@
     <title>甜点设计师 - 定制您的专属甜点</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="css/sweets-designer.css">
+    <style>
+        /* 设计器样式 */
+        .designer-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
+        
+        .action-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .action-btn.primary {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        
+        .action-btn.primary:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        
+        .design-info {
+                background-color: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #e9ecef;
+                max-width: 300px;
+                flex-shrink: 0;
+            }
+            
+            .fixed-info {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .preview-section {
+                margin-top: 0;
+            }
+        
+        .design-name-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: border-color 0.3s ease;
+        }
+        
+        .design-name-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+        
+        .design-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .preview-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .designer-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .action-btn {
+                flex: 1;
+                min-width: 100px;
+            }
+            
+            .preview-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="designer-container">
@@ -16,9 +160,11 @@
                 <p>创造您的专属美味艺术</p>
             </div>
             <div class="header-right">
-                <div class="design-info">
-                    <span id="design-name">未命名设计</span>
-                    <button class="btn-secondary" id="rename-design"><i class="fas fa-edit"></i> 重命名</button>
+                <div class="designer-actions">
+                    <button id="reset-view-btn" class="action-btn">重置视图</button>
+                    <button id="save-design-btn" class="action-btn">保存设计</button>
+                    <button id="export-image-btn" class="action-btn">导出图片</button>
+                    <button id="create-order-btn" class="action-btn primary">提交订单</button>
                 </div>
             </div>
         </header>
@@ -121,15 +267,34 @@
 
             <!-- 右侧预览和属性面板 -->
             <aside class="preview-panel">
-                <div class="panel-section">
+                <!-- 设计信息栏 - 固定在预览上方 -->
+                <div class="design-info fixed-info">
+                    <h3>设计信息</h3>
+                    <div class="design-name-container">
+    <input type="text" id="design-name" class="design-name-input" value="未命名设计" placeholder="输入设计名称">
+    <button id="save-design-name-btn" class="btn-small btn-primary">保存</button>
+</div>
+                    <p>保存设计后可在定制页面查看和下单</p>
+                    <div class="design-stats">
+                        <span>画布尺寸: <span id="canvas-size">1024 x 768</span></span>
+                        <span>元素数量: <span id="elements-count">0</span></span>
+                    </div>
+                    <button class="btn-secondary" id="rename-design"><i class="fas fa-edit"></i> 重命名</button>
+                </div>
+                <div class="panel-section preview-section">
                     <h3><i class="fas fa-eye"></i> 预览</h3>
                     <div class="preview-container">
                         <canvas id="preview-canvas" width="300" height="300"></canvas>
                     </div>
                     <div class="preview-controls">
-                        <button id="switch-3d-preview" class="btn-secondary"><i class="fas fa-cube"></i> 3D 预览</button>
-                        <button id="rotate-model" class="btn-secondary"><i class="fas fa-sync"></i> 旋转模型</button>
-                    </div>
+                    <button id="switch-3d-preview" class="btn-secondary"><i class="fas fa-cube"></i> 3D 预览</button>
+                    <button id="rotate-model" class="btn-secondary"><i class="fas fa-sync"></i> 旋转模型</button>
+                </div>
+                <div class="preview-actions">
+                    <button id="save-design-btn-mobile" class="btn btn-secondary" onclick="saveDesign()">保存设计</button>
+                    <button id="export-image-btn-mobile" class="btn btn-secondary" onclick="exportDesign()">导出图片</button>
+                    <button id="create-order-btn-mobile" class="btn btn-primary" onclick="createOrder()">提交订单</button>
+                </div>
                 </div>
 
 

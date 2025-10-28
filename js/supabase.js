@@ -4,23 +4,27 @@
  * 优先使用Supabase，降级到本地存储
  */
 
-// 导入Supabase配置
-import SUPABASE_CONFIG from './supabase-config.js';
-
-// 尝试初始化Supabase客户端
+// 全局变量
 let supabaseClient = null;
 let usingLocalStorage = true;
 
-// 初始化Supabase客户端
+// 尝试初始化Supabase客户端
 try {
-  // 动态导入Supabase SDK
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-  supabaseClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-  usingLocalStorage = false;
-  console.log('Supabase客户端初始化成功');
+  // 尝试直接使用全局的createClient函数（如果已加载）
+  if (typeof createClient === 'function') {
+    // 简单的配置（不依赖导入）
+    const SUPABASE_CONFIG = {
+      url: 'https://default-url.supabase.co', // 占位符URL
+      anonKey: 'default-anon-key' // 占位符密钥
+    };
+    supabaseClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    usingLocalStorage = false;
+    console.log('使用全局createClient函数初始化Supabase客户端');
+  } else {
+    console.warn('未找到createClient函数，将使用本地存储');
+  }
 } catch (error) {
   console.warn('Supabase初始化失败，将使用本地存储:', error);
-  usingLocalStorage = true;
 }
 const localStorageAuth = {
   // 本地存储登录功能
@@ -344,11 +348,16 @@ document.supabase = {
       }
     },
     
-    // 手机登录（支持Supabase和本地存储）
+    // 手机登录（支持验证码验证）
     async signInWithPhone(phone, code) {
       try {
-        // 由于Supabase的手机登录需要先发送验证码，这里简化处理，使用本地存储
-        // 在实际项目中，应该先调用supabaseClient.auth.signInWithOtp({ phone })
+        // 先验证验证码
+        const verifyResult = await this.verifyPhoneCode(phone, code);
+        if (!verifyResult.success) {
+          return verifyResult;
+        }
+        
+        // 验证码验证成功后进行登录
         return localStorageAuth.signInWithPhone(phone, code);
       } catch (error) {
         console.error('手机登录失败:', error);
@@ -356,15 +365,67 @@ document.supabase = {
       }
     },
     
-    // 模拟发送手机验证码
+    // 模拟发送手机验证码（开发环境）
     async sendPhoneVerification(phone) {
       try {
+        // 生成随机6位验证码
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // 存储验证码与手机号的关联（开发环境使用localStorage）
+        const verificationData = JSON.parse(localStorage.getItem('phoneVerifications') || '{}');
+        verificationData[phone] = {
+          code: verificationCode,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5分钟过期
+        };
+        localStorage.setItem('phoneVerifications', JSON.stringify(verificationData));
+        
+        // 在控制台显示验证码（仅开发环境）
         console.log('发送验证码到手机:', phone);
-        // 模拟发送成功，实际应该调用Supabase的API
-        return { success: true, message: '验证码已发送，请注意查收' };
+        console.log('【开发环境】验证码:', verificationCode, '(5分钟内有效)');
+        
+        return { 
+          success: true, 
+          message: '验证码已发送，请注意查收',
+          code: verificationCode // 开发环境下返回验证码，实际生产环境不应该返回
+        };
       } catch (error) {
         console.error('发送验证码失败:', error);
         return { success: false, error: '发送验证码失败，请稍后重试' };
+      }
+    },
+    
+    // 验证手机验证码
+    async verifyPhoneCode(phone, code) {
+      try {
+        const verificationData = JSON.parse(localStorage.getItem('phoneVerifications') || '{}');
+        const storedData = verificationData[phone];
+        
+        if (!storedData) {
+          return { success: false, error: '未找到验证码记录' };
+        }
+        
+        const now = new Date();
+        const expiresAt = new Date(storedData.expiresAt);
+        
+        if (now > expiresAt) {
+          // 验证码已过期
+          delete verificationData[phone];
+          localStorage.setItem('phoneVerifications', JSON.stringify(verificationData));
+          return { success: false, error: '验证码已过期，请重新获取' };
+        }
+        
+        if (storedData.code !== code) {
+          return { success: false, error: '验证码错误' };
+        }
+        
+        // 验证成功，清除验证码记录
+        delete verificationData[phone];
+        localStorage.setItem('phoneVerifications', JSON.stringify(verificationData));
+        
+        return { success: true, message: '验证码验证成功' };
+      } catch (error) {
+        console.error('验证码验证失败:', error);
+        return { success: false, error: '验证码验证失败' };
       }
     }
   },

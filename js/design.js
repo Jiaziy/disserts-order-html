@@ -216,6 +216,13 @@ function redoAction() {
 
 // 保存画布状态
 function saveCanvasState() {
+    // 使用SweetsDesigner实例的saveState方法进行状态管理
+    if (window.sweetsDesigner) {
+        window.sweetsDesigner.saveState();
+        return;
+    }
+    
+    // 备用的保存方法
     const canvas = document.getElementById('design-canvas');
     const imageData = canvas.toDataURL();
     
@@ -258,20 +265,23 @@ function addTextToCanvas() {
     }
     
     const canvas = document.getElementById('design-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    ctx.font = `bold ${designState.brushSize * 4}px Arial`;
-    ctx.fillStyle = designState.brushColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
     const x = canvas.width / 2;
     const y = canvas.height / 2;
     
-    ctx.fillText(text, x, y);
+    // 使用SweetsDesigner实例的addText方法添加文本
+    if (window.sweetsDesigner) {
+        // 临时保存当前颜色
+        const currentColor = window.sweetsDesigner.currentColor;
+        window.sweetsDesigner.currentColor = designState.brushColor;
+        
+        // 调用addText方法添加文本元素
+        window.sweetsDesigner.addText(text, x, y);
+        
+        // 恢复当前颜色
+        window.sweetsDesigner.currentColor = currentColor;
+    }
     
     textInput.value = '';
-    saveCanvasState();
     
     // 切换回画笔工具
     selectTool('brush');

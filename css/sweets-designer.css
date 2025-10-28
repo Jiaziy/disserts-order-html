@@ -644,6 +644,47 @@ body {
     text-align: center;
 }
 
+.design-name-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.design-name-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: var(--background-light);
+}
+
+.design-name-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.1);
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-small.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-small.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .panel-section {
     margin-bottom: 32px;
     padding-bottom: 24px;

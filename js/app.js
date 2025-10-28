@@ -15,20 +15,47 @@ async function initializeApp() {
     // 初始化应用
     // 现在 supabase.js 会自动初始化并挂载到 document.supabase
     
-    // 检查用户会话
-    const user = document.supabase.auth.getCurrentUser();
-    if (user) {
-        appState.currentUser = user;
-    } else {
-        // 尝试从 localStorage 恢复用户（向后兼容）
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            try {
-                appState.currentUser = JSON.parse(savedUser);
-                console.log('从 localStorage 恢复用户数据');
-            } catch (e) {
-                console.error('解析用户数据失败', e);
+    // 检查用户会话 - 添加错误处理
+    try {
+        let user = null;
+        // 尝试使用document.supabase.auth
+        try {
+            if (document.supabase && document.supabase.auth && typeof document.supabase.auth.getCurrentUser === 'function') {
+                user = document.supabase.auth.getCurrentUser();
+                console.log('通过supabase.auth获取用户');
             }
+        } catch (e) {
+            console.error('调用supabase.auth.getCurrentUser出错:', e);
+            user = null;
+        }
+        
+        if (!user) {
+            // 直接从 localStorage 恢复用户（更可靠的方式）
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                try {
+                    user = JSON.parse(savedUser);
+                    console.log('从 localStorage 恢复用户数据');
+                } catch (e) {
+                    console.error('解析用户数据失败', e);
+                }
+            }
+        }
+        
+        if (user) {
+            appState.currentUser = user;
+        }
+    } catch (error) {
+        console.error('获取用户会话失败:', error);
+        // 尝试直接从localStorage恢复
+        try {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                appState.currentUser = JSON.parse(savedUser);
+                console.log('从localStorage恢复用户数据');
+            }
+        } catch (e) {
+            console.error('localStorage解析失败:', e);
         }
     }
     
@@ -353,7 +380,15 @@ async function loginSuccess(user) {
 // 退出登录
 async function logout() {
     try {
-        await document.supabase.auth.signOut();
+        // 退出登录 - 添加错误处理
+        try {
+            if (document.supabase && document.supabase.auth && typeof document.supabase.auth.signOut === 'function') {
+                await document.supabase.auth.signOut();
+                console.log('成功调用supabase.auth.signOut');
+            }
+        } catch (error) {
+            console.error('退出登录出错:', error);
+        }
         
         appState.currentUser = null;
         localStorage.removeItem('currentUser');

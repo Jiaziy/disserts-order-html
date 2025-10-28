@@ -33,6 +33,11 @@ class SweetsDesigner {
         this.isDragging = false; // 是否正在拖动图片
         this.dragOffset = { x: 0, y: 0 }; // 拖动偏移量
         
+        // 文本元素相关状态
+        this.textElements = []; // 存储所有文本元素
+        this.selectedTextElement = null; // 当前选中的文本元素
+        this.isDraggingText = false; // 是否正在拖动文本
+        
         // 历史记录
         this.history = [];
         this.historyIndex = 0;
@@ -454,6 +459,23 @@ class SweetsDesigner {
     handleMouseDown(e) {
         const pos = this.getMousePos(e);
         
+        // 检查是否点击在文本元素上
+        const clickedTextElement = this.getTextElementAtPosition(pos.x, pos.y);
+        if (clickedTextElement) {
+            // 选中文本元素
+            this.selectedTextElement = clickedTextElement;
+            
+            // 开始拖动文本
+            this.isDraggingText = true;
+            this.dragOffset.x = pos.x - clickedTextElement.x;
+            this.dragOffset.y = pos.y - clickedTextElement.y;
+            this.canvas.style.cursor = 'move';
+            
+            // 重新渲染以显示选中状态
+            this.renderAllElements();
+            return;
+        }
+        
         // 如果有上传的图片，检查是否点击在图片上（无论当前工具是什么）
         if (this.uploadedImage) {
             if (pos.x >= this.imagePosition.x && 
@@ -476,6 +498,10 @@ class SweetsDesigner {
             }
         }
         
+        // 如果点击空白区域，取消选中
+        this.selectedTextElement = null;
+        this.renderAllElements();
+        
         // 其他情况正常开始绘图
         this.startDrawing(e);
     }
@@ -484,6 +510,22 @@ class SweetsDesigner {
      * 处理鼠标移动事件
      */
     handleMouseMove(e) {
+        // 如果正在拖动文本
+        if (this.isDraggingText && this.selectedTextElement) {
+            const pos = this.getMousePos(e);
+            
+            // 更新文本位置
+            this.selectedTextElement.x = pos.x - this.dragOffset.x;
+            this.selectedTextElement.y = pos.y - this.dragOffset.y;
+            
+            // 重新渲染所有元素
+            this.renderAllElements();
+            
+            // 更新预览
+            this.updatePreview();
+            return;
+        }
+        
         // 如果正在拖动图片
         if (this.isDragging) {
             const pos = this.getMousePos(e);
@@ -506,9 +548,16 @@ class SweetsDesigner {
             return;
         }
         
+        // 检查鼠标是否悬停在文本元素上
+        const pos = this.getMousePos(e);
+        const hoveredTextElement = this.getTextElementAtPosition(pos.x, pos.y);
+        if (hoveredTextElement) {
+            this.canvas.style.cursor = 'move';
+            return;
+        }
+        
         // 如果鼠标悬停在图片上，改变光标样式
         if (this.uploadedImage) {
-            const pos = this.getMousePos(e);
             // 考虑图片缩放
             const scaledWidth = this.uploadedImage.width * this.imageScale;
             const scaledHeight = this.uploadedImage.height * this.imageScale;
@@ -520,7 +569,11 @@ class SweetsDesigner {
                 this.canvas.style.cursor = 'move';
             } else if (this.currentTool === 'image') {
                 this.canvas.style.cursor = 'move'; // 图片工具统一使用移动光标
+            } else {
+                this.canvas.style.cursor = this.currentTool === 'brush' ? 'crosshair' : 'default';
             }
+        } else {
+            this.canvas.style.cursor = this.currentTool === 'brush' ? 'crosshair' : 'default';
         }
         
         // 其他情况正常绘图
@@ -531,6 +584,14 @@ class SweetsDesigner {
      * 处理鼠标松开事件
      */
     handleMouseUp() {
+        // 如果正在拖动文本
+        if (this.isDraggingText) {
+            this.isDraggingText = false;
+            this.saveState();
+            console.log('文本拖动完成，位置已保存');
+            return;
+        }
+        
         // 如果正在拖动图片
         if (this.isDragging) {
             this.isDragging = false;
@@ -786,7 +847,52 @@ class SweetsDesigner {
      * 处理鼠标滚轮事件 - 实现图片缩放
      */
     handleWheel(e) {
-        // 只有在图片工具且有上传的图片时才允许缩放
+        // 优先处理文本元素的缩放
+        if (this.selectedTextElement) {
+            e.preventDefault();
+            
+            // 计算鼠标在画布上的坐标
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // 检查鼠标是否在选中的文本元素范围内
+            this.ctx.font = `${this.selectedTextElement.fontSize * this.selectedTextElement.scale}px ${this.selectedTextElement.fontFamily}`;
+            const metrics = this.ctx.measureText(this.selectedTextElement.text);
+            const textHeight = this.selectedTextElement.fontSize * this.selectedTextElement.scale;
+            const padding = 5;
+            
+            const left = this.selectedTextElement.x - metrics.width / 2 - padding;
+            const right = this.selectedTextElement.x + metrics.width / 2 + padding;
+            const top = this.selectedTextElement.y - textHeight / 2 - padding;
+            const bottom = this.selectedTextElement.y + textHeight / 2 + padding;
+            
+            if (mouseX >= left && mouseX <= right && mouseY >= top && mouseY <= bottom) {
+                // 计算缩放方向和缩放因子
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                
+                // 应用缩放，限制在合理范围内
+                const newScale = Math.max(0.1, Math.min(5.0, this.selectedTextElement.scale * zoomFactor));
+                
+                if (newScale !== this.selectedTextElement.scale) {
+                    this.selectedTextElement.scale = newScale;
+                    
+                    // 重新渲染所有元素
+                    this.renderAllElements();
+                    
+                    // 更新预览
+                    this.updatePreview();
+                    
+                    // 保存状态
+                    this.saveState();
+                    
+                    console.log('文本缩放:', this.selectedTextElement.scale);
+                }
+            }
+            return; // 文本缩放处理完成，不再处理图片缩放
+        }
+        
+        // 原有的图片缩放逻辑
         if (this.currentTool === 'image' && this.uploadedImage) {
             e.preventDefault();
             
@@ -830,6 +936,19 @@ class SweetsDesigner {
                 if (this.uploadedImage) {
                     this.drawProcessedImage();
                 }
+                
+                // 重新绘制所有文本元素
+                this.textElements.forEach(element => {
+                    this.ctx.save();
+                    this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
+                    this.ctx.fillStyle = element.color;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.translate(element.x, element.y);
+                    this.ctx.rotate(element.rotation * Math.PI / 180);
+                    this.ctx.fillText(element.text, 0, 0);
+                    this.ctx.restore();
+                });
                 
                 // 更新预览
                 this.updatePreview();
@@ -1415,14 +1534,146 @@ class SweetsDesigner {
      * 添加文本
      */
     addText(text, x, y) {
-        // 实现添加文本功能
-        this.ctx.font = '24px Arial';
-        this.ctx.fillStyle = this.currentColor;
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(text, x || this.canvas.width / 2, y || this.canvas.height / 2);
+        // 获取字体设置
+        const fontFamily = document.getElementById('font-family')?.value || 'Arial';
+        const fontSize = parseInt(document.getElementById('font-size')?.value || '24');
         
+        // 创建文本元素对象
+        const textElement = {
+            id: Date.now(), // 唯一ID
+            text: text,
+            x: x || this.canvas.width / 2,
+            y: y || this.canvas.height / 2,
+            color: this.currentColor,
+            fontFamily: fontFamily,
+            fontSize: fontSize,
+            scale: 1.0,
+            rotation: 0
+        };
+        
+        // 添加到文本元素数组
+        this.textElements.push(textElement);
+        
+        // 选中新添加的文本元素
+        this.selectedTextElement = textElement;
+        
+        // 绘制所有元素
+        this.renderAllElements();
+        
+        // 保存状态并更新预览
         this.saveState();
         this.updatePreview();
+        
+        return textElement;
+    }
+    
+    /**
+     * 渲染所有元素（文本、图片等）
+     */
+    renderAllElements() {
+        // 清空画布
+        this.clearCanvas();
+        this.renderBackground();
+        
+        // 绘制图片
+        if (this.uploadedImage) {
+            this.drawProcessedImage();
+        }
+        
+        // 绘制所有文本元素
+        this.textElements.forEach(element => {
+            this.ctx.save();
+            
+            // 设置字体和颜色
+            this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
+            this.ctx.fillStyle = element.color;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            // 应用变换
+            this.ctx.translate(element.x, element.y);
+            this.ctx.rotate(element.rotation * Math.PI / 180);
+            
+            // 绘制文本
+            this.ctx.fillText(element.text, 0, 0);
+            
+            // 如果是选中的元素，绘制边框
+            if (this.selectedTextElement && this.selectedTextElement.id === element.id) {
+                this.drawSelectionBox(element);
+            }
+            
+            this.ctx.restore();
+        });
+    }
+    
+    /**
+     * 绘制选中边框
+     */
+    drawSelectionBox(element) {
+        this.ctx.save();
+        
+        // 测量文本尺寸
+        this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
+        const metrics = this.ctx.measureText(element.text);
+        const textHeight = element.fontSize * element.scale;
+        const padding = 5;
+        
+        // 绘制边框
+        this.ctx.strokeStyle = '#3498db';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(
+            -metrics.width / 2 - padding,
+            -textHeight / 2 - padding,
+            metrics.width + padding * 2,
+            textHeight + padding * 2
+        );
+        
+        // 绘制缩放控制点
+        const controlSize = 8;
+        const points = [
+            {x: -metrics.width/2 - padding, y: -textHeight/2 - padding}, // 左上
+            {x: 0, y: -textHeight/2 - padding}, // 上中
+            {x: metrics.width/2 + padding, y: -textHeight/2 - padding}, // 右上
+            {x: metrics.width/2 + padding, y: 0}, // 右中
+            {x: metrics.width/2 + padding, y: textHeight/2 + padding}, // 右下
+            {x: 0, y: textHeight/2 + padding}, // 下中
+            {x: -metrics.width/2 - padding, y: textHeight/2 + padding}, // 左下
+            {x: -metrics.width/2 - padding, y: 0} // 左中
+        ];
+        
+        points.forEach(point => {
+            this.ctx.fillStyle = '#3498db';
+            this.ctx.fillRect(point.x - controlSize/2, point.y - controlSize/2, controlSize, controlSize);
+        });
+        
+        this.ctx.restore();
+    }
+    
+    /**
+     * 检查点击是否在文本元素上
+     */
+    getTextElementAtPosition(x, y) {
+        for (let i = this.textElements.length - 1; i >= 0; i--) { // 从后往前检查，优先选择顶层元素
+            const element = this.textElements[i];
+            
+            // 测量文本尺寸
+            this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
+            const metrics = this.ctx.measureText(element.text);
+            const textHeight = element.fontSize * element.scale;
+            const padding = 5;
+            
+            // 计算文本边界
+            const left = element.x - metrics.width / 2 - padding;
+            const right = element.x + metrics.width / 2 + padding;
+            const top = element.y - textHeight / 2 - padding;
+            const bottom = element.y + textHeight / 2 + padding;
+            
+            if (x >= left && x <= right && y >= top && y <= bottom) {
+                return element;
+            }
+        }
+        return null;
     }
 
     /**
@@ -1905,17 +2156,80 @@ class SweetsDesigner {
     }
 
     /**
-     * 保存画布内容
+     * 保存画布内容到本地存储
      */
     saveCanvas() {
+        try {
+            // 获取画布数据
+            const canvasData = this.canvas.toDataURL('image/png');
+            
+            // 获取设计名称
+            const designNameElement = document.getElementById('design-name');
+            const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
+            
+            // 创建设计数据
+            const designData = {
+                id: 'design_' + Date.now(),
+                name: designName,
+                description: '',
+                canvasData: canvasData,
+                dessertType: this.dessertType,
+                elements: JSON.stringify(this.designElements || []),
+                imagePosition: this.imagePosition || { x: 0, y: 0 },
+                imageScale: this.imageScale || 1,
+                createTime: new Date().toISOString()
+            };
+            
+            // 保存设计到本地存储
+            let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            designs.push(designData);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+            
+            // 保存当前设计为最近设计
+            localStorage.setItem('lastDesignImage', canvasData);
+            localStorage.setItem('lastDesignType', this.dessertType);
+            
+            // 显示成功消息
+            this.showNotification('设计保存成功！', 'success');
+            
+            // 自动导出图片作为备份
+            this.exportCanvas('png');
+            
+        } catch (error) {
+            console.error('保存设计失败:', error);
+            this.showNotification('设计保存失败，请重试', 'error');
+        }
+    }
+
+    /**
+     * 导出画布内容
+     * @param {string} format - 导出格式，支持 'png', 'jpeg', 'webp'
+     */
+    exportCanvas(format = 'png') {
+        // 验证格式
+        const validFormats = ['png', 'jpeg', 'webp'];
+        if (!validFormats.includes(format)) {
+            format = 'png';
+        }
+        
+        // 设置MIME类型
+        const mimeType = `image/${format}`;
+        
+        // 获取设计名称
+        const designNameElement = document.getElementById('design-name');
+        const designName = designNameElement ? designNameElement.textContent.trim() : '设计';
+        const safeFileName = designName.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+        
         // 转换为Blob对象
         this.canvas.toBlob((blob) => {
             // 创建下载链接
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${this.dessertType}-design-${Date.now()}.png`;
+            a.download = `${safeFileName}-${Date.now()}.${format}`;
             document.body.appendChild(a);
+            
+            // 触发下载
             a.click();
             
             // 清理
@@ -1923,15 +2237,10 @@ class SweetsDesigner {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }, 0);
-        }, 'image/png');
-    }
-
-    /**
-     * 导出画布内容
-     */
-    exportCanvas() {
-        // 直接使用保存功能
-        this.saveCanvas();
+            
+            // 显示导出成功消息
+            this.showNotification(`设计已导出为${format.toUpperCase()}格式！`, 'success');
+        }, mimeType);
     }
 
     /**
@@ -1947,10 +2256,14 @@ class SweetsDesigner {
             // 从localStorage获取用户信息
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             
+            // 获取设计名称
+            const designNameElement = document.getElementById('design-name');
+            const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
+            
             // 创建设计数据 (符合 Supabase 命名规范)
             const designData = {
                 user_id: currentUser?.id || 'anonymous',
-                name: `设计_${new Date().toLocaleString()}`,
+                name: designName,
                 description: '',
                 canvas_data: canvasData,
                 dessert_type: this.dessertType,
@@ -1965,7 +2278,7 @@ class SweetsDesigner {
             };
             
             // 使用 document.supabase 创建设计
-const newDesign = document.supabase.designs.createDesign(designData);
+            const newDesign = document.supabase.designs.createDesign(designData);
             
             if (newDesign) {
                 // 保持向后兼容，同时保存到本地存储
@@ -1987,6 +2300,7 @@ const newDesign = document.supabase.designs.createDesign(designData);
                 
                 // 保存当前设计为最近设计
                 localStorage.setItem('lastDesignImage', canvasData);
+                localStorage.setItem('lastDesignType', this.dessertType);
                 
                 // 显示成功消息
                 this.showNotification('设计保存成功！', 'success');
@@ -2067,8 +2381,9 @@ const newDesign = document.supabase.designs.createDesign(designData);
      * 显示通知消息
      * @param {string} message 通知消息内容
      * @param {string} type 通知类型：success, error, info, warning
+     * @param {number} duration 显示持续时间（毫秒）
      */
-    showNotification(message, type = 'info') {
+    showNotification(message, type = 'info', duration = 3000) {
         // 创建通知元素
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
@@ -2116,7 +2431,112 @@ const newDesign = document.supabase.designs.createDesign(designData);
                     document.body.removeChild(notification);
                 }
             }, 300);
-        }, 3000);
+        }, duration);
+    }
+    
+    /**
+     * 创建订单
+     */
+    createOrder() {
+        try {
+            // 先保存设计
+            this.saveCanvas();
+            
+            // 获取画布数据
+            const canvasData = this.canvas.toDataURL('image/png');
+            
+            // 从localStorage获取用户信息
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            // 创建订单数据
+            const orderData = {
+                user_id: currentUser?.id || 'anonymous',
+                product_type: this.dessertType,
+                design_image: canvasData,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            };
+            
+            // 使用 document.supabase 创建订单
+            const newOrder = document.supabase.orders.createOrder(orderData);
+            
+            if (newOrder) {
+                // 保存到本地存储
+                let localOrders = JSON.parse(localStorage.getItem('orders')) || [];
+                localOrders.push({
+                    ...newOrder,
+                    id: newOrder.id || 'order_' + Date.now(),
+                    userId: newOrder.user_id,
+                    productType: newOrder.product_type,
+                    designImage: newOrder.design_image,
+                    createTime: newOrder.created_at || new Date().toISOString()
+                });
+                localStorage.setItem('orders', JSON.stringify(localOrders));
+                
+                // 显示成功消息
+                this.showNotification('订单创建成功，正在跳转到定制页面...', 'success', 2000);
+                
+                // 延迟后跳转到定制页面
+                setTimeout(() => {
+                    window.location.href = 'customize.html';
+                }, 2000);
+            } else {
+                // 降级处理：保存到本地
+                this.fallbackCreateOrder(orderData);
+            }
+        } catch (error) {
+            console.error('创建订单失败:', error);
+            // 降级处理
+            try {
+                const fallbackOrder = {
+                    id: 'order_' + Date.now(),
+                    productType: this.dessertType,
+                    designImage: this.canvas.toDataURL('image/png'),
+                    createTime: new Date().toISOString(),
+                    status: 'pending'
+                };
+                
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                orders.push(fallbackOrder);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                this.showNotification('订单已保存到本地，正在跳转到定制页面...', 'success', 2000);
+                
+                setTimeout(() => {
+                    window.location.href = 'customize.html';
+                }, 2000);
+            } catch (fallbackError) {
+                this.showNotification('订单创建失败，请先保存设计', 'error');
+            }
+        }
+    }
+    
+    /**
+     * 降级创建订单
+     */
+    fallbackCreateOrder(orderData) {
+        try {
+            const fallbackOrder = {
+                id: 'order_' + Date.now(),
+                productType: orderData.product_type,
+                designImage: orderData.design_image,
+                createTime: new Date().toISOString(),
+                status: 'pending'
+            };
+            
+            let orders = JSON.parse(localStorage.getItem('orders')) || [];
+            orders.push(fallbackOrder);
+            localStorage.setItem('orders', JSON.stringify(orders));
+            
+            this.showNotification('订单已保存到本地，正在跳转到定制页面...', 'success', 2000);
+            
+            setTimeout(() => {
+                window.location.href = 'customize.html';
+            }, 2000);
+        } catch (error) {
+            console.error('降级创建订单失败:', error);
+            this.showNotification('订单创建失败，请先保存设计', 'error');
+        }
     }
 
     /**
@@ -2172,6 +2592,13 @@ const newDesign = document.supabase.designs.createDesign(designData);
             canvasSizeElement.textContent = `${this.canvasSize.width} × ${this.canvasSize.height}`;
         }
         
+        // 更新元素数量
+        const elementsCountElement = document.getElementById('elements-count');
+        if (elementsCountElement) {
+            const count = this.designElements ? this.designElements.length : 0;
+            elementsCountElement.textContent = count;
+        }
+        
         // 保存初始状态
         this.saveState();
         
@@ -2180,6 +2607,30 @@ const newDesign = document.supabase.designs.createDesign(designData);
         
         // 更新预览
         this.updatePreview();
+    }
+    
+    /**
+     * 设置设计名称
+     * @param {string} name - 设计名称
+     * @param {boolean} allowEmpty - 是否允许空名称
+     */
+    setDesignName(name, allowEmpty = false) {
+        // 只有在不允许空名称且名称为空时才生成默认名称
+        if (!allowEmpty && (!name || name.trim() === '')) {
+            name = `设计_${new Date().toLocaleString()}`;
+        }
+        
+        const designNameElement = document.getElementById('design-name');
+        if (designNameElement) {
+            // 检查是否为输入元素
+            if (designNameElement.tagName === 'INPUT') {
+                designNameElement.value = name;
+            } else {
+                designNameElement.textContent = name;
+            }
+        }
+        
+        return name;
     }
 }
 
@@ -2307,13 +2758,205 @@ function initializeTools() {
     // 初始化重置视图按钮
     document.getElementById('reset-view-btn')?.addEventListener('click', () => designer.resetView());
     
-    // 初始化保存按钮
-    document.getElementById('save-btn')?.addEventListener('click', () => designer.saveCanvas());
+    // 初始化保存设计按钮
+    document.getElementById('save-design-btn')?.addEventListener('click', () => designer.saveCanvas());
+    
+    // 初始化保存设计按钮（移动端）
+    document.getElementById('save-design-btn-mobile')?.addEventListener('click', () => designer.saveCanvas());
+    
+    // 初始化导出图片按钮
+    document.getElementById('export-image-btn')?.addEventListener('click', () => {
+        try {
+            // 显示格式选择对话框
+            const format = prompt('请选择导出格式：\npng (默认)\njpeg\nwebp', 'png').toLowerCase();
+            if (format && ['png', 'jpeg', 'webp'].includes(format)) {
+                designer.exportCanvas(format);
+            } else {
+                designer.exportCanvas('png');
+            }
+        } catch (error) {
+            // 如果用户取消提示，默认导出png格式
+            designer.exportCanvas('png');
+        }
+    });
+    
+    // 初始化导出图片按钮（移动端）
+    document.getElementById('export-image-btn-mobile')?.addEventListener('click', () => {
+        try {
+            // 显示格式选择对话框
+            const format = prompt('请选择导出格式：\npng (默认)\njpeg\nwebp', 'png').toLowerCase();
+            if (format && ['png', 'jpeg', 'webp'].includes(format)) {
+                designer.exportCanvas(format);
+            } else {
+                designer.exportCanvas('png');
+            }
+        } catch (error) {
+            // 如果用户取消提示，默认导出png格式
+            designer.exportCanvas('png');
+        }
+    });
+    
+    // 初始化提交订单按钮
+    document.getElementById('create-order-btn')?.addEventListener('click', () => {
+        // 检查用户是否已登录
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            if (confirm('提交订单前需要登录，是否现在去登录？')) {
+                window.location.href = 'index.html';
+                return;
+            }
+        }
+        
+        // 检查设计是否为空
+        const context = designer.canvas.getContext('2d');
+        const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
+        let isEmpty = true;
+        
+        for (let i = 0; i < imageData.length; i += 4) {
+            // 检查是否有非透明像素（α通道大于0）或非白色像素
+            if (imageData[i + 3] > 0 || 
+                imageData[i] < 255 || 
+                imageData[i + 1] < 255 || 
+                imageData[i + 2] < 255) {
+                isEmpty = false;
+                break;
+            }
+        }
+        
+        if (isEmpty) {
+            alert('请先在画布上创建设计再提交订单！');
+            return;
+        }
+        
+        designer.createOrder();
+    });
+    
+    // 初始化提交订单按钮（移动端）
+    document.getElementById('create-order-btn-mobile')?.addEventListener('click', () => {
+        // 检查用户是否已登录
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            if (confirm('提交订单前需要登录，是否现在去登录？')) {
+                window.location.href = 'index.html';
+                return;
+            }
+        }
+        
+        // 检查设计是否为空
+        const context = designer.canvas.getContext('2d');
+        const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
+        let isEmpty = true;
+        
+        for (let i = 0; i < imageData.length; i += 4) {
+            // 检查是否有非透明像素（α通道大于0）或非白色像素
+            if (imageData[i + 3] > 0 || 
+                imageData[i] < 255 || 
+                imageData[i + 1] < 255 || 
+                imageData[i + 2] < 255) {
+                isEmpty = false;
+                break;
+            }
+        }
+        
+        if (isEmpty) {
+            alert('请先在画布上创建设计再提交订单！');
+            return;
+        }
+        
+        designer.createOrder();
+    });
+    
+    // 初始化文字添加按钮事件
+    const addTextBtn = document.getElementById('add-text-btn');
+    if (addTextBtn) {
+        addTextBtn.addEventListener('click', () => {
+            // 检查是否已选择模板
+            if (!designer.templateSelected) {
+                alert('请先选择一个模板再添加文字');
+                return;
+            }
+            
+            const textInput = document.getElementById('text-input');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                alert('请输入要添加的文字');
+                return;
+            }
+            
+            // 在画布中心添加文字
+            const centerX = designer.canvas.width / 2;
+            const centerY = designer.canvas.height / 2;
+            
+            designer.addText(text, centerX, centerY);
+            textInput.value = ''; // 清空输入框
+            
+            // 保存当前状态
+            designer.saveState();
+        });
+    }
+    
+    // 初始化设计名称更改事件
+    const designNameElement = document.getElementById('design-name');
+    if (designNameElement && designNameElement.tagName === 'INPUT') {
+        designNameElement.addEventListener('input', (e) => {
+            // 实时更新设计名称，但不保存
+            const newName = e.target.value.trim();
+            // 不再自动设置默认值，让用户可以输入空值，但保存时会检查
+        });
+        
+        // 为设计名称添加保存按钮事件
+        const saveDesignNameBtn = document.getElementById('save-design-name-btn');
+        if (saveDesignNameBtn) {
+            saveDesignNameBtn.addEventListener('click', () => {
+                const newName = designNameElement.value.trim();
+                
+                if (newName === '') {
+                    alert('设计名称不能为空，请输入名称');
+                    designNameElement.focus();
+                    return;
+                }
+                
+                designer.setDesignName(newName, false); // 保存时不允许空名称
+                designer.showNotification('设计名称已保存');
+            });
+        }
+        
+        // 保留失焦时的保存功能，但增加空值检查
+        designNameElement.addEventListener('blur', (e) => {
+            const newName = e.target.value.trim();
+            if (newName !== '') {
+                designer.setDesignName(newName, false); // 失焦时保存也不允许空名称
+            }
+            // 当失焦时如果输入框为空，不做任何处理，保持为空状态
+        });
+    }
+    
+    // 初始化重命名按钮（如果存在）
+    const renameDesignBtn = document.getElementById('rename-design');
+    if (renameDesignBtn) {
+        renameDesignBtn.addEventListener('click', () => {
+            const designNameElement = document.getElementById('design-name');
+            if (designNameElement) {
+                if (designNameElement.tagName === 'INPUT') {
+                    designNameElement.focus();
+                }
+            }
+        });
+    }
     
     // 初始化图片上传
     const uploadInput = document.getElementById('image-upload');
     if (uploadInput) {
         uploadInput.addEventListener('change', function(e) {
+            // 检查是否已选择模板
+            if (!designer.templateSelected) {
+                alert('请先选择一个模板再上传图片');
+                // 清空input，防止重复触发
+                e.target.value = '';
+                return;
+            }
+            
             if (e.target.files && e.target.files[0]) {
                 designer.handleImageUpload(e.target.files[0]);
             }
@@ -2344,8 +2987,10 @@ window.undo = () => designer?.undo();
 window.redo = () => designer?.redo();
 window.clearCanvas = () => designer?.clearCanvas();
 window.saveDesign = () => designer?.saveCanvas();
-window.exportDesign = () => designer?.exportCanvas();
+window.exportDesign = (format) => designer?.exportCanvas(format);
 window.generatePreview = () => designer?.updatePreview();
+window.createOrder = () => designer?.createOrder();
+window.submitDesign = () => designer?.submitDesign();
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {

@@ -327,6 +327,17 @@
                     };
                 }
                 
+                // 显示验证码的函数
+                function showVerificationCode(code) {
+                    // 创建验证码显示元素
+                    const codeDisplay = document.createElement('div');
+                    codeDisplay.className = 'verification-code-display';
+                    codeDisplay.style.cssText = 'background-color: #f3f4f6; padding: 8px 16px; border-radius: 8px; margin-top: 8px; text-align: center; font-size: 14px; color: #374151;';
+                    codeDisplay.innerHTML = `开发环境验证码: <strong>${code}</strong> (5分钟内有效)`;
+                    
+                    return codeDisplay;
+                }
+                
                 // 登录验证码按钮
                 const getSmsBtn = document.getElementById('get-sms');
                 if (getSmsBtn) {
@@ -350,6 +361,23 @@
                             const result = await document.supabase.auth.sendPhoneVerification(phone);
                             if (result.success) {
                                 showSuccess('验证码已发送');
+                                
+                                // 在开发环境显示验证码
+                                if (result.code) {
+                                    const codeInput = document.getElementById('sms-code');
+                                    if (codeInput) {
+                                        // 移除旧的验证码显示
+                                        const oldCodeDisplay = document.querySelector('.verification-code-display');
+                                        if (oldCodeDisplay) {
+                                            oldCodeDisplay.remove();
+                                        }
+                                        
+                                        // 添加新的验证码显示
+                                        const codeDisplay = showVerificationCode(result.code);
+                                        codeInput.parentNode.appendChild(codeDisplay);
+                                    }
+                                }
+                                
                                 // 开始倒计时
                                 startCountdown(this);
                             } else {
@@ -385,6 +413,23 @@
                             const result = await document.supabase.auth.sendPhoneVerification(phone);
                             if (result.success) {
                                 showSuccess('验证码已发送');
+                                
+                                // 在开发环境显示验证码
+                                if (result.code) {
+                                    const codeInput = document.getElementById('register-sms-code');
+                                    if (codeInput) {
+                                        // 移除旧的验证码显示
+                                        const oldCodeDisplay = document.querySelector('.verification-code-display');
+                                        if (oldCodeDisplay) {
+                                            oldCodeDisplay.remove();
+                                        }
+                                        
+                                        // 添加新的验证码显示
+                                        const codeDisplay = showVerificationCode(result.code);
+                                        codeInput.parentNode.appendChild(codeDisplay);
+                                    }
+                                }
+                                
                                 // 开始倒计时
                                 startCountdown(this);
                             } else {
