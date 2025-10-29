@@ -550,8 +550,6 @@ class SweetsDesigner {
         
         // 如果点击空白区域，取消选中
         this.selectedTextElement = null;
-        // 使用不清空画布的渲染方法，保留用户绘制内容
-        this.renderElementsOnly();
         
         // 其他情况正常开始绘图
         this.startDrawing(e);
@@ -563,6 +561,11 @@ class SweetsDesigner {
     handleMouseMove(e) {
         // 如果正在拖动文本
         if (this.isDraggingText && this.selectedTextElement) {
+            // 如果正在绘图，不允许拖动文本
+            if (this.isDrawing) {
+                return;
+            }
+            
             const pos = this.getMousePos(e);
             
             // 更新文本位置
@@ -579,6 +582,11 @@ class SweetsDesigner {
         
         // 如果正在拖动图片
         if (this.isDragging) {
+            // 如果正在绘图，不允许拖动图片
+            if (this.isDrawing) {
+                return;
+            }
+            
             const pos = this.getMousePos(e);
             
             // 更新图片位置
@@ -806,9 +814,6 @@ class SweetsDesigner {
             this.lastX = currentX;
             this.lastY = currentY;
             
-            // 保存当前状态，确保绘制内容不会丢失
-            this.saveState();
-            
             // 更新预览画布
             this.updatePreview();
         });
@@ -827,7 +832,7 @@ class SweetsDesigner {
             this.ctx.lineWidth = this.brushSize;
             this.ctx.globalCompositeOperation = 'source-over'; // 确保线条在已有内容之上
         } else if (this.currentTool === 'eraser') {
-            this.ctx.strokeStyle = '#FFFFFF';
+            this.ctx.strokeStyle = 'rgba(255,255,255,1)';
             this.ctx.lineWidth = this.brushSize * 2;
             this.ctx.globalCompositeOperation = 'destination-out';
         }
@@ -885,6 +890,9 @@ class SweetsDesigner {
             // 保存状态和更新预览
             this.saveState();
             this.updatePreview();
+            
+            // 强制从离屏画布恢复内容，确保绘制内容不会丢失
+            this.restoreFromOffscreen();
             
             // 清空点数组
             this.points = [];
@@ -1717,8 +1725,8 @@ class SweetsDesigner {
      * 渲染所有元素但不清空画布（保留用户绘制内容）
      */
     renderElementsOnly() {
-        // 不清空画布，直接绘制背景
-        this.renderBackground();
+        // 不清空画布，直接绘制背景（使用renderBackgroundOnly保留用户绘制内容）
+        this.renderBackgroundOnly();
         
         // 绘制图片
         if (this.uploadedImage) {
@@ -2454,6 +2462,9 @@ class SweetsDesigner {
     restoreFromOffscreen() {
         if (this.offscreenCanvas && this.offscreenCtx && this.ctx) {
             try {
+                // 首先清空主画布
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
                 // 从离屏画布获取图像数据
                 const imageData = this.offscreenCtx.getImageData(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
                 // 将数据绘制到主画布
