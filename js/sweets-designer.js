@@ -1,4 +1,10 @@
 // 甜点设计平台 - 模块化实现
+
+// 为NavigationManager提供的全局getState函数
+window.getState = function() {
+    return {};
+};
+
 class SweetsDesigner {
     constructor() {
         // DOM引用
@@ -8,6 +14,12 @@ class SweetsDesigner {
         this.previewCtx = null;
         this.backgroundCanvas = null;
         this.backgroundCtx = null;
+        
+        // 立即创建window.designer对象并添加getState方法
+        window.designer = window.designer || {};
+        window.designer.getState = function() {
+            return {};
+        };
         
         // 绘图状态
         this.isDrawing = false;
@@ -86,6 +98,11 @@ class SweetsDesigner {
         this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
         console.log('主画布初始化完成');
         
+        // 创建离屏画布用于存储绘制内容，防止笔画消失
+        this.offscreenCanvas = document.createElement('canvas');
+        this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+        console.log('离屏画布创建完成');
+        
         // 创建背景画布
         // 移除任何已存在的背景画布（防止重复）
         const canvasContainer = this.canvas.parentElement;
@@ -125,9 +142,10 @@ class SweetsDesigner {
         canvasContainer.insertBefore(this.backgroundCanvas, this.canvas);
         console.log('背景画布已插入到DOM中，位置在主画布之前');
         
-        // 全局可访问，方便调试
+        // 全局可访问，方便调试和NavigationManager使用
         window.dessertDesigner = this;
-        console.log('甜点设计器实例已暴露到window.dessertDesigner');
+        window.designer = this;
+        console.log('甜点设计器实例已暴露到window.dessertDesigner和window.designer');
         
         // 设置固定比例的画布尺寸 (4:3)
         const aspectRatio = 4 / 3;
@@ -179,24 +197,28 @@ class SweetsDesigner {
      * 调整画布尺寸，保持4:3比例
      */
     resizeCanvas() {
-        const aspectRatio = 4 / 3;
         const container = this.canvas.parentElement;
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
         
-        // 保存当前画布内容和背景画布内容
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        const bgImageData = this.backgroundCtx.getImageData(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
-        
-        // 计算新尺寸
+        // 使用固定比例 4:3，但保持容器边界
+        const aspectRatio = 4 / 3;
         let newWidth, newHeight;
+        
+        // 计算基于容器尺寸的合适尺寸
         if (containerWidth / containerHeight > aspectRatio) {
-            newHeight = containerHeight;
+            // 容器较宽，以高度为基准
+            newHeight = Math.min(containerHeight, 600);
             newWidth = newHeight * aspectRatio;
         } else {
-            newWidth = containerWidth;
+            // 容器较高，以宽度为基准
+            newWidth = Math.min(containerWidth, 800);
             newHeight = newWidth / aspectRatio;
         }
+        
+        // 确保最小尺寸
+        newWidth = Math.max(newWidth, 400);
+        newHeight = Math.max(newHeight, 300);
         
         // 更新尺寸（确保使用整数像素值）
         newWidth = Math.floor(newWidth);
@@ -205,6 +227,12 @@ class SweetsDesigner {
         // 设置Canvas的CSS尺寸，确保它在页面中正确显示
         this.canvas.style.width = `${newWidth}px`;
         this.canvas.style.height = `${newHeight}px`;
+        
+        // 保存当前绘制内容
+        let currentImageData = null;
+        if (this.ctx) {
+            currentImageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        }
         
         // 然后设置物理尺寸
         this.canvas.width = newWidth;
@@ -216,31 +244,21 @@ class SweetsDesigner {
         this.backgroundCanvas.style.width = `${newWidth}px`;
         this.backgroundCanvas.style.height = `${newHeight}px`;
         
+        // 更新离屏画布尺寸
+        if (this.offscreenCanvas) {
+            this.offscreenCanvas.width = newWidth;
+            this.offscreenCanvas.height = newHeight;
+        }
+        
         // 更新canvasSize对象
         this.canvasSize = { width: newWidth, height: newHeight };
         
-        // 尝试绘制回之前的内容（会按新尺寸缩放）
-        if (imageData) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = imageData.width;
-            tempCanvas.height = imageData.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.putImageData(imageData, 0, 0);
-            
-            // 按新尺寸绘制内容
-            this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width, this.canvas.height);
-        }
+        // 清空画布并重新绘制背景
+        this.clearCanvas(false);
         
-        // 恢复背景画布内容
-        if (bgImageData) {
-            const bgTempCanvas = document.createElement('canvas');
-            bgTempCanvas.width = bgImageData.width;
-            bgTempCanvas.height = bgImageData.height;
-            const bgTempCtx = bgTempCanvas.getContext('2d');
-            bgTempCtx.putImageData(bgImageData, 0, 0);
-            
-            // 按新尺寸绘制背景内容
-            this.backgroundCtx.drawImage(bgTempCanvas, 0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+        // 如果有模板，重新绘制模板
+        if (this.templateSelected) {
+            this.displayChocolateTemplates();
         }
         
         // 更新状态栏
@@ -499,8 +517,8 @@ class SweetsDesigner {
             this.dragOffset.y = pos.y - clickedTextElement.y;
             this.canvas.style.cursor = 'move';
             
-            // 重新渲染以显示选中状态
-            this.renderAllElements();
+            // 重新渲染以显示选中状态，但不清空画布
+            this.renderElementsOnly();
             return;
         }
         
@@ -528,7 +546,8 @@ class SweetsDesigner {
         
         // 如果点击空白区域，取消选中
         this.selectedTextElement = null;
-        this.renderAllElements();
+        // 使用不清空画布的渲染方法，保留用户绘制内容
+        this.renderElementsOnly();
         
         // 其他情况正常开始绘图
         this.startDrawing(e);
@@ -546,8 +565,8 @@ class SweetsDesigner {
             this.selectedTextElement.x = pos.x - this.dragOffset.x;
             this.selectedTextElement.y = pos.y - this.dragOffset.y;
             
-            // 重新渲染所有元素
-            this.renderAllElements();
+            // 重新渲染所有元素，但不清空画布
+            this.renderElementsOnly();
             
             // 更新预览
             this.updatePreview();
@@ -562,9 +581,8 @@ class SweetsDesigner {
             this.imagePosition.x = pos.x - this.dragOffset.x;
             this.imagePosition.y = pos.y - this.dragOffset.y;
             
-            // 重绘整个画布，确保清除旧图片避免拖尾
-            this.clearCanvas();
-            this.renderBackground();
+            // 重绘背景，保留用户绘制的内容
+            this.renderBackgroundOnly();
             
             // 重新绘制图片
             if (this.uploadedImage) {
@@ -631,6 +649,12 @@ class SweetsDesigner {
         
         // 其他情况正常停止绘图
         this.stopDrawing();
+        
+        // 立即再次从离屏画布恢复内容，确保绘制的内容正确显示
+        // 使用setTimeout稍微延迟，确保浏览器渲染完成
+        setTimeout(() => {
+            this.restoreFromOffscreen();
+        }, 0);
     }
     
     /**
@@ -647,17 +671,17 @@ class SweetsDesigner {
         const pos = this.getMousePos(e);
         this.lastX = pos.x;
         this.lastY = pos.y;
-        this.points = [{x: this.lastX, y: this.lastY}];
         
+        // 设置绘图属性，确保合成模式正确
         if (this.currentTool === 'brush') {
-            // 画笔模式
+            // 画笔模式 - 使用source-over确保新内容叠加在已有内容之上
             this.ctx.strokeStyle = this.currentColor;
             this.ctx.lineWidth = this.brushSize;
             this.ctx.lineCap = 'round';
             this.ctx.lineJoin = 'round';
             this.ctx.globalCompositeOperation = 'source-over';
         } else if (this.currentTool === 'eraser') {
-            // 橡皮擦模式
+            // 橡皮擦模式 - 使用destination-out擦除内容
             this.ctx.strokeStyle = '#FFFFFF';
             this.ctx.lineWidth = this.brushSize * 2; // 橡皮擦更大一些
             this.ctx.lineCap = 'round';
@@ -721,61 +745,68 @@ class SweetsDesigner {
         const currentX = pos.x;
         const currentY = pos.y;
         
-        // 如果points数组为空，添加最后一个已知点作为起点
-        if (this.points.length === 0) {
-            this.points.push({x: this.lastX, y: this.lastY});
-        }
-        
-        // 添加新点
-        this.points.push({x: currentX, y: currentY});
-        
-        // 使用requestAnimationFrame优化渲染
-        if (!this.isRendering) {
-            this.isRendering = true;
-            requestAnimationFrame(() => this.render());
-        }
-        
-        // 更新最后位置
-        this.lastX = currentX;
-        this.lastY = currentY;
+        // 使用requestAnimationFrame确保浏览器正确渲染
+        requestAnimationFrame(() => {
+            // 在离屏画布上绘制内容，作为备份
+            if (this.offscreenCanvas && this.offscreenCtx) {
+                // 设置离屏画布的绘制属性
+                this.offscreenCtx.beginPath();
+                this.offscreenCtx.moveTo(this.lastX, this.lastY);
+                this.offscreenCtx.lineTo(currentX, currentY);
+                
+                if (this.currentTool === 'brush') {
+                    this.offscreenCtx.strokeStyle = this.currentColor;
+                } else if (this.currentTool === 'eraser') {
+                    this.offscreenCtx.strokeStyle = 'white';
+                }
+                
+                this.offscreenCtx.lineWidth = this.brushSize;
+                this.offscreenCtx.lineCap = 'round';
+                this.offscreenCtx.lineJoin = 'round';
+                this.offscreenCtx.stroke();
+            }
+            
+            // 在主画布上绘制线段
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.lastX, this.lastY);
+            this.ctx.lineTo(currentX, currentY);
+            
+            // 设置绘制属性
+            if (this.currentTool === 'brush') {
+                this.ctx.strokeStyle = this.currentColor;
+            } else if (this.currentTool === 'eraser') {
+                this.ctx.strokeStyle = 'white'; // 假设画布背景是白色
+            }
+            
+            this.ctx.lineWidth = this.brushSize;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.stroke();
+            
+            // 更新最后位置
+            this.lastX = currentX;
+            this.lastY = currentY;
+            
+            // 保存当前状态，确保绘制内容不会丢失
+            this.saveState();
+            
+            // 更新预览画布
+            this.updatePreview();
+        });
     }
 
     /**
      * 渲染方法 - 使用高效路径管理
      */
     render() {
-        if (this.points.length < 2) {
-            // 单个点绘制
-            if (this.points.length === 1) {
-                if (this.currentTool === 'brush') {
-                    this.ctx.strokeStyle = this.currentColor;
-                    this.ctx.lineWidth = this.brushSize;
-                    this.ctx.globalCompositeOperation = 'source-over'; // 确保线条在模板之上
-                } else if (this.currentTool === 'eraser') {
-                    this.ctx.strokeStyle = '#FFFFFF';
-                    this.ctx.lineWidth = this.brushSize * 2;
-                    this.ctx.globalCompositeOperation = 'destination-out';
-                }
-                this.ctx.lineCap = 'round';
-                
-                // 使用小线段绘制单个点
-                const point = this.points[0];
-                this.ctx.beginPath();
-                this.ctx.moveTo(point.x, point.y);
-                this.ctx.lineTo(point.x + 0.1, point.y);
-                this.ctx.stroke();
-            }
-            this.isRendering = false;
-            // 更新预览
-            this.updatePreview();
-            return;
-        }
+        // 保存当前上下文状态，确保不会影响其他绘制
+        this.ctx.save();
         
         // 根据工具设置不同的绘图属性
         if (this.currentTool === 'brush') {
             this.ctx.strokeStyle = this.currentColor;
             this.ctx.lineWidth = this.brushSize;
-            this.ctx.globalCompositeOperation = 'source-over'; // 确保线条在模板之上
+            this.ctx.globalCompositeOperation = 'source-over'; // 确保线条在已有内容之上
         } else if (this.currentTool === 'eraser') {
             this.ctx.strokeStyle = '#FFFFFF';
             this.ctx.lineWidth = this.brushSize * 2;
@@ -785,16 +816,31 @@ class SweetsDesigner {
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
         
-        // 一次性绘制所有线段
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.points[0].x, this.points[0].y);
-        
-        // 绘制所有点之间的线段
-        for (let i = 1; i < this.points.length; i++) {
-            this.ctx.lineTo(this.points[i].x, this.points[i].y);
+        if (this.points.length < 2) {
+            // 单个点绘制
+            if (this.points.length === 1) {
+                // 使用小线段绘制单个点
+                const point = this.points[0];
+                this.ctx.beginPath();
+                this.ctx.moveTo(point.x, point.y);
+                this.ctx.lineTo(point.x + 0.1, point.y);
+                this.ctx.stroke();
+            }
+        } else {
+            // 一次性绘制所有线段
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.points[0].x, this.points[0].y);
+            
+            // 绘制所有点之间的线段
+            for (let i = 1; i < this.points.length; i++) {
+                this.ctx.lineTo(this.points[i].x, this.points[i].y);
+            }
+            
+            this.ctx.stroke();
         }
         
-        this.ctx.stroke();
+        // 恢复上下文状态
+        this.ctx.restore();
         
         // 清空点数组
         this.points = [];
@@ -811,16 +857,15 @@ class SweetsDesigner {
         if (this.isDrawing) {
             this.isDrawing = false;
             
-            // 确保所有点都被渲染
-            if (this.points.length > 0) {
-                this.render();
-            }
-            
             // 恢复默认合成模式
             this.ctx.globalCompositeOperation = 'source-over';
             
+            // 保存状态和更新预览
             this.saveState();
             this.updatePreview();
+            
+            // 清空点数组
+            this.points = [];
         }
     }
 
@@ -905,8 +950,8 @@ class SweetsDesigner {
                 if (newScale !== this.selectedTextElement.scale) {
                     this.selectedTextElement.scale = newScale;
                     
-                    // 重新渲染所有元素
-                    this.renderAllElements();
+                    // 重新渲染所有元素，但不清空画布
+                    this.renderElementsOnly();
                     
                     // 更新预览
                     this.updatePreview();
@@ -956,9 +1001,8 @@ class SweetsDesigner {
                 
                 console.log('图片缩放:', this.imageScale);
                 
-                // 重绘整个画布，确保清除旧图片避免拖尾
-                this.clearCanvas();
-                this.renderBackground();
+                // 重绘背景，保留用户绘制的内容
+                this.renderBackgroundOnly();
                 
                 // 重新绘制所有内容
                 if (this.uploadedImage) {
@@ -1596,8 +1640,8 @@ class SweetsDesigner {
         // 选中新添加的文本元素
         this.selectedTextElement = textElement;
         
-        // 绘制所有元素
-        this.renderAllElements();
+        // 绘制所有元素，但不清空画布
+        this.renderElementsOnly();
         
         // 保存状态并更新预览
         this.saveState();
@@ -1612,6 +1656,44 @@ class SweetsDesigner {
     renderAllElements() {
         // 清空画布
         this.clearCanvas();
+        this.renderBackground();
+        
+        // 绘制图片
+        if (this.uploadedImage) {
+            this.drawProcessedImage();
+        }
+        
+        // 绘制所有文本元素
+        this.textElements.forEach(element => {
+            this.ctx.save();
+            
+            // 设置字体和颜色
+            this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
+            this.ctx.fillStyle = element.color;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            // 应用变换
+            this.ctx.translate(element.x, element.y);
+            this.ctx.rotate(element.rotation * Math.PI / 180);
+            
+            // 绘制文本
+            this.ctx.fillText(element.text, 0, 0);
+            
+            // 如果是选中的元素，绘制边框
+            if (this.selectedTextElement && this.selectedTextElement.id === element.id) {
+                this.drawSelectionBox(element);
+            }
+            
+            this.ctx.restore();
+        });
+    }
+    
+    /**
+     * 渲染所有元素但不清空画布（保留用户绘制内容）
+     */
+    renderElementsOnly() {
+        // 不清空画布，直接绘制背景
         this.renderBackground();
         
         // 绘制图片
@@ -1716,68 +1798,11 @@ class SweetsDesigner {
     }
 
     /**
-     * 添加日志到日志显示区域，并同时输出到控制台
+     * 添加日志到控制台（隐藏界面显示）
      */
     addLog(message) {
-        // 首先输出到控制台
+        // 只输出到控制台，不创建界面元素
         console.log(`[Designer] ${message}`);
-        
-        // 尝试获取或创建日志显示区域
-        let logContainer = document.getElementById('designer-logs');
-        if (!logContainer) {
-            logContainer = document.createElement('div');
-            logContainer.id = 'designer-logs';
-            logContainer.style.position = 'fixed';
-            logContainer.style.bottom = '10px';
-            logContainer.style.left = '10px';
-            logContainer.style.width = '400px';
-            logContainer.style.maxHeight = '400px';
-            logContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-            logContainer.style.color = 'white';
-            logContainer.style.padding = '15px';
-            logContainer.style.borderRadius = '8px';
-            logContainer.style.fontSize = '13px';
-            logContainer.style.fontFamily = 'monospace';
-            logContainer.style.overflow = 'auto';
-            logContainer.style.zIndex = '1000';
-            logContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
-            
-            // 添加标题栏
-            const titleBar = document.createElement('div');
-            titleBar.style.paddingBottom = '10px';
-            titleBar.style.marginBottom = '10px';
-            titleBar.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
-            titleBar.style.fontWeight = 'bold';
-            titleBar.textContent = '设计师调试日志';
-            logContainer.appendChild(titleBar);
-            
-            document.body.appendChild(logContainer);
-        }
-        
-        // 添加新日志
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = document.createElement('div');
-        logEntry.style.marginBottom = '5px';
-        logEntry.style.wordBreak = 'break-word';
-        
-        // 为不同类型的日志设置不同的颜色
-        let logText = `${timestamp}: ${message}`;
-        if (message.includes('错误') || message.includes('ERROR')) {
-            logEntry.style.color = '#ff6b6b';
-        } else if (message.includes('警告') || message.includes('WARNING')) {
-            logEntry.style.color = '#ffd93d';
-        } else if (message.includes('完成') || message.includes('成功')) {
-            logEntry.style.color = '#6bcb77';
-        }
-        
-        logEntry.textContent = logText;
-        logContainer.appendChild(logEntry);
-        
-        // 滚动到底部
-        logContainer.scrollTop = logContainer.scrollHeight;
-        
-        // 同时输出到控制台
-        console.log(message);
     }
     
     /**
@@ -2381,6 +2406,11 @@ class SweetsDesigner {
             this.history.push(imageData);
             this.historyIndex = this.history.length - 1;
             
+            // 同时确保离屏画布与主画布保持同步
+            if (this.offscreenCanvas && this.offscreenCtx) {
+                this.offscreenCtx.putImageData(imageData, 0, 0);
+            }
+            
             // 限制历史记录数量
             if (this.history.length > 50) {
                 this.history.shift();
@@ -2391,6 +2421,25 @@ class SweetsDesigner {
             console.log('状态已保存，历史记录数量:', this.history.length);
         } catch (error) {
             console.error('保存状态时出错:', error);
+        }
+    }
+    
+    /**
+     * 从离屏画布恢复内容到主画布
+     */
+    restoreFromOffscreen() {
+        if (this.offscreenCanvas && this.offscreenCtx && this.ctx) {
+            try {
+                // 从离屏画布获取图像数据
+                const imageData = this.offscreenCtx.getImageData(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+                // 将数据绘制到主画布
+                this.ctx.putImageData(imageData, 0, 0);
+                console.log('从离屏画布恢复了绘制内容');
+                // 更新预览画布
+                this.updatePreview();
+            } catch (error) {
+                console.error('恢复绘制内容时出错:', error);
+            }
         }
     }
 
@@ -2432,6 +2481,19 @@ class SweetsDesigner {
             this.updateHistoryButtons();
         }
     }
+    
+    /**
+     * 获取当前设计状态，供NavigationManager使用
+     */
+    getState() {
+        return {
+            templateSelected: this.templateSelected,
+            selectedShape: this.selectedShape,
+            currentTool: this.currentTool,
+            currentColor: this.currentColor,
+            brushSize: this.brushSize
+        };
+    }
 
     /**
      * 更新历史记录按钮状态
@@ -2463,6 +2525,22 @@ class SweetsDesigner {
             this.saveState();
             this.updatePreview();
             console.log('主画布已清空，背景模板保持不变');
+        }
+    }
+    
+    /**
+     * 重绘画布背景和模板（不清空用户绘制的内容）
+     */
+    renderBackgroundOnly() {
+        if (this.ctx) {
+            // 如果有背景画布，将其内容绘制到主画布
+            if (this.backgroundCanvas && this.backgroundCtx) {
+                this.ctx.drawImage(this.backgroundCanvas, 0, 0, this.canvas.width, this.canvas.height);
+            } else {
+                // 否则绘制白色背景
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
         }
     }
     

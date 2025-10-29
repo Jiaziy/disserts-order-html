@@ -283,17 +283,16 @@ class NavigationManager {
             designState: {}
         };
         
-        // 根据页面类型保存特定数据
-        switch (this.currentPage) {
-            case 'sweets-designer.html':
-                if (typeof window.designer !== 'undefined') {
-                    data.designState = window.designer.getState();
-                }
-                break;
-            case 'customize.html':
-                // 保存定制表单数据
-                data.formData = this.getFormData();
-                break;
+        try {
+            // 根据页面类型保存特定数据
+            switch (this.currentPage) {
+                case 'customize.html':
+                    // 保存定制表单数据
+                    data.formData = this.getFormData();
+                    break;
+            }
+        } catch (error) {
+            console.warn('获取页面数据时出错:', error);
         }
         
         return data;
