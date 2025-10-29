@@ -1680,6 +1680,12 @@ class SweetsDesigner {
      * 处理图片上传并提取线条
      */
     async handleImageUpload(file) {
+        // 检查是否已选择模板
+        if (!this.templateSelected) {
+            alert('请先选择一个模板再上传图片');
+            return;
+        }
+        
         console.log('开始处理上传的图片:', file.name);
         
         const reader = new FileReader();
