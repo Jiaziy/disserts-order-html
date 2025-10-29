@@ -1922,274 +1922,146 @@ class SweetsDesigner {
     async handleImageUpload(file) {
         // 重置图片确认状态
         this.imageConfirmed = false;
-        console.log('handleImageUpload called with file:', file ? file.name : 'null');
-        this.addLog('handleImageUpload调用，templateSelected状态: ' + this.templateSelected + '，当前模板ID: ' + this.currentTemplateId);
         
         // 检查是否已选择模板
         if (!this.templateSelected) {
             alert('请先选择一个模板再上传图片');
-            this.addLog('未选择模板，阻止图片上传');
-            console.log('Blocked upload: no template selected');
             return;
         }
         
         // 检查画布和上下文是否存在
-        if (!this.canvas) {
-            console.error('Canvas element not found!');
-            this.addLog('错误: 画布元素不存在');
+        if (!this.canvas || !this.ctx) {
+            console.error('Canvas or context not found!');
             return;
         }
         
-        if (!this.ctx) {
-            console.error('Canvas context not found!');
-            this.addLog('错误: 画布上下文不存在');
+        // 检查文件类型
+        if (!file.type.startsWith('image/')) {
+            alert('请上传图片文件');
             return;
         }
         
-        this.addLog('开始处理上传的图片: ' + file.name);
-        this.addLog('当前画布状态: 存在，上下文状态: 存在');
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            console.log('FileReader onload event triggered');
-            this.addLog('文件读取完成，开始加载图片');
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
             
-            const img = new Image();
-            img.onload = () => {
-                console.log('Image onload event triggered, dimensions:', img.width, 'x', img.height);
-                this.addLog('图片加载完成，原始尺寸: ' + img.width + 'x' + img.height);
+            reader.onload = (event) => {
+                const img = new Image();
                 
-                // 计算合适的缩放比例
-                const maxWidth = this.canvas.width * 0.8;
-                const maxHeight = this.canvas.height * 0.8;
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height *= maxWidth / width;
-                        width = maxWidth;
+                img.onload = () => {
+                    // 计算合适的缩放比例
+                    const maxWidth = this.canvas.width * 0.8;
+                    const maxHeight = this.canvas.height * 0.8;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
                     }
-                } else {
-                    if (height > maxHeight) {
-                        width *= maxHeight / height;
-                        height = maxHeight;
-                    }
-                }
-                
-                this.addLog('调整后的图片尺寸: ' + width + 'x' + height);
-                
-                try {
-                    this.addLog('直接显示图片，跳过AI处理');
-                    console.log('Setting up uploadedImage object');
                     
                     // 保存上传的图片信息
                     this.uploadedImage = {
-                        img: img, // 直接使用加载的图片对象
+                        img: img,
                         width: width,
                         height: height,
                         originalDataUrl: event.target.result
                     };
                     
-                    console.log('uploadedImage set:', this.uploadedImage);
-                    this.addLog('已保存上传的图片信息');
-                    
-                    // 初始化缩放比例
+                    // 初始化缩放比例和位置
                     this.imageScale = 1.0;
-                    console.log('imageScale initialized to 1.0');
-                    
-                    // 计算居中位置
                     this.imagePosition = {
                         x: (this.canvas.width - width) / 2,
                         y: (this.canvas.height - height) / 2
                     };
-                    console.log('imagePosition calculated:', this.imagePosition);
-                    this.addLog('计算图片居中位置: ' + JSON.stringify(this.imagePosition));
                     
                     // 自动切换到图片工具
                     this.selectTool('image');
-                    this.addLog('已切换到图片工具');
                     
-                    // 使用正确的渲染顺序重新绘制所有元素
-                    console.log('Rendering all elements with correct order');
+                    // 重新绘制所有元素
                     this.renderAllElements();
                     
                     // 更新预览
-                    console.log('Updating preview');
                     this.updatePreview();
                     
-                    this.addLog('图片上传和显示完成');
-                    console.log('Image upload and display process completed');
-                } catch (error) {
-                    console.error('Error in image processing:', error);
-                    this.addLog('图片处理失败: ' + error.message);
-                    // 显示错误信息
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                    this.ctx.fillStyle = '#ff0000';
-                    this.ctx.font = '16px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText('图片处理失败，请重试', this.canvas.width / 2, this.canvas.height / 2);
-                }
+                    resolve();
+                };
+                
+                img.onerror = () => {
+                    alert('图片加载失败，请重试');
+                    reject(new Error('Image loading failed'));
+                };
+                
+                img.src = event.target.result;
             };
             
-            img.onerror = (error) => {
-                console.error('Image loading failed:', error);
-                this.addLog('图片加载失败');
+            reader.onerror = () => {
+                alert('文件读取失败，请重试');
+                reject(new Error('File reading failed'));
             };
             
-            img.src = event.target.result;
-            console.log('Image src set, waiting for onload');
-        };
-        
-        reader.onerror = (error) => {
-            console.error('File reading failed:', error);
-            this.addLog('文件读取失败');
-        };
-        
-        reader.readAsDataURL(file);
-        console.log('FileReader started reading file');
-    }
-    
-    /**
-     * 使用AI处理图片
-     * 注：这里是模拟AI处理的实现，实际应用中应该调用真实的AI图像生成API
-     */
-    async aiProcessImage(tempCanvas, tempCtx, img) {
-        return new Promise((resolve) => {
-            console.log('开始AI处理图片...');
-            
-            // 创建处理后的图像数据
-            const width = tempCanvas.width;
-            const height = tempCanvas.height;
-            
-            // 为了模拟AI处理，我们使用一个增强版的边缘检测算法
-            // 在实际应用中，这里应该调用外部AI API（如OpenAI、DeepAI等）
-            // 或者使用本地部署的AI模型进行处理
-            
-            // 步骤1: 绘制原始图像
-            tempCtx.drawImage(img, 0, 0, width, height);
-            
-            // 步骤2: 获取图像数据
-            const imageData = tempCtx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-            
-            // 步骤3: 模拟AI处理效果 - 使用多步骤处理来增强线条效果
-            // 1. 转换为灰度
-            const grayData = new Uint8ClampedArray(width * height);
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-                grayData[i / 4] = gray;
-            }
-            
-            // 2. 高级边缘检测（模拟AI处理效果）
-            const edgeData = new Uint8ClampedArray(data.length);
-            
-            // 模拟AI处理的参数调整
-            const threshold = 35; // 更低的阈值以获取更丰富的细节
-            
-            // 3. 应用增强的边缘检测
-            for (let y = 1; y < height - 1; y++) {
-                for (let x = 1; x < width - 1; x++) {
-                    // 计算局部对比度和梯度
-                    let maxVal = 0;
-                    let minVal = 255;
-                    
-                    // 分析局部区域
-                    for (let ky = -1; ky <= 1; ky++) {
-                        for (let kx = -1; kx <= 1; kx++) {
-                            const val = grayData[(y + ky) * width + (x + kx)];
-                            maxVal = Math.max(maxVal, val);
-                            minVal = Math.min(minVal, val);
-                        }
-                    }
-                    
-                    // 局部对比度
-                    const contrast = maxVal - minVal;
-                    
-                    // 基于对比度的边缘检测（模拟AI智能判断）
-                    const isEdge = contrast > threshold;
-                    const edgeValue = isEdge ? 0 : 255; // 黑色线条，白色背景
-                    
-                    const index = (y * width + x) * 4;
-                    edgeData[index] = edgeValue;     // R
-                    edgeData[index + 1] = edgeValue; // G
-                    edgeData[index + 2] = edgeValue; // B
-                    edgeData[index + 3] = 255;       // A
-                }
-            }
-            
-            // 步骤4: 模拟AI处理延迟
-            setTimeout(() => {
-                console.log('AI处理图片完成');
-                resolve(edgeData);
-            }, 500); // 模拟API调用延迟
+            reader.readAsDataURL(file);
         });
     }
     
     /**
-     * 提取图像边缘（线条）- 旧方法，保留用于参考
+     * 边缘检测算法
      */
-    extractEdges(imageData) {
-        // 保留原有实现，但不再使用
-        const data = imageData.data;
+    detectEdges(imageData) {
         const width = imageData.width;
         const height = imageData.height;
+        const data = imageData.data;
         
-        const grayData = new Uint8ClampedArray(width * height);
-        for (let i = 0; i < data.length; i += 4) {
-            const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            grayData[i / 4] = gray;
-        }
+        // 创建新的图像数据用于存储边缘检测结果
+        const edgeData = new Uint8ClampedArray(width * height * 4);
         
-        const edgeData = new Uint8ClampedArray(data.length);
-        const sobelX = [
-            [-1, 0, 1],
-            [-2, 0, 2],
-            [-1, 0, 1]
-        ];
-        const sobelY = [
-            [-1, -2, -1],
-            [0, 0, 0],
-            [1, 2, 1]
-        ];
-        
-        const threshold = 40;
-        
+        // 简单的Sobel边缘检测算法
         for (let y = 1; y < height - 1; y++) {
             for (let x = 1; x < width - 1; x++) {
+                // 计算Sobel算子
                 let gx = 0;
                 let gy = 0;
                 
+                // 3x3卷积核
                 for (let ky = -1; ky <= 1; ky++) {
                     for (let kx = -1; kx <= 1; kx++) {
-                        const pixel = grayData[(y + ky) * width + (x + kx)];
-                        gx += sobelX[ky + 1][kx + 1] * pixel;
-                        gy += sobelY[ky + 1][kx + 1] * pixel;
+                        const pixelIndex = ((y + ky) * width + (x + kx)) * 4;
+                        const gray = (data[pixelIndex] + data[pixelIndex + 1] + data[pixelIndex + 2]) / 3;
+                        
+                        // Sobel X方向核
+                        if (kx === -1 && ky === -1) gx += gray * -1;
+                        if (kx === 0 && ky === -1) gx += gray * -2;
+                        if (kx === 1 && ky === -1) gx += gray * -1;
+                        if (kx === -1 && ky === 1) gx += gray * 1;
+                        if (kx === 0 && ky === 1) gx += gray * 2;
+                        if (kx === 1 && ky === 1) gx += gray * 1;
+                        
+                        // Sobel Y方向核
+                        if (kx === -1 && ky === -1) gy += gray * -1;
+                        if (kx === -1 && ky === 0) gy += gray * -2;
+                        if (kx === -1 && ky === 1) gy += gray * -1;
+                        if (kx === 1 && ky === -1) gy += gray * 1;
+                        if (kx === 1 && ky === 0) gy += gray * 2;
+                        if (kx === 1 && ky === 1) gy += gray * 1;
                     }
                 }
                 
-                const gradient = Math.sqrt(gx * gx + gy * gy);
-                const edgeValue = gradient > threshold ? 0 : 255;
+                // 计算梯度幅度
+                const magnitude = Math.sqrt(gx * gx + gy * gy);
+                const edgeIndex = (y * width + x) * 4;
                 
-                const index = (y * width + x) * 4;
-                edgeData[index] = edgeValue;
-                edgeData[index + 1] = edgeValue;
-                edgeData[index + 2] = edgeValue;
-                edgeData[index + 3] = 255;
-            }
-        }
-        
-        // 确保边界像素也被正确设置
-        for (let x = 0; x < width; x++) {
-            for (let y = 0; y < height; y++) {
-                if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
-                    const index = (y * width + x) * 4;
-                    edgeData[index] = 255;     // R
-                    edgeData[index + 1] = 255; // G
-                    edgeData[index + 2] = 255; // B
-                    edgeData[index + 3] = 255; // A
-                }
+                // 设置边缘像素为白色，非边缘为黑色
+                const edgeValue = magnitude > 50 ? 255 : 0;
+                edgeData[edgeIndex] = edgeValue;     // R
+                edgeData[edgeIndex + 1] = edgeValue; // G
+                edgeData[edgeIndex + 2] = edgeValue; // B
+                edgeData[edgeIndex + 3] = 255;        // A
             }
         }
         
@@ -3502,64 +3374,7 @@ function initializeTools() {
         });
     }
     
-    // 初始化图片上传
-    const uploadInput = document.getElementById('image-upload-input');
-    console.log('查找上传元素，结果:', uploadInput ? '找到' : '未找到');
-    
-    if (uploadInput) {
-        console.log('为上传元素添加change事件监听器');
-        
-        // 先移除可能存在的事件监听器，避免重复添加
-        uploadInput.removeEventListener('change', handleUploadChange);
-        
-        // 使用命名函数，便于调试和移除
-        function handleUploadChange(e) {
-            console.log('上传元素change事件触发!');
-            console.log('当前designer对象状态:', {
-                templateSelected: designer.templateSelected,
-                currentTemplateId: designer.currentTemplateId,
-                canvas: designer.canvas ? '存在' : '不存在',
-                ctx: designer.ctx ? '存在' : '不存在'
-            });
-            
-            designer.addLog('图片上传change事件触发，templateSelected状态: ' + designer.templateSelected);
-            
-            // 检查是否已选择模板
-            if (!designer.templateSelected) {
-                alert('请先选择一个模板再上传图片');
-                // 清空input，防止重复触发
-                e.target.value = '';
-                designer.addLog('未选择模板，阻止图片上传并清空input');
-                return;
-            }
-            
-            console.log('文件检查:', e.target.files ? `找到${e.target.files.length}个文件` : '未找到文件');
-            
-            if (e.target.files && e.target.files[0]) {
-                const selectedFile = e.target.files[0];
-                console.log('选择了文件:', selectedFile.name, selectedFile.type, selectedFile.size + ' bytes');
-                designer.addLog('选择了有效文件: ' + selectedFile.name + '，开始调用handleImageUpload');
-                
-                try {
-                    console.log('准备调用handleImageUpload方法');
-                    designer.handleImageUpload(selectedFile);
-                    console.log('handleImageUpload方法已调用');
-                } catch (error) {
-                    console.error('调用handleImageUpload时出错:', error);
-                    designer.addLog('调用handleImageUpload时出错: ' + error.message);
-                }
-            } else {
-                designer.addLog('未选择有效文件');
-            }
-        }
-        
-        // 添加事件监听器
-        uploadInput.addEventListener('change', handleUploadChange);
-        console.log('上传元素change事件监听器已添加');
-    } else {
-        console.error('错误: 找不到ID为"image-upload"的元素!');
-        designer.addLog('错误: 找不到图片上传元素');
-    }
+    // 图片上传事件已经在setupEventListeners中初始化，这里不需要重复初始化
     
     // 设置默认工具为画笔
     designer.selectTool('brush');
