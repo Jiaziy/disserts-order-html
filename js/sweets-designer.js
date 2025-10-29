@@ -101,7 +101,11 @@ class SweetsDesigner {
         // 创建离屏画布用于存储绘制内容，防止笔画消失
         this.offscreenCanvas = document.createElement('canvas');
         this.offscreenCtx = this.offscreenCanvas.getContext('2d');
-        console.log('离屏画布创建完成');
+        
+        // 设置离屏画布尺寸与主画布一致
+        this.offscreenCanvas.width = this.canvas.width;
+        this.offscreenCanvas.height = this.canvas.height;
+        console.log('离屏画布创建完成，尺寸:', this.offscreenCanvas.width, '×', this.offscreenCanvas.height);
         
         // 创建背景画布
         // 移除任何已存在的背景画布（防止重复）
@@ -672,6 +676,9 @@ class SweetsDesigner {
         this.lastX = pos.x;
         this.lastY = pos.y;
         
+        // 确保离屏画布与主画布同步
+        this.syncOffscreenCanvas();
+        
         // 设置绘图属性，确保合成模式正确
         if (this.currentTool === 'brush') {
             // 画笔模式 - 使用source-over确保新内容叠加在已有内容之上
@@ -682,7 +689,7 @@ class SweetsDesigner {
             this.ctx.globalCompositeOperation = 'source-over';
         } else if (this.currentTool === 'eraser') {
             // 橡皮擦模式 - 使用destination-out擦除内容
-            this.ctx.strokeStyle = '#FFFFFF';
+            this.ctx.strokeStyle = 'rgba(255,255,255,1)'; // 使用不透明白色
             this.ctx.lineWidth = this.brushSize * 2; // 橡皮擦更大一些
             this.ctx.lineCap = 'round';
             this.ctx.lineJoin = 'round';
@@ -694,6 +701,9 @@ class SweetsDesigner {
             this.saveState();
             this.updatePreview();
         }
+        
+        // 保存初始状态
+        this.saveState();
     }
     
     /**
@@ -747,7 +757,30 @@ class SweetsDesigner {
         
         // 使用requestAnimationFrame确保浏览器正确渲染
         requestAnimationFrame(() => {
-            // 在离屏画布上绘制内容，作为备份
+            // 首先确保离屏画布与主画布完全同步
+            this.syncOffscreenCanvas();
+            
+            // 在主画布上绘制当前线段
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.lastX, this.lastY);
+            this.ctx.lineTo(currentX, currentY);
+            
+            // 设置绘制属性
+            if (this.currentTool === 'brush') {
+                this.ctx.strokeStyle = this.currentColor;
+                this.ctx.globalCompositeOperation = 'source-over'; // 画笔模式：叠加内容
+            } else if (this.currentTool === 'eraser') {
+                // 橡皮擦模式 - 使用白色绘制并设置destination-out模式
+                this.ctx.strokeStyle = 'rgba(255,255,255,1)'; // 使用不透明白色
+                this.ctx.globalCompositeOperation = 'destination-out'; // 橡皮擦模式：擦除内容
+            }
+            
+            this.ctx.lineWidth = this.currentTool === 'eraser' ? this.brushSize * 2 : this.brushSize;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.stroke();
+            
+            // 在离屏画布上绘制相同的内容，作为备份
             if (this.offscreenCanvas && this.offscreenCtx) {
                 // 设置离屏画布的绘制属性
                 this.offscreenCtx.beginPath();
@@ -756,32 +789,18 @@ class SweetsDesigner {
                 
                 if (this.currentTool === 'brush') {
                     this.offscreenCtx.strokeStyle = this.currentColor;
+                    this.offscreenCtx.globalCompositeOperation = 'source-over';
                 } else if (this.currentTool === 'eraser') {
-                    this.offscreenCtx.strokeStyle = 'white';
+                    // 橡皮擦模式 - 使用白色绘制并设置destination-out模式
+                    this.offscreenCtx.strokeStyle = 'rgba(255,255,255,1)'; // 使用不透明白色
+                    this.offscreenCtx.globalCompositeOperation = 'destination-out';
                 }
                 
-                this.offscreenCtx.lineWidth = this.brushSize;
+                this.offscreenCtx.lineWidth = this.currentTool === 'eraser' ? this.brushSize * 2 : this.brushSize;
                 this.offscreenCtx.lineCap = 'round';
                 this.offscreenCtx.lineJoin = 'round';
                 this.offscreenCtx.stroke();
             }
-            
-            // 在主画布上绘制线段
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.lastX, this.lastY);
-            this.ctx.lineTo(currentX, currentY);
-            
-            // 设置绘制属性
-            if (this.currentTool === 'brush') {
-                this.ctx.strokeStyle = this.currentColor;
-            } else if (this.currentTool === 'eraser') {
-                this.ctx.strokeStyle = 'white'; // 假设画布背景是白色
-            }
-            
-            this.ctx.lineWidth = this.brushSize;
-            this.ctx.lineCap = 'round';
-            this.ctx.lineJoin = 'round';
-            this.ctx.stroke();
             
             // 更新最后位置
             this.lastX = currentX;
@@ -860,12 +879,17 @@ class SweetsDesigner {
             // 恢复默认合成模式
             this.ctx.globalCompositeOperation = 'source-over';
             
+            // 确保离屏画布与主画布完全同步
+            this.syncOffscreenCanvas();
+            
             // 保存状态和更新预览
             this.saveState();
             this.updatePreview();
             
             // 清空点数组
             this.points = [];
+            
+            console.log('绘图停止，状态已保存');
         }
     }
 
@@ -2439,6 +2463,28 @@ class SweetsDesigner {
                 this.updatePreview();
             } catch (error) {
                 console.error('恢复绘制内容时出错:', error);
+            }
+        }
+    }
+    
+    /**
+     * 同步离屏画布与主画布内容
+     */
+    syncOffscreenCanvas() {
+        if (this.offscreenCanvas && this.offscreenCtx && this.ctx) {
+            try {
+                // 确保离屏画布尺寸与主画布一致
+                if (this.offscreenCanvas.width !== this.canvas.width || this.offscreenCanvas.height !== this.canvas.height) {
+                    this.offscreenCanvas.width = this.canvas.width;
+                    this.offscreenCanvas.height = this.canvas.height;
+                    console.log('离屏画布尺寸已同步:', this.offscreenCanvas.width, '×', this.offscreenCanvas.height);
+                }
+                
+                // 将主画布内容复制到离屏画布
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                this.offscreenCtx.putImageData(imageData, 0, 0);
+            } catch (error) {
+                console.error('同步离屏画布时出错:', error);
             }
         }
     }
