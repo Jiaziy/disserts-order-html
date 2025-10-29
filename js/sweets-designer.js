@@ -572,11 +572,41 @@ class SweetsDesigner {
             this.selectedTextElement.x = pos.x - this.dragOffset.x;
             this.selectedTextElement.y = pos.y - this.dragOffset.y;
             
-            // 重新渲染所有元素，但不清空画布
-            this.renderElementsOnly();
+            // 使用requestAnimationFrame确保平滑移动
+            requestAnimationFrame(() => {
+                // 首先保存当前画布内容到临时画布
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(this.canvas, 0, 0);
+                
+                // 清空主画布
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 重新绘制背景
+                this.renderBackgroundOnly();
+                
+                // 恢复用户绘制的内容
+                this.ctx.drawImage(tempCanvas, 0, 0);
+                
+                // 重新绘制所有文本元素（在用户内容之上）
+                this.textElements.forEach(element => {
+                    this.ctx.save();
+                    this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
+                    this.ctx.fillStyle = element.color;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.translate(element.x, element.y);
+                    this.ctx.rotate(element.rotation * Math.PI / 180);
+                    this.ctx.fillText(element.text, 0, 0);
+                    this.ctx.restore();
+                });
+                
+                // 更新预览
+                this.updatePreview();
+            });
             
-            // 更新预览
-            this.updatePreview();
             return;
         }
         
@@ -593,16 +623,33 @@ class SweetsDesigner {
             this.imagePosition.x = pos.x - this.dragOffset.x;
             this.imagePosition.y = pos.y - this.dragOffset.y;
             
-            // 重绘背景，保留用户绘制的内容
-            this.renderBackgroundOnly();
+            // 使用requestAnimationFrame确保平滑移动
+            requestAnimationFrame(() => {
+                // 首先保存当前画布内容到临时画布
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(this.canvas, 0, 0);
+                
+                // 清空主画布
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 重新绘制背景
+                this.renderBackgroundOnly();
+                
+                // 恢复用户绘制的内容
+                this.ctx.drawImage(tempCanvas, 0, 0);
+                
+                // 重新绘制图片（在用户内容之上）
+                if (this.uploadedImage) {
+                    this.drawProcessedImage();
+                }
+                
+                // 更新预览
+                this.updatePreview();
+            });
             
-            // 重新绘制图片
-            if (this.uploadedImage) {
-                this.drawProcessedImage();
-            }
-            
-            // 更新预览
-            this.updatePreview();
             return;
         }
         
@@ -1033,13 +1080,32 @@ class SweetsDesigner {
                 
                 console.log('图片缩放:', this.imageScale);
                 
-                // 重绘背景，保留用户绘制的内容
-                this.renderBackgroundOnly();
-                
-                // 重新绘制所有内容
-                if (this.uploadedImage) {
-                    this.drawProcessedImage();
-                }
+                // 使用requestAnimationFrame确保平滑缩放
+                requestAnimationFrame(() => {
+                    // 首先保存当前画布内容到临时画布
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = this.canvas.width;
+                    tempCanvas.height = this.canvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(this.canvas, 0, 0);
+                    
+                    // 清空主画布
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 重新绘制背景
+                    this.renderBackgroundOnly();
+                    
+                    // 恢复用户绘制的内容
+                    this.ctx.drawImage(tempCanvas, 0, 0);
+                    
+                    // 重新绘制图片（在用户内容之上）
+                    if (this.uploadedImage) {
+                        this.drawProcessedImage();
+                    }
+                    
+                    // 更新预览
+                    this.updatePreview();
+                });
                 
                 // 重新绘制所有文本元素
                 this.textElements.forEach(element => {
