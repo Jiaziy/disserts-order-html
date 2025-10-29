@@ -475,9 +475,14 @@
                                 showSuccess('登录成功，欢迎回来！');
                                 console.log('登录成功，用户信息:', result.user);
                                 // 这里可以跳转到首页
-                                setTimeout(() => {
+                                setTimeout(async () => {
                                     if (window.navigationManager) {
-                                        window.navigationManager.navigateTo('main.html');
+                                        try {
+                                            await window.navigationManager.navigateTo('main.html');
+                                        } catch (error) {
+                                            console.error('导航失败，使用降级方案:', error);
+                                            window.location.href = 'main.html';
+                                        }
                                     } else {
                                         window.location.href = 'main.html';
                                     }
@@ -524,9 +529,14 @@
                                 showSuccess('登录成功，欢迎回来！');
                                 console.log('登录成功，用户信息:', result.user);
                                 // 这里可以跳转到首页
-                                setTimeout(() => {
+                                setTimeout(async () => {
                                     if (window.navigationManager) {
-                                        window.navigationManager.navigateTo('main.html');
+                                        try {
+                                            await window.navigationManager.navigateTo('main.html');
+                                        } catch (error) {
+                                            console.error('导航失败，使用降级方案:', error);
+                                            window.location.href = 'main.html';
+                                        }
                                     } else {
                                         window.location.href = 'main.html';
                                     }

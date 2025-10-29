@@ -435,8 +435,23 @@ class NavigationManager {
     }
 
     // 公共导航方法
-    navigateTo(destination) {
-        this.handleNavigation({ getAttribute: () => destination });
+    async navigateTo(destination) {
+        try {
+            if (!destination) {
+                throw new Error('导航目标不能为空');
+            }
+            
+            // 直接处理导航，不需要模拟DOM元素
+            if (!this.validateDestination(destination)) {
+                throw new Error('无效的导航目标');
+            }
+            
+            // 执行导航
+            await this.performNavigation(destination);
+        } catch (error) {
+            console.error('导航失败:', error);
+            this.handleNavigationError(error, destination);
+        }
     }
 
     // 返回上一页
