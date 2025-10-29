@@ -504,6 +504,66 @@ body {
     backdrop-filter: blur(8px);
 }
 
+/* 历史操作按钮样式 */
+.history-actions {
+    margin-bottom: 32px;
+}
+
+.history-buttons-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.history-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: white;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 15px;
+    font-weight: 600;
+    width: 100%;
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+}
+
+.history-tool-btn:hover:not(:disabled) {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
+}
+
+.history-tool-btn:active:not(:disabled) {
+    transform: translateX(2px);
+}
+
+.history-tool-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.history-tool-btn.clear-btn:hover:not(:disabled) {
+    background-color: #ff4444;
+    border-color: #ff4444;
+}
+
+.history-tool-btn i {
+    font-size: 18px;
+    min-width: 20px;
+}
+
+.history-tool-btn span {
+    flex: 1;
+}
+
 /* 画布操作工具栏 */
 .canvas-toolbar {
     position: absolute;

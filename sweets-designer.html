@@ -173,6 +173,24 @@
         <main class="designer-main">
             <!-- 左侧工具栏 -->
             <aside class="tool-panel">
+                <!-- 历史操作按钮 -->
+                <div class="tool-section history-actions">
+                    <h3>操作历史</h3>
+                    <div class="history-buttons-group">
+                        <button id="undo-action-btn" class="history-tool-btn">
+                            <i class="fas fa-undo"></i>
+                            <span>撤销</span>
+                        </button>
+                        <button id="redo-action-btn" class="history-tool-btn">
+                            <i class="fas fa-redo"></i>
+                            <span>重做</span>
+                        </button>
+                        <button id="clear-canvas-action-btn" class="history-tool-btn clear-btn">
+                            <i class="fas fa-trash"></i>
+                            <span>清空</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="panel-section">
                     <h3><i class="fas fa-tools"></i> 工具</h3>
                     <div class="tool-buttons">
@@ -354,11 +372,6 @@
             <div class="status-info">
                 <span id="current-tool">当前工具: 画笔</span>
                 <span id="canvas-size">画布: 1024×768</span>
-            </div>
-            <div class="action-history">
-                <button id="undo-action-btn"><i class="fas fa-undo"></i>撤销</button>
-                <button id="redo-action-btn"><i class="fas fa-redo"></i>重做</button>
-                <button id="clear-canvas-action-btn"><i class="fas fa-trash"></i>清空</button>
             </div>
         </footer>
     </div>

@@ -32,6 +32,7 @@ class SweetsDesigner {
         this.imageScale = 1.0; // 图片缩放比例
         this.isDragging = false; // 是否正在拖动图片
         this.dragOffset = { x: 0, y: 0 }; // 拖动偏移量
+        this.imageConfirmed = false; // 图片是否已确认固定
         
         // 文本元素相关状态
         this.textElements = []; // 存储所有文本元素
@@ -458,6 +459,33 @@ class SweetsDesigner {
      */
     handleMouseDown(e) {
         const pos = this.getMousePos(e);
+        
+        // 检查是否点击了按钮
+        if (this.uploadedImage && !this.imageConfirmed && this.buttonPositions) {
+            // 检查是否点击了取消按钮
+            const cancelBtn = this.buttonPositions.cancel;
+            const cancelDistance = Math.sqrt(
+                Math.pow(pos.x - (cancelBtn.x + cancelBtn.size / 2), 2) +
+                Math.pow(pos.y - (cancelBtn.y + cancelBtn.size / 2), 2)
+            );
+            
+            if (cancelDistance <= cancelBtn.size / 2) {
+                this.cancelImage();
+                return;
+            }
+            
+            // 检查是否点击了确认按钮
+            const confirmBtn = this.buttonPositions.confirm;
+            const confirmDistance = Math.sqrt(
+                Math.pow(pos.x - (confirmBtn.x + confirmBtn.size / 2), 2) +
+                Math.pow(pos.y - (confirmBtn.y + confirmBtn.size / 2), 2)
+            );
+            
+            if (confirmDistance <= confirmBtn.size / 2) {
+                this.confirmImage();
+                return;
+            }
+        }
         
         // 检查是否点击在文本元素上
         const clickedTextElement = this.getTextElementAtPosition(pos.x, pos.y);
@@ -1175,20 +1203,25 @@ class SweetsDesigner {
      * 注意：此方法只在用户确认后被调用，执行实际的模板切换操作，且不清空画布
      */
     selectTemplate(templateType) {
+        this.addLog('selectTemplate方法调用，模板类型: ' + templateType);
+        
         // 检查模板类型是否有效
         const validTemplates = ['circle', 'square', 'heart'];
         if (!validTemplates.includes(templateType)) {
+            this.addLog('无效的模板类型: ' + templateType);
             return;
         }
         
         // 如果用户正在点击当前已选中的模板，则不做任何操作
         if (this.currentTemplateId === templateType) {
+            this.addLog('点击的是当前已选中的模板，不做操作');
             return;
         }
         
         // 重要：在进行任何操作前，先保存当前状态
         // 记录当前选中的模板ID
         this.currentTemplateId = templateType;
+        this.addLog('设置当前模板ID为: ' + templateType);
         
         // 更新按钮状态
         document.querySelectorAll('.template-btn').forEach(btn => {
@@ -1197,10 +1230,12 @@ class SweetsDesigner {
         const activeButton = document.querySelector(`.template-btn[data-template="${templateType}"]`);
         if (activeButton) {
             activeButton.classList.add('active');
+            this.addLog('更新按钮状态，激活模板按钮');
         }
         
         // 确保canvas和ctx可用
         if (!this.canvas || !this.ctx || !this.backgroundCanvas || !this.backgroundCtx) {
+            this.addLog('错误: canvas或ctx不可用');
             return;
         }
         
@@ -1216,6 +1251,7 @@ class SweetsDesigner {
             // 确保背景画布在DOM中
             if (!this.backgroundCanvas.parentElement) {
                 canvasContainer.appendChild(this.backgroundCanvas);
+                this.addLog('背景画布添加到DOM');
             }
             
             // 确保z-index设置正确，背景画布在主画布下方
@@ -1237,6 +1273,7 @@ class SweetsDesigner {
         tempCanvas.height = this.canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.drawImage(this.canvas, 0, 0);
+        this.addLog('已保存主画布当前内容到临时画布');
         
         // 清空背景画布，使用透明背景
         this.backgroundCtx.clearRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
@@ -1308,6 +1345,7 @@ class SweetsDesigner {
                 this.backgroundCtx.stroke();
                 break;
         }
+        this.addLog('已绘制模板形状: ' + templateType);
         
         // 在主画布上恢复之前保存的内容（不清空画布）
         this.ctx.drawImage(tempCanvas, 0, 0);
@@ -1315,6 +1353,7 @@ class SweetsDesigner {
         // 保存状态
         this.saveState();
         this.templateSelected = true; // 标记已选择模板
+        this.addLog('模板选择成功，templateSelected设置为: ' + this.templateSelected + '，当前模板ID: ' + this.currentTemplateId);
         
         // 创建模板名称映射
         const templateNames = {
@@ -1677,26 +1716,112 @@ class SweetsDesigner {
     }
 
     /**
-     * 处理图片上传并提取线条
+     * 添加日志到日志显示区域，并同时输出到控制台
+     */
+    addLog(message) {
+        // 首先输出到控制台
+        console.log(`[Designer] ${message}`);
+        
+        // 尝试获取或创建日志显示区域
+        let logContainer = document.getElementById('designer-logs');
+        if (!logContainer) {
+            logContainer = document.createElement('div');
+            logContainer.id = 'designer-logs';
+            logContainer.style.position = 'fixed';
+            logContainer.style.bottom = '10px';
+            logContainer.style.left = '10px';
+            logContainer.style.width = '400px';
+            logContainer.style.maxHeight = '400px';
+            logContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+            logContainer.style.color = 'white';
+            logContainer.style.padding = '15px';
+            logContainer.style.borderRadius = '8px';
+            logContainer.style.fontSize = '13px';
+            logContainer.style.fontFamily = 'monospace';
+            logContainer.style.overflow = 'auto';
+            logContainer.style.zIndex = '1000';
+            logContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
+            
+            // 添加标题栏
+            const titleBar = document.createElement('div');
+            titleBar.style.paddingBottom = '10px';
+            titleBar.style.marginBottom = '10px';
+            titleBar.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
+            titleBar.style.fontWeight = 'bold';
+            titleBar.textContent = '设计师调试日志';
+            logContainer.appendChild(titleBar);
+            
+            document.body.appendChild(logContainer);
+        }
+        
+        // 添加新日志
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.style.marginBottom = '5px';
+        logEntry.style.wordBreak = 'break-word';
+        
+        // 为不同类型的日志设置不同的颜色
+        let logText = `${timestamp}: ${message}`;
+        if (message.includes('错误') || message.includes('ERROR')) {
+            logEntry.style.color = '#ff6b6b';
+        } else if (message.includes('警告') || message.includes('WARNING')) {
+            logEntry.style.color = '#ffd93d';
+        } else if (message.includes('完成') || message.includes('成功')) {
+            logEntry.style.color = '#6bcb77';
+        }
+        
+        logEntry.textContent = logText;
+        logContainer.appendChild(logEntry);
+        
+        // 滚动到底部
+        logContainer.scrollTop = logContainer.scrollHeight;
+        
+        // 同时输出到控制台
+        console.log(message);
+    }
+    
+    /**
+     * 处理图片上传并显示
      */
     async handleImageUpload(file) {
+        // 重置图片确认状态
+        this.imageConfirmed = false;
+        console.log('handleImageUpload called with file:', file ? file.name : 'null');
+        this.addLog('handleImageUpload调用，templateSelected状态: ' + this.templateSelected + '，当前模板ID: ' + this.currentTemplateId);
+        
         // 检查是否已选择模板
         if (!this.templateSelected) {
             alert('请先选择一个模板再上传图片');
+            this.addLog('未选择模板，阻止图片上传');
+            console.log('Blocked upload: no template selected');
             return;
         }
         
-        console.log('开始处理上传的图片:', file.name);
+        // 检查画布和上下文是否存在
+        if (!this.canvas) {
+            console.error('Canvas element not found!');
+            this.addLog('错误: 画布元素不存在');
+            return;
+        }
+        
+        if (!this.ctx) {
+            console.error('Canvas context not found!');
+            this.addLog('错误: 画布上下文不存在');
+            return;
+        }
+        
+        this.addLog('开始处理上传的图片: ' + file.name);
+        this.addLog('当前画布状态: 存在，上下文状态: 存在');
         
         const reader = new FileReader();
-        reader.onload = async (event) => {
+        reader.onload = (event) => {
+            console.log('FileReader onload event triggered');
+            this.addLog('文件读取完成，开始加载图片');
+            
             const img = new Image();
-            img.onload = async () => {
-                console.log('图片加载完成，原始尺寸:', img.width, 'x', img.height);
-                
-                // 创建临时画布用于图像处理
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
+            img.onload = () => {
+                console.log('Image onload event triggered, dimensions:', img.width, 'x', img.height);
+                this.addLog('图片加载完成，原始尺寸: ' + img.width + 'x' + img.height);
                 
                 // 计算合适的缩放比例
                 const maxWidth = this.canvas.width * 0.8;
@@ -1716,61 +1841,60 @@ class SweetsDesigner {
                     }
                 }
                 
-                console.log('调整后的图片尺寸:', width, 'x', height);
+                this.addLog('调整后的图片尺寸: ' + width + 'x' + height);
                 
-                // 设置临时画布尺寸
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-                
-                // 使用AI处理图片（替代直接提取线条）
                 try {
-                    // 显示处理中的状态
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                    this.ctx.fillStyle = '#333';
-                    this.ctx.font = '16px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText('AI正在处理图片，请稍候...', this.canvas.width / 2, this.canvas.height / 2);
-                    
-                    // 调用AI处理方法
-                    const processedData = await this.aiProcessImage(tempCanvas, tempCtx, img);
-                    
-                    // 创建新的ImageData对象
-                    const imageData = new ImageData(processedData, width, height);
-                    
-                    // 在临时画布上绘制AI处理后的图像
-                    tempCtx.putImageData(imageData, 0, 0);
+                    this.addLog('直接显示图片，跳过AI处理');
+                    console.log('Setting up uploadedImage object');
                     
                     // 保存上传的图片信息
                     this.uploadedImage = {
-                        img: new Image(),
+                        img: img, // 直接使用加载的图片对象
                         width: width,
                         height: height,
-                        originalDataUrl: event.target.result // 保存原始图片数据，便于将来可能的重新处理
+                        originalDataUrl: event.target.result
                     };
-                    this.uploadedImage.img.src = tempCanvas.toDataURL();
+                    
+                    console.log('uploadedImage set:', this.uploadedImage);
+                    this.addLog('已保存上传的图片信息');
                     
                     // 初始化缩放比例
                     this.imageScale = 1.0;
+                    console.log('imageScale initialized to 1.0');
                     
                     // 计算居中位置
                     this.imagePosition = {
                         x: (this.canvas.width - width) / 2,
                         y: (this.canvas.height - height) / 2
                     };
+                    console.log('imagePosition calculated:', this.imagePosition);
+                    this.addLog('计算图片居中位置: ' + JSON.stringify(this.imagePosition));
                     
                     // 自动切换到图片工具
                     this.selectTool('image');
+                    this.addLog('已切换到图片工具');
                     
-                    // 在主画布上绘制处理后的图像
+                    // 清空画布并渲染背景
+                    console.log('Clearing canvas and rendering background');
                     this.clearCanvas();
                     this.renderBackground();
+                    
+                    // 直接绘制图片
                     this.drawProcessedImage();
                     
-                    console.log('AI图片处理完成，已显示在画布上');
+                    // 直接调用drawProcessedImage方法
+                    console.log('Calling drawProcessedImage directly');
+                    this.drawProcessedImage();
+                    
+                    // 更新预览
+                    console.log('Updating preview');
                     this.updatePreview();
+                    
+                    this.addLog('图片上传和显示完成');
+                    console.log('Image upload and display process completed');
                 } catch (error) {
-                    console.error('AI图片处理失败:', error);
+                    console.error('Error in image processing:', error);
+                    this.addLog('图片处理失败: ' + error.message);
                     // 显示错误信息
                     this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -1780,9 +1904,23 @@ class SweetsDesigner {
                     this.ctx.fillText('图片处理失败，请重试', this.canvas.width / 2, this.canvas.height / 2);
                 }
             };
+            
+            img.onerror = (error) => {
+                console.error('Image loading failed:', error);
+                this.addLog('图片加载失败');
+            };
+            
             img.src = event.target.result;
+            console.log('Image src set, waiting for onload');
         };
+        
+        reader.onerror = (error) => {
+            console.error('File reading failed:', error);
+            this.addLog('文件读取失败');
+        };
+        
         reader.readAsDataURL(file);
+        console.log('FileReader started reading file');
     }
     
     /**
@@ -1934,9 +2072,44 @@ class SweetsDesigner {
      * 绘制处理后的图像
      */
     drawProcessedImage() {
-        if (!this.uploadedImage || !this.uploadedImage.img.complete) {
-            console.log('图片未准备好或不存在，无法绘制');
+        console.log('drawProcessedImage called, checking image readiness');
+        
+        // 确保有上传的图片
+        if (!this.uploadedImage) {
+            console.log('ERROR: uploadedImage is null/undefined');
             return;
+        }
+        
+        // 确保有图片对象
+        if (!this.uploadedImage.img) {
+            console.log('ERROR: uploadedImage.img is null/undefined');
+            return;
+        }
+        
+        // 确保图片加载完成
+        if (!this.uploadedImage.img.complete) {
+            console.log('ERROR: image not fully loaded yet');
+            // 如果图片正在加载，添加加载完成事件监听器
+            this.uploadedImage.img.onload = () => {
+                console.log('Image loaded after initial check, retrying drawProcessedImage');
+                this.drawProcessedImage();
+            };
+            return;
+        }
+        
+        // 确保有有效的缩放比例
+        if (typeof this.imageScale !== 'number' || isNaN(this.imageScale)) {
+            this.imageScale = 1.0;
+            console.log('WARNING: imageScale was invalid, reset to 1.0');
+        }
+        
+        // 确保有有效的位置对象
+        if (!this.imagePosition || typeof this.imagePosition.x !== 'number' || typeof this.imagePosition.y !== 'number') {
+            this.imagePosition = {
+                x: (this.canvas.width - this.uploadedImage.width) / 2,
+                y: (this.canvas.height - this.uploadedImage.height) / 2
+            };
+            console.log('WARNING: imagePosition was invalid, recalculated to:', this.imagePosition);
         }
         
         // 计算缩放后的图片尺寸
@@ -1945,23 +2118,171 @@ class SweetsDesigner {
         
         console.log('绘制处理后的图像，位置:', this.imagePosition.x, this.imagePosition.y,
                     '缩放比例:', this.imageScale,
-                    '尺寸:', scaledWidth, scaledHeight);
+                    '原始尺寸:', this.uploadedImage.width, this.uploadedImage.height,
+                    '缩放后尺寸:', scaledWidth, scaledHeight);
         
-        // 先保存当前状态
-        this.ctx.save();
-        
-        // 绘制处理后的图像
-        this.ctx.drawImage(
-            this.uploadedImage.img,
-            this.imagePosition.x,
-            this.imagePosition.y,
-            scaledWidth,
-            scaledHeight
-        );
-        
-        // 恢复状态
-        this.ctx.restore();
+        try {
+            // 先保存当前状态
+            this.ctx.save();
+            
+            // 绘制处理后的图像
+            this.ctx.drawImage(
+                this.uploadedImage.img,
+                this.imagePosition.x,
+                this.imagePosition.y,
+                scaledWidth,
+                scaledHeight
+            );
+            
+            // 如果图片未确认，绘制确认和取消按钮
+            if (!this.imageConfirmed) {
+                this.drawImageButtons(this.imagePosition.x, this.imagePosition.y, scaledWidth, scaledHeight);
+            }
+            
+            console.log('Image drawn successfully!');
+            
+            // 恢复状态
+            this.ctx.restore();
+        } catch (error) {
+            console.error('Error drawing image:', error);
+        }
     }
+    
+    /**
+     * 绘制图片的确认和取消按钮
+     */
+    drawImageButtons(x, y, width, height) {
+        const buttonSize = 30;
+        const buttonSpacing = 10;
+        
+        // 确认按钮 (✓) - 移到左边
+        const confirmButtonX = x + width - buttonSize * 2 - buttonSpacing * 2;
+        const confirmButtonY = y - buttonSize - buttonSpacing;
+        
+        // 绘制确认按钮背景
+        this.ctx.save();
+        this.ctx.fillStyle = '#44ff44';
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(confirmButtonX + buttonSize / 2, confirmButtonY + buttonSize / 2, buttonSize / 2, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // 绘制✓符号
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.moveTo(confirmButtonX + buttonSize * 0.25, confirmButtonY + buttonSize * 0.5);
+        this.ctx.lineTo(confirmButtonX + buttonSize * 0.45, confirmButtonY + buttonSize * 0.7);
+        this.ctx.lineTo(confirmButtonX + buttonSize * 0.75, confirmButtonY + buttonSize * 0.3);
+        this.ctx.stroke();
+        
+        // 取消按钮 (X) - 移到右边
+        const cancelButtonX = x + width - buttonSize - buttonSpacing;
+        const cancelButtonY = y - buttonSize - buttonSpacing;
+        
+        // 绘制取消按钮背景
+        this.ctx.fillStyle = '#ff4444';
+        this.ctx.beginPath();
+        this.ctx.arc(cancelButtonX + buttonSize / 2, cancelButtonY + buttonSize / 2, buttonSize / 2, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // 绘制X符号
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.moveTo(cancelButtonX + buttonSize * 0.25, cancelButtonY + buttonSize * 0.25);
+        this.ctx.lineTo(cancelButtonX + buttonSize * 0.75, cancelButtonY + buttonSize * 0.75);
+        this.ctx.moveTo(cancelButtonX + buttonSize * 0.75, cancelButtonY + buttonSize * 0.25);
+        this.ctx.lineTo(cancelButtonX + buttonSize * 0.25, cancelButtonY + buttonSize * 0.75);
+        this.ctx.stroke();
+        
+
+        
+        this.ctx.restore();
+        
+        // 保存按钮位置信息以便后续检测点击
+        this.buttonPositions = {
+            cancel: { x: cancelButtonX, y: cancelButtonY, size: buttonSize },
+            confirm: { x: confirmButtonX, y: confirmButtonY, size: buttonSize }
+        };
+    }
+    
+    /**
+      * 确认图片 - 将图片固定为画布的一部分
+      */
+     confirmImage() {
+         console.log('确认图片，固定到画布');
+         this.addLog('用户确认图片，已固定到画布');
+         
+         // 设置图片已确认状态
+         this.imageConfirmed = true;
+         
+         // 将图片绘制到背景画布上，使其成为画布的一部分
+         if (this.backgroundCtx && this.uploadedImage) {
+             const scaledWidth = this.uploadedImage.width * this.imageScale;
+             const scaledHeight = this.uploadedImage.height * this.imageScale;
+             
+             this.backgroundCtx.save();
+             this.backgroundCtx.drawImage(
+                 this.uploadedImage.img,
+                 this.imagePosition.x,
+                 this.imagePosition.y,
+                 scaledWidth,
+                 scaledHeight
+             );
+             this.backgroundCtx.restore();
+             
+             // 更新主画布
+             this.renderBackground();
+         }
+         
+         // 清除上传的图片信息，防止再次绘制
+         this.uploadedImage = null;
+         this.isDragging = false;
+         
+         // 切换回画笔工具
+         this.selectTool('brush');
+         
+         // 更新历史记录
+         this.saveCurrentState();
+         
+         // 清空上传input的值，允许再次上传新图片
+         const uploadInput = document.getElementById('image-upload-input');
+         if (uploadInput) {
+             uploadInput.value = '';
+             console.log('已清空上传input的值');
+         }
+     }
+    
+    /**
+      * 取消图片上传
+      */
+     cancelImage() {
+         console.log('取消图片上传');
+         this.addLog('用户取消图片上传');
+         
+         // 清除上传的图片信息
+         this.uploadedImage = null;
+         this.isDragging = false;
+         this.imageConfirmed = false;
+         
+         // 清空画布并重新渲染背景
+         this.clearCanvas();
+         this.renderBackground();
+         
+         // 切换回画笔工具
+         this.selectTool('brush');
+         
+         // 清空上传input的值，允许再次上传同一张图片
+         const uploadInput = document.getElementById('image-upload-input');
+         if (uploadInput) {
+             uploadInput.value = '';
+             console.log('已清空上传input的值');
+         }
+     }
 
     /**
      * 更新预览
@@ -2952,21 +3273,62 @@ function initializeTools() {
     }
     
     // 初始化图片上传
-    const uploadInput = document.getElementById('image-upload');
+    const uploadInput = document.getElementById('image-upload-input');
+    console.log('查找上传元素，结果:', uploadInput ? '找到' : '未找到');
+    
     if (uploadInput) {
-        uploadInput.addEventListener('change', function(e) {
+        console.log('为上传元素添加change事件监听器');
+        
+        // 先移除可能存在的事件监听器，避免重复添加
+        uploadInput.removeEventListener('change', handleUploadChange);
+        
+        // 使用命名函数，便于调试和移除
+        function handleUploadChange(e) {
+            console.log('上传元素change事件触发!');
+            console.log('当前designer对象状态:', {
+                templateSelected: designer.templateSelected,
+                currentTemplateId: designer.currentTemplateId,
+                canvas: designer.canvas ? '存在' : '不存在',
+                ctx: designer.ctx ? '存在' : '不存在'
+            });
+            
+            designer.addLog('图片上传change事件触发，templateSelected状态: ' + designer.templateSelected);
+            
             // 检查是否已选择模板
             if (!designer.templateSelected) {
                 alert('请先选择一个模板再上传图片');
                 // 清空input，防止重复触发
                 e.target.value = '';
+                designer.addLog('未选择模板，阻止图片上传并清空input');
                 return;
             }
             
+            console.log('文件检查:', e.target.files ? `找到${e.target.files.length}个文件` : '未找到文件');
+            
             if (e.target.files && e.target.files[0]) {
-                designer.handleImageUpload(e.target.files[0]);
+                const selectedFile = e.target.files[0];
+                console.log('选择了文件:', selectedFile.name, selectedFile.type, selectedFile.size + ' bytes');
+                designer.addLog('选择了有效文件: ' + selectedFile.name + '，开始调用handleImageUpload');
+                
+                try {
+                    console.log('准备调用handleImageUpload方法');
+                    designer.handleImageUpload(selectedFile);
+                    console.log('handleImageUpload方法已调用');
+                } catch (error) {
+                    console.error('调用handleImageUpload时出错:', error);
+                    designer.addLog('调用handleImageUpload时出错: ' + error.message);
+                }
+            } else {
+                designer.addLog('未选择有效文件');
             }
-        });
+        }
+        
+        // 添加事件监听器
+        uploadInput.addEventListener('change', handleUploadChange);
+        console.log('上传元素change事件监听器已添加');
+    } else {
+        console.error('错误: 找不到ID为"image-upload"的元素!');
+        designer.addLog('错误: 找不到图片上传元素');
     }
     
     // 设置默认工具为画笔
