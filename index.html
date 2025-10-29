@@ -129,6 +129,7 @@
         <!-- 引入Supabase配置和工具 -->
         <script type="module" src="js/supabase-config.js"></script>
         <script type="module" src="js/supabase.js"></script>
+        <script src="js/navigation-manager.js"></script>
         
         <script>
             // 登录功能脚本
@@ -475,7 +476,7 @@
                                 console.log('登录成功，用户信息:', result.user);
                                 // 这里可以跳转到首页
                                 setTimeout(() => {
-                                    window.location.href = 'main.html';
+                                    NavigationManager.navigateTo('main.html');
                                 }, 1500);
                             } else {
                                 showError(result.error || '登录失败');
@@ -520,7 +521,7 @@
                                 console.log('登录成功，用户信息:', result.user);
                                 // 这里可以跳转到首页
                                 setTimeout(() => {
-                                    window.location.href = 'main.html';
+                                    NavigationManager.navigateTo('main.html');
                                 }, 1500);
                             } else {
                                 showError(result.error || '邮箱或密码错误');

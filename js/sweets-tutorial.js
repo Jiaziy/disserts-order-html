@@ -200,7 +200,11 @@ class SweetsTutorial {
         
         // 3秒后跳转到设计页面
         setTimeout(() => {
-            window.location.href = 'sweets-designer.html';
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('sweets-designer.html');
+            } else {
+                window.location.href = 'sweets-designer.html';
+            }
         }, 3000);
     }
 

@@ -164,6 +164,13 @@ function showMainPage() {
 
 // 页面导航功能
 function navigateToPage(page) {
+    // 如果导航管理器可用，使用统一导航
+    if (window.navigationManager) {
+        window.navigationManager.navigateTo(`main.html#${page}`);
+        return;
+    }
+    
+    // 降级处理：单页面应用导航
     // 隐藏所有页面内容
     document.querySelectorAll('.page-content').forEach(content => {
         content.classList.remove('active');
@@ -379,6 +386,13 @@ function updateUserInfo() {
 
 // 导航到定制页面
 function navigateToCustomize(type) {
+    // 如果导航管理器可用，使用统一导航
+    if (window.navigationManager) {
+        window.navigationManager.navigateTo(`customize.html?type=${type}`);
+        return;
+    }
+    
+    // 降级处理
     window.location.href = `customize.html?type=${type}`;
 }
 

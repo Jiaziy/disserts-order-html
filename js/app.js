@@ -558,7 +558,11 @@ function navigateToCustomize(productType) {
         return;
     }
     
-    window.location.href = `customize.html?type=${productType}`;
+    if (window.navigationManager) {
+        window.navigationManager.navigateTo(`customize.html?type=${productType}`);
+    } else {
+        window.location.href = `customize.html?type=${productType}`;
+    }
 }
 
 // 检查登录状态并跳转

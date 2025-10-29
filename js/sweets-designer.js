@@ -2634,7 +2634,11 @@ class SweetsDesigner {
                 
                 // 延迟后跳转到定制页面
                 setTimeout(() => {
-                    window.location.href = 'customize.html';
+                    if (window.navigationManager) {
+                        window.navigationManager.navigateTo('customize.html');
+                    } else {
+                        window.location.href = 'customize.html';
+                    }
                 }, 1500);
             } else {
                 this.showNotification('设计保存失败，请稍后重试', 'error');
@@ -2673,7 +2677,11 @@ class SweetsDesigner {
                 
                 // 延迟后跳转到定制页面
                 setTimeout(() => {
-                    window.location.href = 'customize.html';
+                    if (window.navigationManager) {
+                        window.navigationManager.navigateTo('customize.html');
+                    } else {
+                        window.location.href = 'customize.html';
+                    }
                 }, 1500);
             } catch (fallbackError) {
                 this.showNotification('设计保存失败，请检查网络连接', 'error');
@@ -2805,7 +2813,11 @@ class SweetsDesigner {
                 
                 // 延迟后跳转到定制页面
                 setTimeout(() => {
-                    window.location.href = 'customize.html';
+                    if (window.navigationManager) {
+                        window.navigationManager.navigateTo('customize.html');
+                    } else {
+                        window.location.href = 'customize.html';
+                    }
                 }, 2000);
             } else {
                 // 降级处理：保存到本地
@@ -2830,7 +2842,11 @@ class SweetsDesigner {
                 this.showNotification('订单已保存到本地，正在跳转到定制页面...', 'success', 2000);
                 
                 setTimeout(() => {
-                    window.location.href = 'customize.html';
+                    if (window.navigationManager) {
+                        window.navigationManager.navigateTo('customize.html');
+                    } else {
+                        window.location.href = 'customize.html';
+                    }
                 }, 2000);
             } catch (fallbackError) {
                 this.showNotification('订单创建失败，请先保存设计', 'error');
@@ -3129,7 +3145,11 @@ function initializeTools() {
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         if (!currentUser) {
             if (confirm('提交订单前需要登录，是否现在去登录？')) {
-                window.location.href = 'index.html';
+                if (window.navigationManager) {
+                    window.navigationManager.navigateTo('index.html');
+                } else {
+                    window.location.href = 'index.html';
+                }
                 return;
             }
         }
@@ -3164,7 +3184,11 @@ function initializeTools() {
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         if (!currentUser) {
             if (confirm('提交订单前需要登录，是否现在去登录？')) {
-                window.location.href = 'index.html';
+                if (window.navigationManager) {
+                    window.navigationManager.navigateTo('index.html');
+                } else {
+                    window.location.href = 'index.html';
+                }
                 return;
             }
         }

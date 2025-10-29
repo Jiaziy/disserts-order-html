@@ -220,7 +220,11 @@ class SweetsGallery {
         if (design) {
             // 将设计数据传递到设计页面
             localStorage.setItem('currentEditDesign', JSON.stringify(design));
-            window.location.href = 'sweets-designer.html';
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('sweets-designer.html');
+            } else {
+                window.location.href = 'sweets-designer.html';
+            }
         }
     }
 

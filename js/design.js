@@ -408,17 +408,29 @@ function saveDesign() {
     localStorage.setItem('lastDesignType', designState.designType);
     
     // 返回定制页面
-    window.location.href = 'customize.html';
+    if (window.navigationManager) {
+        window.navigationManager.navigateTo('customize.html');
+    } else {
+        window.location.href = 'customize.html';
+    }
 }
 
 // 返回上一页
 function goBack() {
     if (designState.history.length > 1) {
         if (confirm('确定要放弃当前设计吗？')) {
-            window.location.href = 'customize.html';
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('customize.html');
+            } else {
+                window.location.href = 'customize.html';
+            }
         }
     } else {
-        window.location.href = 'customize.html';
+        if (window.navigationManager) {
+            window.navigationManager.navigateTo('customize.html');
+        } else {
+            window.location.href = 'customize.html';
+        }
     }
 }
 

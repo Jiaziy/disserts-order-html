@@ -89,25 +89,25 @@
             <div class="banner">
                 <h2>个性化巧克力定制</h2>
                 <p>打造属于您的专属甜蜜体验，从口味到包装，完全由您定制</p>
-                <button class="start-btn" onclick="navigateToCustomize('chocolate')">开始定制</button>
+                <button class="start-btn" data-navigate="customize.html?type=chocolate">开始定制</button>
             </div>
             
             <div class="product-list">
                 <h3>产品分类</h3>
                 <div class="products">
-                    <div class="product-item" onclick="navigateToCustomize('chocolate')">
+                    <div class="product-item" data-navigate="customize.html?type=chocolate">
                         <i class="fas fa-cookie-bite"></i>
                         <span>巧克力定制</span>
                     </div>
-                    <div class="product-item" onclick="navigateToCustomize('cake')">
+                    <div class="product-item" data-navigate="customize.html?type=cake">
                         <i class="fas fa-birthday-cake"></i>
                         <span>蛋糕定制</span>
                     </div>
-                    <div class="product-item" onclick="navigateToCustomize('gift')">
+                    <div class="product-item" data-navigate="customize.html?type=gift">
                         <i class="fas fa-gift"></i>
                         <span>礼品套装</span>
                     </div>
-                    <div class="product-item" onclick="navigateToCustomize('special')">
+                    <div class="product-item" data-navigate="customize.html?type=special">
                         <i class="fas fa-star"></i>
                         <span>特色定制</span>
                     </div>
@@ -143,7 +143,7 @@
                 <h2>个性化定制中心</h2>
                 <p>选择您想要定制的产品类型，开始您的创意之旅</p>
                 <div class="products" style="margin-top: 30px;">
-                    <div class="product-item" onclick="navigateToCustomize('chocolate')">
+                    <div class="product-item" data-navigate="customize.html?type=chocolate">
                         <i class="fas fa-cookie-bite"></i>
                         <span>巧克力定制</span>
                     </div>
@@ -222,10 +222,10 @@
                         </div>
                     </div>
                     <div class="platform-actions">
-                        <button class="primary-btn" onclick="window.location.href='sweets-designer.html'">
+                        <button class="primary-btn" data-navigate="sweets-designer.html">
                             <i class="fas fa-play"></i> 开始设计
                         </button>
-                        <button class="secondary-btn" onclick="navigateToPage('sweets-tutorial')">
+                        <button class="secondary-btn" data-navigate="sweets-tutorial.html">
                             <i class="fas fa-graduation-cap"></i> 查看教程
                         </button>
                     </div>
@@ -243,7 +243,7 @@
                         <i class="fas fa-images"></i>
                         <h3>作品管理</h3>
                         <p>查看、编辑和分享您的设计作品</p>
-                        <button class="primary-btn" onclick="window.location.href='sweets-gallery.html'">
+                        <button class="primary-btn" data-navigate="sweets-gallery.html">
                             查看作品库
                         </button>
                     </div>
@@ -251,7 +251,7 @@
                         <i class="fas fa-plus"></i>
                         <h3>新建设计</h3>
                         <p>开始一个新的甜点设计项目</p>
-                        <button class="secondary-btn" onclick="window.location.href='sweets-designer.html'">
+                        <button class="secondary-btn" data-navigate="sweets-designer.html">
                             开始设计
                         </button>
                     </div>
@@ -281,7 +281,7 @@
                         <p>各种设计工具说明</p>
                     </div>
                     <div class="tutorial-actions">
-                        <button class="primary-btn" onclick="window.location.href='sweets-tutorial.html'">
+                        <button class="primary-btn" data-navigate="sweets-tutorial.html">
                             <i class="fas fa-graduation-cap"></i> 查看完整教程
                         </button>
                     </div>
@@ -290,6 +290,7 @@
         </div>
     </main>
 
+    <script src="js/navigation-manager.js"></script>
     <script src="js/app-new.js"></script>
 </body>
 </html>
