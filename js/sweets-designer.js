@@ -2442,9 +2442,14 @@ class SweetsDesigner {
             const designNameElement = document.getElementById('design-name');
             const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
             
+            // 从localStorage获取用户信息
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
             // 创建设计数据
             const designData = {
                 id: 'design_' + Date.now(),
+                userId: currentUser?.id || 'anonymous',
+                userName: currentUser?.displayName || currentUser?.email || '匿名用户',
                 name: designName,
                 description: '',
                 canvasData: canvasData,
@@ -2452,7 +2457,8 @@ class SweetsDesigner {
                 elements: JSON.stringify(this.designElements || []),
                 imagePosition: this.imagePosition || { x: 0, y: 0 },
                 imageScale: this.imageScale || 1,
-                createTime: new Date().toISOString()
+                createTime: new Date().toISOString(),
+                status: 'saved'
             };
             
             // 保存设计到本地存储
@@ -2465,7 +2471,7 @@ class SweetsDesigner {
             localStorage.setItem('lastDesignType', this.dessertType);
             
             // 显示成功消息
-            this.showNotification('设计保存成功！', 'success');
+            this.showNotification('设计已保存到"我的设计"中！', 'success');
             
             // 自动导出图片作为备份
             this.exportCanvas('png');
@@ -2475,12 +2481,20 @@ class SweetsDesigner {
             this.showNotification('设计保存失败，请重试', 'error');
         }
     }
+    
+    /**
+     * 保存设计到"我的设计"中
+     */
+    saveToMyDesigns() {
+        this.saveCanvas();
+    }
 
     /**
      * 导出画布内容
      * @param {string} format - 导出格式，支持 'png', 'jpeg', 'webp'
+     * @param {boolean} withTemplate - 是否包含模板底图
      */
-    exportCanvas(format = 'png') {
+    exportCanvas(format = 'png', withTemplate = false) {
         // 验证格式
         const validFormats = ['png', 'jpeg', 'webp'];
         if (!validFormats.includes(format)) {
@@ -2495,13 +2509,31 @@ class SweetsDesigner {
         const designName = designNameElement ? designNameElement.textContent.trim() : '设计';
         const safeFileName = designName.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
         
+        // 创建导出画布
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = this.canvas.width;
+        exportCanvas.height = this.canvas.height;
+        const exportCtx = exportCanvas.getContext('2d');
+        
+        // 绘制白色背景
+        exportCtx.fillStyle = '#FFFFFF';
+        exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        
+        // 如果包含模板底图，绘制模板
+        if (withTemplate && this.templateSelected) {
+            this.drawTemplate(exportCtx);
+        }
+        
+        // 绘制用户设计内容
+        exportCtx.drawImage(this.canvas, 0, 0);
+        
         // 转换为Blob对象
-        this.canvas.toBlob((blob) => {
+        exportCanvas.toBlob((blob) => {
             // 创建下载链接
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${safeFileName}-${Date.now()}.${format}`;
+            a.download = `${safeFileName}-${withTemplate ? '带模板' : ''}-${Date.now()}.${format}`;
             document.body.appendChild(a);
             
             // 触发下载
@@ -2514,8 +2546,15 @@ class SweetsDesigner {
             }, 0);
             
             // 显示导出成功消息
-            this.showNotification(`设计已导出为${format.toUpperCase()}格式！`, 'success');
+            this.showNotification(`设计已导出为${format.toUpperCase()}格式${withTemplate ? '（含模板）' : ''}！`, 'success');
         }, mimeType);
+    }
+    
+    /**
+     * 导出带模板底图的图片
+     */
+    exportWithTemplate() {
+        this.exportCanvas('png', true);
     }
 
     /**
@@ -2731,13 +2770,21 @@ class SweetsDesigner {
             // 从localStorage获取用户信息
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             
+            // 获取设计名称
+            const designNameElement = document.getElementById('design-name');
+            const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
+            
             // 创建订单数据
             const orderData = {
                 user_id: currentUser?.id || 'anonymous',
+                user_name: currentUser?.displayName || currentUser?.email || '匿名用户',
                 product_type: this.dessertType,
+                design_name: designName,
                 design_image: canvasData,
-                status: 'pending',
-                created_at: new Date().toISOString()
+                status: 'step2_completed', // 步骤二已完成
+                current_step: 3, // 跳转到步骤三
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             };
             
             // 使用 document.supabase 创建订单
@@ -2750,21 +2797,29 @@ class SweetsDesigner {
                     ...newOrder,
                     id: newOrder.id || 'order_' + Date.now(),
                     userId: newOrder.user_id,
+                    userName: newOrder.user_name,
                     productType: newOrder.product_type,
+                    designName: newOrder.design_name,
                     designImage: newOrder.design_image,
-                    createTime: newOrder.created_at || new Date().toISOString()
+                    status: newOrder.status,
+                    currentStep: newOrder.current_step,
+                    createTime: newOrder.created_at || new Date().toISOString(),
+                    updateTime: newOrder.updated_at || new Date().toISOString()
                 });
                 localStorage.setItem('orders', JSON.stringify(localOrders));
                 
-                // 显示成功消息
-                this.showNotification('订单创建成功，正在跳转到定制页面...', 'success', 2000);
+                // 保存当前订单ID
+                localStorage.setItem('currentOrderId', newOrder.id || 'order_' + Date.now());
                 
-                // 延迟后跳转到定制页面
+                // 显示成功消息
+                this.showNotification('订单创建成功，正在跳转到步骤三...', 'success', 2000);
+                
+                // 延迟后跳转到定制页面（步骤三）
                 setTimeout(() => {
                     if (window.navigationManager) {
-                        window.navigationManager.navigateTo('customize.html');
+                        window.navigationManager.navigateTo('customize.html?step=3');
                     } else {
-                        window.location.href = 'customize.html';
+                        window.location.href = 'customize.html?step=3';
                     }
                 }, 2000);
             } else {
@@ -2780,20 +2835,24 @@ class SweetsDesigner {
                     productType: this.dessertType,
                     designImage: this.canvas.toDataURL('image/png'),
                     createTime: new Date().toISOString(),
-                    status: 'pending'
+                    status: 'step2_completed',
+                    currentStep: 3
                 };
                 
                 let orders = JSON.parse(localStorage.getItem('orders')) || [];
                 orders.push(fallbackOrder);
                 localStorage.setItem('orders', JSON.stringify(orders));
                 
-                this.showNotification('订单已保存到本地，正在跳转到定制页面...', 'success', 2000);
+                // 保存当前订单ID
+                localStorage.setItem('currentOrderId', fallbackOrder.id);
+                
+                this.showNotification('订单已保存到本地，正在跳转到步骤三...', 'success', 2000);
                 
                 setTimeout(() => {
                     if (window.navigationManager) {
-                        window.navigationManager.navigateTo('customize.html');
+                        window.navigationManager.navigateTo('customize.html?step=3');
                     } else {
-                        window.location.href = 'customize.html';
+                        window.location.href = 'customize.html?step=3';
                     }
                 }, 2000);
             } catch (fallbackError) {
@@ -3071,6 +3130,11 @@ function initializeTools() {
         }
     });
     
+    // 初始化导出带模板按钮
+    document.getElementById('export-with-template-btn')?.addEventListener('click', () => {
+        designer.exportWithTemplate();
+    });
+    
     // 初始化导出图片按钮（移动端）
     document.getElementById('export-image-btn-mobile')?.addEventListener('click', () => {
         try {
@@ -3085,6 +3149,21 @@ function initializeTools() {
             // 如果用户取消提示，默认导出png格式
             designer.exportCanvas('png');
         }
+    });
+    
+    // 初始化导出带模板按钮（移动端）
+    document.getElementById('export-with-template-btn-mobile')?.addEventListener('click', () => {
+        designer.exportWithTemplate();
+    });
+    
+    // 初始化导出带模板按钮（移动端）
+    document.getElementById('export-with-template-btn-mobile')?.addEventListener('click', () => {
+        designer.exportWithTemplate();
+    });
+    
+    // 初始化导出带模板按钮（移动端）
+    document.getElementById('export-with-template-btn-mobile')?.addEventListener('click', () => {
+        designer.exportWithTemplate();
     });
     
     // 初始化提交订单按钮
@@ -3271,9 +3350,12 @@ window.redo = () => designer?.redo();
 window.clearCanvas = () => designer?.clearCanvas();
 window.saveDesign = () => designer?.saveCanvas();
 window.exportDesign = (format) => designer?.exportCanvas(format);
+window.exportWithTemplate = () => designer?.exportWithTemplate();
 window.generatePreview = () => designer?.updatePreview();
 window.createOrder = () => designer?.createOrder();
 window.submitDesign = () => designer?.submitDesign();
+window.saveToMyDesigns = () => designer?.saveToMyDesigns();
+window.saveToMyDesigns = () => designer?.saveToMyDesigns();
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
