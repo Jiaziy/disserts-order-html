@@ -638,13 +638,13 @@ class SweetsDesigner {
                 // 重新绘制背景
                 this.renderBackgroundOnly();
                 
-                // 恢复用户绘制的内容
-                this.ctx.drawImage(tempCanvas, 0, 0);
-                
-                // 重新绘制图片（在用户内容之上）
+                // 重新绘制图片（在背景之上，用户内容之下）
                 if (this.uploadedImage) {
                     this.drawProcessedImage();
                 }
+                
+                // 恢复用户绘制的内容
+                this.ctx.drawImage(tempCanvas, 0, 0);
                 
                 // 更新预览
                 this.updatePreview();
@@ -982,9 +982,9 @@ class SweetsDesigner {
                 case 'image':
                     // 图片工具统一使用移动光标
                     this.canvas.style.cursor = 'move';
-                    // 如果有上传的图片，重新绘制
+                    // 如果有上传的图片，使用正确的渲染顺序重新绘制
                     if (this.uploadedImage) {
-                        this.drawProcessedImage();
+                        this.renderAllElements();
                     }
                     break;
                 default:
@@ -1095,13 +1095,13 @@ class SweetsDesigner {
                     // 重新绘制背景
                     this.renderBackgroundOnly();
                     
-                    // 恢复用户绘制的内容
-                    this.ctx.drawImage(tempCanvas, 0, 0);
-                    
-                    // 重新绘制图片（在用户内容之上）
+                    // 重新绘制图片（在背景之上，用户内容之下）
                     if (this.uploadedImage) {
                         this.drawProcessedImage();
                     }
+                    
+                    // 恢复用户绘制的内容
+                    this.ctx.drawImage(tempCanvas, 0, 0);
                     
                     // 更新预览
                     this.updatePreview();
@@ -1756,7 +1756,7 @@ class SweetsDesigner {
         this.clearCanvas();
         this.renderBackground();
         
-        // 绘制图片
+        // 绘制图片（在背景之上，用户内容之下）
         if (this.uploadedImage) {
             this.drawProcessedImage();
         }
@@ -1791,13 +1791,26 @@ class SweetsDesigner {
      * 渲染所有元素但不清空画布（保留用户绘制内容）
      */
     renderElementsOnly() {
-        // 不清空画布，直接绘制背景（使用renderBackgroundOnly保留用户绘制内容）
+        // 首先保存当前画布内容到临时画布
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(this.canvas, 0, 0);
+        
+        // 清空主画布
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // 重新绘制背景
         this.renderBackgroundOnly();
         
-        // 绘制图片
+        // 绘制图片（在背景之上，用户内容之下）
         if (this.uploadedImage) {
             this.drawProcessedImage();
         }
+        
+        // 恢复用户绘制的内容
+        this.ctx.drawImage(tempCanvas, 0, 0);
         
         // 绘制所有文本元素
         this.textElements.forEach(element => {
@@ -1997,17 +2010,9 @@ class SweetsDesigner {
                     this.selectTool('image');
                     this.addLog('已切换到图片工具');
                     
-                    // 清空画布并渲染背景
-                    console.log('Clearing canvas and rendering background');
-                    this.clearCanvas();
-                    this.renderBackground();
-                    
-                    // 直接绘制图片
-                    this.drawProcessedImage();
-                    
-                    // 直接调用drawProcessedImage方法
-                    console.log('Calling drawProcessedImage directly');
-                    this.drawProcessedImage();
+                    // 使用正确的渲染顺序重新绘制所有元素
+                    console.log('Rendering all elements with correct order');
+                    this.renderAllElements();
                     
                     // 更新预览
                     console.log('Updating preview');
