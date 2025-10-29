@@ -476,7 +476,11 @@
                                 console.log('登录成功，用户信息:', result.user);
                                 // 这里可以跳转到首页
                                 setTimeout(() => {
-                                    NavigationManager.navigateTo('main.html');
+                                    if (window.navigationManager) {
+                                        window.navigationManager.navigateTo('main.html');
+                                    } else {
+                                        window.location.href = 'main.html';
+                                    }
                                 }, 1500);
                             } else {
                                 showError(result.error || '登录失败');
@@ -521,7 +525,11 @@
                                 console.log('登录成功，用户信息:', result.user);
                                 // 这里可以跳转到首页
                                 setTimeout(() => {
-                                    NavigationManager.navigateTo('main.html');
+                                    if (window.navigationManager) {
+                                        window.navigationManager.navigateTo('main.html');
+                                    } else {
+                                        window.location.href = 'main.html';
+                                    }
                                 }, 1500);
                             } else {
                                 showError(result.error || '邮箱或密码错误');

@@ -4,16 +4,17 @@ class NavigationManager {
         this.currentPage = '';
         this.previousPage = '';
         this.isTransitioning = false;
-        this.init();
+        this.initialized = false;
     }
 
     init() {
-        // 监听页面加载完成
-        document.addEventListener('DOMContentLoaded', () => {
-            this.setCurrentPage();
-            this.setupNavigation();
-            this.handleBackNavigation();
-        });
+        if (this.initialized) return;
+        this.initialized = true;
+        
+        // 立即设置当前页面
+        this.setCurrentPage();
+        this.setupNavigation();
+        this.handleBackNavigation();
 
         // 监听页面卸载
         window.addEventListener('beforeunload', () => {
@@ -450,6 +451,15 @@ class NavigationManager {
 
 // 创建全局导航管理器实例
 window.navigationManager = new NavigationManager();
+
+// 立即初始化导航管理器（不等待DOMContentLoaded）
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.navigationManager.init();
+    });
+} else {
+    window.navigationManager.init();
+}
 
 // 兼容旧版导航函数
 window.navigateToPage = function(page) {
