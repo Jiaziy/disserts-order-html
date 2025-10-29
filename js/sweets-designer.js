@@ -528,10 +528,14 @@ class SweetsDesigner {
         
         // 如果有上传的图片，检查是否点击在图片上（无论当前工具是什么）
         if (this.uploadedImage) {
+            // 考虑图片缩放
+            const scaledWidth = this.uploadedImage.width * this.imageScale;
+            const scaledHeight = this.uploadedImage.height * this.imageScale;
+            
             if (pos.x >= this.imagePosition.x && 
-                pos.x <= this.imagePosition.x + this.uploadedImage.width && 
+                pos.x <= this.imagePosition.x + scaledWidth && 
                 pos.y >= this.imagePosition.y && 
-                pos.y <= this.imagePosition.y + this.uploadedImage.height) {
+                pos.y <= this.imagePosition.y + scaledHeight) {
                 
                 // 自动切换到图片工具并开始拖动
                 if (this.currentTool !== 'image') {
@@ -572,40 +576,8 @@ class SweetsDesigner {
             this.selectedTextElement.x = pos.x - this.dragOffset.x;
             this.selectedTextElement.y = pos.y - this.dragOffset.y;
             
-            // 使用requestAnimationFrame确保平滑移动
-            requestAnimationFrame(() => {
-                // 首先保存当前画布内容到临时画布
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.canvas.width;
-                tempCanvas.height = this.canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(this.canvas, 0, 0);
-                
-                // 清空主画布
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // 重新绘制背景
-                this.renderBackgroundOnly();
-                
-                // 恢复用户绘制的内容
-                this.ctx.drawImage(tempCanvas, 0, 0);
-                
-                // 重新绘制所有文本元素（在用户内容之上）
-                this.textElements.forEach(element => {
-                    this.ctx.save();
-                    this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
-                    this.ctx.fillStyle = element.color;
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.translate(element.x, element.y);
-                    this.ctx.rotate(element.rotation * Math.PI / 180);
-                    this.ctx.fillText(element.text, 0, 0);
-                    this.ctx.restore();
-                });
-                
-                // 更新预览
-                this.updatePreview();
-            });
+            // 直接重新绘制整个画布
+            this.renderAllElements();
             
             return;
         }
@@ -623,32 +595,8 @@ class SweetsDesigner {
             this.imagePosition.x = pos.x - this.dragOffset.x;
             this.imagePosition.y = pos.y - this.dragOffset.y;
             
-            // 使用requestAnimationFrame确保平滑移动
-            requestAnimationFrame(() => {
-                // 首先保存当前画布内容到临时画布
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.canvas.width;
-                tempCanvas.height = this.canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(this.canvas, 0, 0);
-                
-                // 清空主画布
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // 重新绘制背景
-                this.renderBackgroundOnly();
-                
-                // 重新绘制图片（在背景之上，用户内容之下）
-                if (this.uploadedImage) {
-                    this.drawProcessedImage();
-                }
-                
-                // 恢复用户绘制的内容
-                this.ctx.drawImage(tempCanvas, 0, 0);
-                
-                // 更新预览
-                this.updatePreview();
-            });
+            // 直接重新绘制整个画布，避免使用临时画布
+            this.renderAllElements();
             
             return;
         }
@@ -1791,51 +1739,8 @@ class SweetsDesigner {
      * 渲染所有元素但不清空画布（保留用户绘制内容）
      */
     renderElementsOnly() {
-        // 首先保存当前画布内容到临时画布
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.canvas.width;
-        tempCanvas.height = this.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(this.canvas, 0, 0);
-        
-        // 清空主画布
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // 重新绘制背景
-        this.renderBackgroundOnly();
-        
-        // 绘制图片（在背景之上，用户内容之下）
-        if (this.uploadedImage) {
-            this.drawProcessedImage();
-        }
-        
-        // 恢复用户绘制的内容
-        this.ctx.drawImage(tempCanvas, 0, 0);
-        
-        // 绘制所有文本元素
-        this.textElements.forEach(element => {
-            this.ctx.save();
-            
-            // 设置字体和颜色
-            this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
-            this.ctx.fillStyle = element.color;
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            
-            // 应用变换
-            this.ctx.translate(element.x, element.y);
-            this.ctx.rotate(element.rotation * Math.PI / 180);
-            
-            // 绘制文本
-            this.ctx.fillText(element.text, 0, 0);
-            
-            // 如果是选中的元素，绘制边框
-            if (this.selectedTextElement && this.selectedTextElement.id === element.id) {
-                this.drawSelectionBox(element);
-            }
-            
-            this.ctx.restore();
-        });
+        // 直接重新绘制整个画布，避免使用临时画布
+        this.renderAllElements();
     }
     
     /**
@@ -2069,82 +1974,47 @@ class SweetsDesigner {
     }
     
     /**
-     * 绘制处理后的图像
+     * 绘制上传的图片
      */
     drawProcessedImage() {
-        console.log('drawProcessedImage called, checking image readiness');
-        
         // 确保有上传的图片
-        if (!this.uploadedImage) {
-            console.log('ERROR: uploadedImage is null/undefined');
-            return;
-        }
-        
-        // 确保有图片对象
-        if (!this.uploadedImage.img) {
-            console.log('ERROR: uploadedImage.img is null/undefined');
+        if (!this.uploadedImage || !this.uploadedImage.img) {
             return;
         }
         
         // 确保图片加载完成
         if (!this.uploadedImage.img.complete) {
-            console.log('ERROR: image not fully loaded yet');
-            // 如果图片正在加载，添加加载完成事件监听器
-            this.uploadedImage.img.onload = () => {
-                console.log('Image loaded after initial check, retrying drawProcessedImage');
-                this.drawProcessedImage();
-            };
             return;
         }
         
-        // 确保有有效的缩放比例
+        // 确保有有效的缩放比例和位置
         if (typeof this.imageScale !== 'number' || isNaN(this.imageScale)) {
             this.imageScale = 1.0;
-            console.log('WARNING: imageScale was invalid, reset to 1.0');
         }
         
-        // 确保有有效的位置对象
         if (!this.imagePosition || typeof this.imagePosition.x !== 'number' || typeof this.imagePosition.y !== 'number') {
             this.imagePosition = {
                 x: (this.canvas.width - this.uploadedImage.width) / 2,
                 y: (this.canvas.height - this.uploadedImage.height) / 2
             };
-            console.log('WARNING: imagePosition was invalid, recalculated to:', this.imagePosition);
         }
         
         // 计算缩放后的图片尺寸
         const scaledWidth = this.uploadedImage.width * this.imageScale;
         const scaledHeight = this.uploadedImage.height * this.imageScale;
         
-        console.log('绘制处理后的图像，位置:', this.imagePosition.x, this.imagePosition.y,
-                    '缩放比例:', this.imageScale,
-                    '原始尺寸:', this.uploadedImage.width, this.uploadedImage.height,
-                    '缩放后尺寸:', scaledWidth, scaledHeight);
+        // 绘制图片
+        this.ctx.drawImage(
+            this.uploadedImage.img,
+            this.imagePosition.x,
+            this.imagePosition.y,
+            scaledWidth,
+            scaledHeight
+        );
         
-        try {
-            // 先保存当前状态
-            this.ctx.save();
-            
-            // 绘制处理后的图像
-            this.ctx.drawImage(
-                this.uploadedImage.img,
-                this.imagePosition.x,
-                this.imagePosition.y,
-                scaledWidth,
-                scaledHeight
-            );
-            
-            // 如果图片未确认，绘制确认和取消按钮
-            if (!this.imageConfirmed) {
-                this.drawImageButtons(this.imagePosition.x, this.imagePosition.y, scaledWidth, scaledHeight);
-            }
-            
-            console.log('Image drawn successfully!');
-            
-            // 恢复状态
-            this.ctx.restore();
-        } catch (error) {
-            console.error('Error drawing image:', error);
+        // 如果图片未确认，绘制确认和取消按钮
+        if (!this.imageConfirmed) {
+            this.drawImageButtons(this.imagePosition.x, this.imagePosition.y, scaledWidth, scaledHeight);
         }
     }
     
