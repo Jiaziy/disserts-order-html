@@ -450,3 +450,660 @@
         flex-direction: column;
     }
 }
+
+/* 标签页样式 */
+.tab-container {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: 30px;
+    gap: 8px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6c757d;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 107, 149, 0.1);
+    color: #FF6B95;
+}
+
+.tab-btn.active {
+    background: #FF6B95;
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
+}
+
+/* 订单卡片样式 */
+.order-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    border-color: #FF6B95;
+}
+
+.order-image {
+    width: 100%;
+    height: 180px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.order-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.order-info {
+    padding: 20px;
+}
+
+.order-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.order-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.order-status.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.order-status.confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.order-status.shipped {
+    background: #d4edda;
+    color: #155724;
+}
+
+.order-status.completed {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.order-status.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.order-date {
+    font-size: 12px;
+    color: #999;
+}
+
+.order-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: #FF6B95;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.order-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.order-actions button:hover {
+    background: #e9ecef;
+}
+
+.order-actions button.primary {
+    background: #FF6B95;
+    color: white;
+    border-color: #FF6B95;
+}
+
+.order-actions button.primary:hover {
+    background: #ff4d7d;
+}
+
+.order-actions button.danger {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.order-actions button.danger:hover {
+    background: #c82333;
+}
+
+/* 订单模态框样式 */
+.order-details {
+    width: 100%;
+}
+
+.order-details .info-grid {
+    gap: 15px;
+}
+
+.order-details .info-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.order-details .info-item span:first-child {
+    min-width: 80px;
+}
+
+/* 刷新按钮样式 */
+.refresh-btn {
+    padding: 10px 15px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-btn:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+/* 标签页样式 */
+.tab-container {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: 30px;
+    gap: 8px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6c757d;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 107, 149, 0.1);
+    color: #FF6B95;
+}
+
+.tab-btn.active {
+    background: #FF6B95;
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
+}
+
+/* 订单卡片样式 */
+.order-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    border-color: #FF6B95;
+}
+
+.order-image {
+    width: 100%;
+    height: 180px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.order-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.order-info {
+    padding: 20px;
+}
+
+.order-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.order-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.order-status.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.order-status.confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.order-status.shipped {
+    background: #d4edda;
+    color: #155724;
+}
+
+.order-status.completed {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.order-status.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.order-date {
+    font-size: 12px;
+    color: #999;
+}
+
+.order-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: #FF6B95;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.order-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.order-actions button:hover {
+    background: #e9ecef;
+}
+
+.order-actions button.primary {
+    background: #FF6B95;
+    color: white;
+    border-color: #FF6B95;
+}
+
+.order-actions button.primary:hover {
+    background: #ff4d7d;
+}
+
+.order-actions button.danger {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.order-actions button.danger:hover {
+    background: #c82333;
+}
+
+/* 订单模态框样式 */
+.order-details {
+    width: 100%;
+}
+
+.order-details .info-grid {
+    gap: 15px;
+}
+
+.order-details .info-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.order-details .info-item span:first-child {
+    min-width: 80px;
+}
+
+/* 刷新按钮样式 */
+.refresh-btn {
+    padding: 10px 15px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-btn:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+/* 标签页样式 */
+.tab-container {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: 30px;
+    gap: 8px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6c757d;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 107, 149, 0.1);
+    color: #FF6B95;
+}
+
+.tab-btn.active {
+    background: #FF6B95;
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
+}
+
+/* 订单卡片样式 */
+.order-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    border-color: #FF6B95;
+}
+
+.order-image {
+    width: 100%;
+    height: 180px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.order-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.order-info {
+    padding: 20px;
+}
+
+.order-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.order-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.order-status.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.order-status.confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.order-status.shipped {
+    background: #d4edda;
+    color: #155724;
+}
+
+.order-status.completed {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.order-status.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.order-date {
+    font-size: 12px;
+    color: #999;
+}
+
+.order-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: #FF6B95;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.order-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.order-actions button:hover {
+    background: #e9ecef;
+}
+
+.order-actions button.primary {
+    background: #FF6B95;
+    color: white;
+    border-color: #FF6B95;
+}
+
+.order-actions button.primary:hover {
+    background: #ff4d7d;
+}
+
+.order-actions button.danger {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.order-actions button.danger:hover {
+    background: #c82333;
+}
+
+/* 订单模态框样式 */
+.order-details {
+    width: 100%;
+}
+
+.order-details .info-grid {
+    gap: 15px;
+}
+
+.order-details .info-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.order-details .info-item span:first-child {
+    min-width: 80px;
+}
+
+/* 刷新按钮样式 */
+.refresh-btn {
+    padding: 10px 15px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-btn:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
