@@ -117,7 +117,7 @@ class NavigationManager {
         // 允许的页面列表
         const allowedPages = [
             'index.html', 'main.html', 'sweets-designer.html', 
-            'sweets-gallery.html', 'sweets-tutorial.html',
+            'sweets-gallery.html',
             'customize.html', 'design.html'
         ];
         

@@ -1516,7 +1516,7 @@ class SweetsDesigner {
             case 'circle':
                 this.backgroundCtx.beginPath();
                 this.backgroundCtx.arc(centerX, centerY, maxSize / 2, 0, Math.PI * 2);
-                this.backgroundCtx.fill();;
+                this.backgroundCtx.fill();
                 break;
             case 'square':
                 this.backgroundCtx.fillRect(centerX - maxSize / 2, centerY - maxSize / 2, maxSize, maxSize);
