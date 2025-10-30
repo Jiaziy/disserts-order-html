@@ -424,7 +424,7 @@ async function submitOrder() {
             showToast('订单已保存到本地，网络恢复后将同步');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = 'main.html';
             }, 2000);
         } catch (fallbackError) {
             showToast('订单保存失败，请检查网络连接');

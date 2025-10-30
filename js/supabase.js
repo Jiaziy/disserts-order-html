@@ -10,18 +10,23 @@ let usingLocalStorage = true;
 
 // 尝试初始化Supabase客户端
 try {
-  // 尝试直接使用全局的createClient函数（如果已加载）
-  if (typeof createClient === 'function') {
-    // 简单的配置（不依赖导入）
+  // 检查是否已加载Supabase客户端库
+  if (window.supabase) {
+    // 使用已加载的Supabase客户端
+    supabaseClient = window.supabase;
+    usingLocalStorage = false;
+    console.log('使用已加载的Supabase客户端');
+  } else if (typeof createClient === 'function') {
+    // 尝试直接使用全局的createClient函数
     const SUPABASE_CONFIG = {
-      url: 'https://default-url.supabase.co', // 占位符URL
-      anonKey: 'default-anon-key' // 占位符密钥
+      url: 'https://spxugyajxliackysdjkb.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNweHVneWFqeGxpYWNreXNkamtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MDcxNjIsImV4cCI6MjA3NzE4MzE2Mn0.h0xkb3PRuTtxYdetXCu2_V7nhGgATGLIOkxOWi0xjXA'
     };
     supabaseClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
     usingLocalStorage = false;
     console.log('使用全局createClient函数初始化Supabase客户端');
   } else {
-    console.warn('未找到createClient函数，将使用本地存储');
+    console.warn('未找到Supabase客户端库，将使用本地存储');
   }
 } catch (error) {
   console.warn('Supabase初始化失败，将使用本地存储:', error);
@@ -454,13 +459,74 @@ document.supabase = {
   
   orders: {
     // 创建订单
-    createOrder(orderData) {
-      return localStorageOrders.createOrder(orderData);
+    async createOrder(orderData) {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase保存订单
+          const { data, error } = await supabaseClient
+            .from('orders')
+            .insert([{
+              user_id: orderData.user_id,
+              product_type: orderData.product_type,
+              selected_style: orderData.selected_style,
+              flavor_index: orderData.flavor_index,
+              custom_text: orderData.custom_text,
+              quantity: orderData.quantity,
+              selected_packaging: orderData.selected_packaging,
+              design_image: orderData.design_image,
+              total_price: orderData.total_price,
+              customer_info: orderData.customer_info,
+              status: 'pending',
+              created_at: new Date().toISOString()
+            }])
+            .select();
+          
+          if (error) {
+            console.error('Supabase订单保存失败:', error.message);
+            // 降级到本地存储
+            return localStorageOrders.createOrder(orderData);
+          }
+          
+          console.log('订单成功保存到Supabase:', data[0]);
+          return data[0];
+        } else {
+          // 使用本地存储
+          return localStorageOrders.createOrder(orderData);
+        }
+      } catch (error) {
+        console.error('订单保存失败:', error);
+        // 降级到本地存储
+        return localStorageOrders.createOrder(orderData);
+      }
     },
     
     // 获取用户订单
-    getUserOrders(userId) {
-      return localStorageOrders.getUserOrders(userId);
+    async getUserOrders(userId) {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase获取订单
+          const { data, error } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          
+          if (error) {
+            console.error('Supabase订单获取失败:', error.message);
+            // 降级到本地存储
+            return localStorageOrders.getUserOrders(userId);
+          }
+          
+          return data || [];
+        } else {
+          // 使用本地存储
+          return localStorageOrders.getUserOrders(userId);
+        }
+      } catch (error) {
+        console.error('订单获取失败:', error);
+        // 降级到本地存储
+        return localStorageOrders.getUserOrders(userId);
+      }
     }
   },
   
