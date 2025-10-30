@@ -2942,14 +2942,22 @@ function initializeDesigner() {
  * 初始化所有工具事件监听器
  */
 function initializeTools() {
-    if (!designer) return;
+    // 使用window.designer确保全局访问
+    const designer = window.designer;
+    if (!designer) {
+        console.warn('designer对象未找到，延迟重试...');
+        setTimeout(initializeTools, 200);
+        return;
+    }
     
     // 初始化绘图工具按钮事件
     const toolButtons = document.querySelectorAll('.tool-btn');
     toolButtons.forEach(button => {
         button.addEventListener('click', function() {
             const toolType = this.dataset.tool;
-            designer.selectTool(toolType);
+            if (designer && designer.selectTool) {
+                designer.selectTool(toolType);
+            }
         });
     });
     
@@ -2958,7 +2966,9 @@ function initializeTools() {
     shapeButtons.forEach(button => {
         button.addEventListener('click', function() {
             const shapeType = this.dataset.shape;
-            designer.selectShape(shapeType);
+            if (designer && designer.selectShape) {
+                designer.selectShape(shapeType);
+            }
         });
     });
     
@@ -2967,7 +2977,9 @@ function initializeTools() {
     colorSwatches.forEach(swatch => {
         swatch.addEventListener('click', function() {
             const color = this.dataset.color;
-            designer.selectColor(color);
+            if (designer && designer.selectColor) {
+                designer.selectColor(color);
+            }
         });
     });
     
@@ -2976,7 +2988,9 @@ function initializeTools() {
     sizeOptions.forEach(option => {
         option.addEventListener('click', function() {
             const size = parseInt(this.dataset.size);
-            designer.selectBrushSize(size);
+            if (designer && designer.selectBrushSize) {
+                designer.selectBrushSize(size);
+            }
         });
     });
     
@@ -2985,11 +2999,15 @@ function initializeTools() {
     if (brushSizeSlider) {
         brushSizeSlider.addEventListener('input', function() {
             const size = parseInt(this.value);
-            designer.selectBrushSize(size);
+            if (designer && designer.selectBrushSize) {
+                designer.selectBrushSize(size);
+            }
         });
         brushSizeSlider.addEventListener('change', function() {
             const size = parseInt(this.value);
-            designer.selectBrushSize(size);
+            if (designer && designer.selectBrushSize) {
+                designer.selectBrushSize(size);
+            }
         });
     }
     
@@ -2998,7 +3016,9 @@ function initializeTools() {
     dessertButtons.forEach(button => {
         button.addEventListener('click', function() {
             const dessertType = this.dataset.type;
-            designer.selectDessertType(dessertType);
+            if (designer && designer.selectDessertType) {
+                designer.selectDessertType(dessertType);
+            }
         });
     });
     
@@ -3047,16 +3067,23 @@ function initializeTools() {
     }
     
     // 初始化重置视图按钮
-    document.getElementById('reset-view-btn')?.addEventListener('click', () => designer.resetView());
+    document.getElementById('reset-view-btn')?.addEventListener('click', () => {
+        if (designer && designer.resetView) designer.resetView();
+    });
     
     // 初始化保存设计按钮
-    document.getElementById('save-design-btn')?.addEventListener('click', () => designer.saveCanvas());
+    document.getElementById('save-design-btn')?.addEventListener('click', () => {
+        if (designer && designer.saveCanvas) designer.saveCanvas();
+    });
     
     // 初始化保存设计按钮（移动端）
-    document.getElementById('save-design-btn-mobile')?.addEventListener('click', () => designer.saveCanvas());
+    document.getElementById('save-design-btn-mobile')?.addEventListener('click', () => {
+        if (designer && designer.saveCanvas) designer.saveCanvas();
+    });
     
     // 初始化导出图片按钮
     document.getElementById('export-image-btn')?.addEventListener('click', () => {
+        if (!designer || !designer.exportCanvas) return;
         try {
             // 显示格式选择对话框
             const format = prompt('请选择导出格式：\npng (默认)\njpeg\nwebp', 'png').toLowerCase();
@@ -3073,11 +3100,12 @@ function initializeTools() {
     
     // 初始化导出带模板按钮
     document.getElementById('export-with-template-btn')?.addEventListener('click', () => {
-        designer.exportWithTemplate();
+        if (designer && designer.exportWithTemplate) designer.exportWithTemplate();
     });
     
     // 初始化导出图片按钮（移动端）
     document.getElementById('export-image-btn-mobile')?.addEventListener('click', () => {
+        if (!designer || !designer.exportCanvas) return;
         try {
             // 显示格式选择对话框
             const format = prompt('请选择导出格式：\npng (默认)\njpeg\nwebp', 'png').toLowerCase();
@@ -3094,21 +3122,13 @@ function initializeTools() {
     
     // 初始化导出带模板按钮（移动端）
     document.getElementById('export-with-template-btn-mobile')?.addEventListener('click', () => {
-        designer.exportWithTemplate();
-    });
-    
-    // 初始化导出带模板按钮（移动端）
-    document.getElementById('export-with-template-btn-mobile')?.addEventListener('click', () => {
-        designer.exportWithTemplate();
-    });
-    
-    // 初始化导出带模板按钮（移动端）
-    document.getElementById('export-with-template-btn-mobile')?.addEventListener('click', () => {
-        designer.exportWithTemplate();
+        if (designer && designer.exportWithTemplate) designer.exportWithTemplate();
     });
     
     // 初始化设计完成按钮
     document.getElementById('design-complete-btn')?.addEventListener('click', () => {
+        if (!designer || !designer.canvas || !designer.designComplete) return;
+        
         // 检查设计是否为空
         const context = designer.canvas.getContext('2d');
         const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
@@ -3135,6 +3155,8 @@ function initializeTools() {
     
     // 初始化设计完成按钮（移动端）
     document.getElementById('design-complete-btn-mobile')?.addEventListener('click', () => {
+        if (!designer || !designer.canvas || !designer.designComplete) return;
+        
         // 检查设计是否为空
         const context = designer.canvas.getContext('2d');
         const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
@@ -3163,6 +3185,8 @@ function initializeTools() {
     const addTextBtn = document.getElementById('add-text-btn');
     if (addTextBtn) {
         addTextBtn.addEventListener('click', () => {
+            if (!designer || !designer.addText || !designer.saveState) return;
+            
             // 检查是否已选择模板
             if (!designer.templateSelected) {
                 alert('请先选择一个模板再添加文字');
@@ -3202,6 +3226,8 @@ function initializeTools() {
         const saveDesignNameBtn = document.getElementById('save-design-name-btn');
         if (saveDesignNameBtn) {
             saveDesignNameBtn.addEventListener('click', () => {
+                if (!designer || !designer.setDesignName || !designer.showNotification) return;
+                
                 const newName = designNameElement.value.trim();
                 
                 if (newName === '') {
@@ -3217,6 +3243,8 @@ function initializeTools() {
         
         // 保留失焦时的保存功能，但增加空值检查
         designNameElement.addEventListener('blur', (e) => {
+            if (!designer || !designer.setDesignName) return;
+            
             const newName = e.target.value.trim();
             if (newName !== '') {
                 designer.setDesignName(newName, false); // 失焦时保存也不允许空名称
@@ -3241,22 +3269,26 @@ function initializeTools() {
     // 图片上传事件已经在setupEventListeners中初始化，这里不需要重复初始化
     
     // 设置默认工具为画笔
-    designer.selectTool('brush');
+    if (designer && designer.selectTool) {
+        designer.selectTool('brush');
+    }
     
     // 设置默认颜色为第一个颜色
-    if (colorSwatches.length > 0) {
+    if (colorSwatches.length > 0 && designer && designer.selectColor) {
         const defaultColor = colorSwatches[0].dataset.color;
         designer.selectColor(defaultColor);
     }
     
     // 设置默认画笔大小
-    if (sizeOptions.length > 0) {
+    if (sizeOptions.length > 0 && designer && designer.selectBrushSize) {
         const defaultSize = parseInt(sizeOptions[1].dataset.size);
         designer.selectBrushSize(defaultSize);
     }
     
     // 初始化巧克力设计
-    designer.initChocolateDesign();
+    if (designer && designer.initChocolateDesign) {
+        designer.initChocolateDesign();
+    }
 }
 
 // 导出全局方法供HTML使用
