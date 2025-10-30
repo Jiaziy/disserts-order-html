@@ -37,7 +37,34 @@ function initApp() {
 function setupEventListeners() {
     console.log('开始设置事件监听器...');
     
-    // 登录标签页切换
+    // 只在main.html页面中设置导航事件
+    if (window.location.pathname.includes('main.html') || document.querySelector('.nav-item')) {
+        // 顶部导航菜单点击事件
+        const navItems = document.querySelectorAll('.nav-item');
+        console.log('找到顶部导航项数量:', navItems.length);
+        
+        navItems.forEach(item => {
+            item.addEventListener('click', function() {
+                console.log('点击顶部导航:', this.getAttribute('data-page'));
+                const page = this.getAttribute('data-page');
+                navigateToPage(page);
+            });
+        });
+
+        // 侧边栏菜单点击事件
+        const sidebarItems = document.querySelectorAll('.sidebar-item');
+        console.log('找到侧边栏项数量:', sidebarItems.length);
+        
+        sidebarItems.forEach(item => {
+            item.addEventListener('click', function() {
+                console.log('点击侧边栏:', this.getAttribute('data-page'));
+                const page = this.getAttribute('data-page');
+                navigateToPage(page);
+            });
+        });
+    }
+    
+    // 登录标签页切换（适用于登录页面）
     const tabBtns = document.querySelectorAll('.tab-btn');
     console.log('找到标签页按钮数量:', tabBtns.length);
     
@@ -46,30 +73,6 @@ function setupEventListeners() {
             console.log('点击标签页:', this.getAttribute('data-tab'));
             const tab = this.getAttribute('data-tab');
             switchTab(tab);
-        });
-    });
-
-    // 顶部导航菜单点击事件
-    const navItems = document.querySelectorAll('.nav-item');
-    console.log('找到顶部导航项数量:', navItems.length);
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', function() {
-            console.log('点击顶部导航:', this.getAttribute('data-page'));
-            const page = this.getAttribute('data-page');
-            navigateToPage(page);
-        });
-    });
-
-    // 侧边栏菜单点击事件
-    const sidebarItems = document.querySelectorAll('.sidebar-item');
-    console.log('找到侧边栏项数量:', sidebarItems.length);
-    
-    sidebarItems.forEach(item => {
-        item.addEventListener('click', function() {
-            console.log('点击侧边栏:', this.getAttribute('data-page'));
-            const page = this.getAttribute('data-page');
-            navigateToPage(page);
         });
     });
 
@@ -164,37 +167,57 @@ function showMainPage() {
 
 // 页面导航功能
 function navigateToPage(page) {
-    // 如果导航管理器可用，使用统一导航
-    if (window.navigationManager) {
-        window.navigationManager.navigateTo(`main.html#${page}`);
-        return;
+    console.log('导航到页面:', page);
+    
+    // 检查是否在main.html页面中
+    if (window.location.pathname.includes('main.html') || document.querySelector('.page-content')) {
+        // 单页面应用导航：在main.html内部切换页面
+        
+        // 隐藏所有页面内容
+        document.querySelectorAll('.page-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // 显示目标页面
+        const targetPage = document.getElementById(page + '-page');
+        if (targetPage) {
+            targetPage.classList.add('active');
+            console.log('显示页面:', page + '-page');
+        } else {
+            console.warn('未找到页面:', page + '-page');
+        }
+        
+        // 更新导航激活状态
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
+        const sidebarItem = document.querySelector(`.sidebar-item[data-page="${page}"]`);
+        
+        if (navItem) {
+            navItem.classList.add('active');
+            console.log('激活顶部导航:', page);
+        }
+        if (sidebarItem) {
+            sidebarItem.classList.add('active');
+            console.log('激活侧边栏:', page);
+        }
+    } else {
+        // 页面跳转导航：跳转到其他页面
+        console.log('执行页面跳转到:', page);
+        
+        // 如果导航管理器可用，使用统一导航
+        if (window.navigationManager) {
+            window.navigationManager.navigateTo(`${page}.html`);
+        } else {
+            // 降级处理：直接跳转
+            window.location.href = `${page}.html`;
+        }
     }
-    
-    // 降级处理：单页面应用导航
-    // 隐藏所有页面内容
-    document.querySelectorAll('.page-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    // 显示目标页面
-    const targetPage = document.getElementById(page + '-page');
-    if (targetPage) {
-        targetPage.classList.add('active');
-    }
-    
-    // 更新导航激活状态
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
-    const sidebarItem = document.querySelector(`.sidebar-item[data-page="${page}"]`);
-    
-    if (navItem) navItem.classList.add('active');
-    if (sidebarItem) sidebarItem.classList.add('active');
 }
 
 // 切换登录标签页
