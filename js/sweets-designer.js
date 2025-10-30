@@ -195,19 +195,6 @@ class SweetsDesigner {
             this.showNotification('设计加载失败，请重试', 'error');
         }
     }
-                // 选择形状后标记模板已选定
-                this.templateSelected = true;
-            }
-            
-            // 确保渲染更新
-            this.renderCanvas();
-            this.updatePreview();
-            
-            console.log('设计加载成功');
-        } catch (error) {
-            console.error('设计还原失败:', error);
-        }
-    }
     
     /**
      * 还原画布状态
@@ -231,7 +218,6 @@ class SweetsDesigner {
         } catch (error) {
             console.error('还原画布失败:', error);
         }
-    }
     }
 
     /**
@@ -1530,7 +1516,7 @@ class SweetsDesigner {
             case 'circle':
                 this.backgroundCtx.beginPath();
                 this.backgroundCtx.arc(centerX, centerY, maxSize / 2, 0, Math.PI * 2);
-                this.backgroundCtx.fill();
+                this.backgroundCtx.fill();;
                 break;
             case 'square':
                 this.backgroundCtx.fillRect(centerX - maxSize / 2, centerY - maxSize / 2, maxSize, maxSize);
@@ -1699,7 +1685,7 @@ class SweetsDesigner {
             x, y + 20 * scaling
         );
         this.backgroundCtx.bezierCurveTo(
-            x + 50 * scaling, y - 5 * scaling, 
+            x - 50 * scaling, y - 50 * scaling, 
             x + 50 * scaling, y - 50 * scaling, 
             x, y - 25 * scaling
         );
@@ -1974,7 +1960,7 @@ class SweetsDesigner {
     /**
      * 处理图片上传并显示
      */
-    async handleImageUpload(file) {
+    handleImageUpload(file) {
         // 重置图片确认状态
         this.imageConfirmed = false;
         
@@ -2738,7 +2724,7 @@ class SweetsDesigner {
     /**
      * 提交设计到存储
      */
-    async submitDesign() {
+    submitDesign() {
         try {
             // 转换为Base64编码
             const canvasData = this.canvas.toDataURL('image/png');
