@@ -81,7 +81,157 @@ class SweetsDesigner {
             console.log('历史记录初始化完成，当前索引:', this.historyIndex, '历史记录数量:', this.history.length);
         }
         
+        // 尝试从localStorage加载设计数据
+        this.loadDesignFromStorage();
+        
         this.updateUI();
+    }
+    
+    /**
+     * 从localStorage加载设计数据
+     */
+    loadDesignFromStorage() {
+        try {
+            // 检查是否有待编辑的设计
+            const savedDesign = localStorage.getItem('currentEditDesign');
+            if (savedDesign) {
+                const design = JSON.parse(savedDesign);
+                this.loadDesign(design);
+                
+                // 加载后清除临时存储，避免重复加载
+                localStorage.removeItem('currentEditDesign');
+            }
+        } catch (error) {
+            console.error('加载设计失败:', error);
+        }
+    }
+    
+    /**
+     * 加载指定设计数据
+     */
+    loadDesign(design) {
+        try {
+            console.log('开始加载设计:', design.name || '未命名');
+            
+            // 设置设计名称
+            if (design.name) {
+                this.setDesignName(design.name);
+            }
+            
+            // 加载画布数据
+            if (design.canvasData) {
+                this.restoreCanvasState(design.canvasData);
+            } else if (design.data) {
+                // 兼容旧版本数据格式
+                this.restoreCanvasState(design.data);
+            }
+            
+            // 加载图片（如果有）
+            if (design.imageData) {
+                const img = new Image();
+                img.onload = () => {
+                    this.uploadedImage = img;
+                    this.imagePosition = { ...(design.imagePosition || { x: 0, y: 0 }) };
+                    this.imageScale = design.imageScale || 1.0;
+                    this.imageConfirmed = design.imageConfirmed || false;
+                    this.renderCanvas();
+                    console.log('图片已加载并渲染');
+                };
+                img.src = design.imageData;
+            }
+            
+            // 加载文本元素
+            if (design.textElements && Array.isArray(design.textElements)) {
+                this.textElements = [...design.textElements];
+                console.log('文本元素已加载:', this.textElements.length, '个');
+            }
+            
+            // 加载绘图点数据
+            if (design.points && Array.isArray(design.points)) {
+                this.points = [...design.points];
+                console.log('绘图点数据已加载:', this.points.length, '个');
+            }
+            
+            // 加载形状选择
+            if (design.shape) {
+                this.selectedShape = design.shape;
+                console.log('形状已加载:', design.shape);
+            }
+            
+            // 加载模板选择状态
+            if (design.templateSelected) {
+                this.templateSelected = design.templateSelected;
+                console.log('模板状态已加载:', design.templateSelected);
+                // 如果加载了模板，尝试重新渲染模板
+                this.displayChocolateTemplates();
+            }
+            
+            // 加载甜点类型
+            if (design.dessertType) {
+                this.dessertType = design.dessertType;
+                console.log('甜点类型已加载:', design.dessertType);
+            } else if (design.type) {
+                // 兼容旧版本的类型字段
+                this.dessertType = design.type;
+                console.log('甜点类型(兼容模式)已加载:', design.type);
+            }
+            
+            // 加载设计元素
+            if (design.elements) {
+                try {
+                    this.designElements = JSON.parse(design.elements);
+                    console.log('设计元素已加载');
+                } catch (e) {
+                    console.warn('无法解析设计元素:', e);
+                }
+            }
+            
+            // 更新UI
+            this.updateUI();
+            
+            console.log('设计加载完成');
+        } catch (error) {
+            console.error('加载设计失败:', error);
+            this.showNotification('设计加载失败，请重试', 'error');
+        }
+    }
+                // 选择形状后标记模板已选定
+                this.templateSelected = true;
+            }
+            
+            // 确保渲染更新
+            this.renderCanvas();
+            this.updatePreview();
+            
+            console.log('设计加载成功');
+        } catch (error) {
+            console.error('设计还原失败:', error);
+        }
+    }
+    
+    /**
+     * 还原画布状态
+     */
+    restoreCanvasState(canvasData) {
+        try {
+            const img = new Image();
+            img.onload = () => {
+                // 清空画布
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                // 绘制保存的图像
+                this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                // 更新离屏画布
+                this.syncOffscreenCanvas();
+                // 保存这个状态到历史记录
+                this.saveState();
+                // 渲染画布
+                this.renderCanvas();
+            };
+            img.src = canvasData;
+        } catch (error) {
+            console.error('还原画布失败:', error);
+        }
+    }
     }
 
     /**
@@ -2445,7 +2595,13 @@ class SweetsDesigner {
             // 从localStorage获取用户信息
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             
-            // 创建设计数据
+            // 保存图片数据（如果有）
+            let imageData = null;
+            if (this.uploadedImage) {
+                imageData = this.uploadedImage.src;
+            }
+            
+            // 创建设计数据 - 包含完整的设计状态
             const designData = {
                 id: 'design_' + Date.now(),
                 userId: currentUser?.id || 'anonymous',
@@ -2455,10 +2611,20 @@ class SweetsDesigner {
                 canvasData: canvasData,
                 dessertType: this.dessertType,
                 elements: JSON.stringify(this.designElements || []),
+                imageData: imageData, // 保存上传的图片
                 imagePosition: this.imagePosition || { x: 0, y: 0 },
                 imageScale: this.imageScale || 1,
+                imageConfirmed: this.imageConfirmed || false,
+                textElements: this.textElements || [], // 保存文本元素
+                points: this.points || [], // 保存绘图点数据
+                shape: this.selectedShape || null,
+                templateSelected: this.templateSelected,
                 createTime: new Date().toISOString(),
-                status: 'saved'
+                createdAt: new Date().toISOString(), // 兼容gallery.js中使用的字段
+                status: 'saved',
+                // 兼容旧版本的数据格式
+                data: canvasData, // 用于兼容旧版本
+                type: this.dessertType // 用于兼容旧版本
             };
             
             // 确保StorageUtils已加载
@@ -2584,7 +2750,13 @@ class SweetsDesigner {
             const designNameElement = document.getElementById('design-name');
             const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
             
-            // 创建设计数据
+            // 保存图片数据（如果有）
+            let imageData = null;
+            if (this.uploadedImage) {
+                imageData = this.uploadedImage.src;
+            }
+            
+            // 创建设计数据 - 包含完整的设计状态
             const designData = {
                 id: 'design_' + Date.now(),
                 userId: currentUser?.id || 'anonymous',
@@ -2594,10 +2766,20 @@ class SweetsDesigner {
                 canvasData: canvasData,
                 dessertType: this.dessertType,
                 elements: JSON.stringify(this.designElements || []),
+                imageData: imageData, // 保存上传的图片
                 imagePosition: this.imagePosition || { x: 0, y: 0 },
                 imageScale: this.imageScale || 1,
+                imageConfirmed: this.imageConfirmed || false,
+                textElements: this.textElements || [], // 保存文本元素
+                points: this.points || [], // 保存绘图点数据
+                shape: this.selectedShape || null,
+                templateSelected: this.templateSelected,
                 createTime: new Date().toISOString(),
-                status: 'saved'
+                createdAt: new Date().toISOString(), // 兼容gallery.js中使用的字段
+                status: 'saved',
+                // 兼容旧版本的数据格式
+                data: canvasData, // 用于兼容旧版本
+                type: this.dessertType // 用于兼容旧版本
             };
             
             // 优先使用StorageUtils保存设计
