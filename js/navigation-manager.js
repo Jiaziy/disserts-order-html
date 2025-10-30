@@ -121,8 +121,9 @@ class NavigationManager {
             'customize.html', 'design.html'
         ];
         
-        const page = destination.split('?')[0];
-        return allowedPages.includes(page) || allowedPages.includes(destination);
+        // 提取基础页面名称（去除参数和哈希）
+        const basePage = destination.split(/[?#]/)[0];
+        return allowedPages.includes(basePage) || allowedPages.includes(destination);
     }
 
     // 检查前置条件
