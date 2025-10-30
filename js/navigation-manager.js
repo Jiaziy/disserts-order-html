@@ -116,8 +116,7 @@ class NavigationManager {
         
         // 允许的页面列表
         const allowedPages = [
-            'index.html', 'main.html', 'sweets-designer.html', 
-            'sweets-gallery.html',
+            'index.html', 'main.html', 'sweets-designer.html',
             'customize.html', 'design.html'
         ];
         
@@ -129,7 +128,7 @@ class NavigationManager {
     // 检查前置条件
     async checkPreconditions(destination) {
         const requiresLogin = [
-            'main.html', 'sweets-designer.html', 'sweets-gallery.html',
+            'main.html', 'sweets-designer.html',
             'customize.html', 'design.html'
         ];
         
