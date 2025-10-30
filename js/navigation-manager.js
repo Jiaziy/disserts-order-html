@@ -34,7 +34,7 @@ class NavigationManager {
         // 保存到sessionStorage
         sessionStorage.setItem('currentPage', this.currentPage);
         
-        console.log('当前页面:', this.currentPage);
+        console.log("当前页面:", this.currentPage);
     }
 
     // 设置导航事件

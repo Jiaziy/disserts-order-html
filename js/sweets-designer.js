@@ -3455,12 +3455,12 @@ window.undo = () => designer?.undo();
 window.redo = () => designer?.redo();
 window.clearCanvas = () => designer?.clearCanvas();
 window.saveDesign = () => designer?.saveCanvas();
-window.exportDesign = (format) => designer?.exportCanvas(format);
+window.exportDesign = () => designer?.exportCanvas();
 window.exportWithTemplate = () => designer?.exportWithTemplate();
 window.generatePreview = () => designer?.updatePreview();
 window.designComplete = () => designer?.designComplete();
 window.submitDesign = () => designer?.submitDesign();
-window.saveToMyDesigns = () => designer?.saveToMyDesigns();
+
 window.saveToMyDesigns = () => designer?.saveToMyDesigns();
 
 // 页面加载完成后初始化
