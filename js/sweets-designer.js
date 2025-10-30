@@ -2757,107 +2757,48 @@ class SweetsDesigner {
     }
     
     /**
-     * 创建订单
+     * 设计完成 - 保存设计并返回步骤二
      */
-    createOrder() {
+    designComplete() {
         try {
-            // 先保存设计
+            // 先保存设计到用户设计库
             this.saveCanvas();
             
             // 获取画布数据
             const canvasData = this.canvas.toDataURL('image/png');
             
-            // 从localStorage获取用户信息
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            
             // 获取设计名称
             const designNameElement = document.getElementById('design-name');
             const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
             
-            // 创建订单数据
-            const orderData = {
-                user_id: currentUser?.id || 'anonymous',
-                user_name: currentUser?.displayName || currentUser?.email || '匿名用户',
-                product_type: this.dessertType,
-                design_name: designName,
-                design_image: canvasData,
-                status: 'step2_completed', // 步骤二已完成
-                current_step: 3, // 跳转到步骤三
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+            // 保存设计结果到localStorage，供步骤二页面使用
+            const designResult = {
+                imageData: canvasData,
+                designName: designName,
+                dessertType: this.dessertType,
+                createTime: new Date().toISOString(),
+                shape: this.currentTemplateId || 'circle',
+                size: 'M',
+                status: 'completed'
             };
             
-            // 使用 document.supabase 创建订单
-            const newOrder = document.supabase.orders.createOrder(orderData);
+            localStorage.setItem('sweetsDesignResult', JSON.stringify(designResult));
             
-            if (newOrder) {
-                // 保存到本地存储
-                let localOrders = JSON.parse(localStorage.getItem('orders')) || [];
-                localOrders.push({
-                    ...newOrder,
-                    id: newOrder.id || 'order_' + Date.now(),
-                    userId: newOrder.user_id,
-                    userName: newOrder.user_name,
-                    productType: newOrder.product_type,
-                    designName: newOrder.design_name,
-                    designImage: newOrder.design_image,
-                    status: newOrder.status,
-                    currentStep: newOrder.current_step,
-                    createTime: newOrder.created_at || new Date().toISOString(),
-                    updateTime: newOrder.updated_at || new Date().toISOString()
-                });
-                localStorage.setItem('orders', JSON.stringify(localOrders));
-                
-                // 保存当前订单ID
-                localStorage.setItem('currentOrderId', newOrder.id || 'order_' + Date.now());
-                
-                // 显示成功消息
-                this.showNotification('订单创建成功，正在跳转到步骤三...', 'success', 2000);
-                
-                // 延迟后跳转到定制页面（步骤三）
-                setTimeout(() => {
-                    if (window.navigationManager) {
-                        window.navigationManager.navigateTo('customize.html?step=3');
-                    } else {
-                        window.location.href = 'customize.html?step=3';
-                    }
-                }, 2000);
-            } else {
-                // 降级处理：保存到本地
-                this.fallbackCreateOrder(orderData);
-            }
+            // 显示成功消息
+            this.showNotification('设计已完成！正在返回定制页面...', 'success');
+            
+            // 2秒后返回步骤二页面
+            setTimeout(() => {
+                if (window.navigationManager) {
+                    window.navigationManager.navigateTo('customize.html?step=2');
+                } else {
+                    window.location.href = 'customize.html?step=2';
+                }
+            }, 2000);
+            
         } catch (error) {
-            console.error('创建订单失败:', error);
-            // 降级处理
-            try {
-                const fallbackOrder = {
-                    id: 'order_' + Date.now(),
-                    productType: this.dessertType,
-                    designImage: this.canvas.toDataURL('image/png'),
-                    createTime: new Date().toISOString(),
-                    status: 'step2_completed',
-                    currentStep: 3
-                };
-                
-                let orders = JSON.parse(localStorage.getItem('orders')) || [];
-                orders.push(fallbackOrder);
-                localStorage.setItem('orders', JSON.stringify(orders));
-                
-                // 保存当前订单ID
-                localStorage.setItem('currentOrderId', fallbackOrder.id);
-                
-                this.showNotification('订单已保存到本地，正在跳转到步骤三...', 'success', 2000);
-                
-                setTimeout(() => {
-                    if (window.navigationManager) {
-                        window.navigationManager.navigateTo('customize.html?step=3');
-                    } else {
-                        window.location.href = 'customize.html?step=3';
-                    }
-                }, 2000);
-            } catch (fallbackError) {
-                this.showNotification('订单创建失败，请先保存设计', 'error');
-            }
+            console.error('设计完成失败:', error);
+            this.showNotification('设计完成失败，请重试', 'error');
         }
     }
     
@@ -3166,21 +3107,8 @@ function initializeTools() {
         designer.exportWithTemplate();
     });
     
-    // 初始化提交订单按钮
-    document.getElementById('create-order-btn')?.addEventListener('click', () => {
-        // 检查用户是否已登录
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser) {
-            if (confirm('提交订单前需要登录，是否现在去登录？')) {
-                if (window.navigationManager) {
-                    window.navigationManager.navigateTo('index.html');
-                } else {
-                    window.location.href = 'index.html';
-                }
-                return;
-            }
-        }
-        
+    // 初始化设计完成按钮
+    document.getElementById('design-complete-btn')?.addEventListener('click', () => {
         // 检查设计是否为空
         const context = designer.canvas.getContext('2d');
         const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
@@ -3198,28 +3126,15 @@ function initializeTools() {
         }
         
         if (isEmpty) {
-            alert('请先在画布上创建设计再提交订单！');
+            alert('请先在画布上创建设计！');
             return;
         }
         
-        designer.createOrder();
+        designer.designComplete();
     });
     
-    // 初始化提交订单按钮（移动端）
-    document.getElementById('create-order-btn-mobile')?.addEventListener('click', () => {
-        // 检查用户是否已登录
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser) {
-            if (confirm('提交订单前需要登录，是否现在去登录？')) {
-                if (window.navigationManager) {
-                    window.navigationManager.navigateTo('index.html');
-                } else {
-                    window.location.href = 'index.html';
-                }
-                return;
-            }
-        }
-        
+    // 初始化设计完成按钮（移动端）
+    document.getElementById('design-complete-btn-mobile')?.addEventListener('click', () => {
         // 检查设计是否为空
         const context = designer.canvas.getContext('2d');
         const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
@@ -3237,11 +3152,11 @@ function initializeTools() {
         }
         
         if (isEmpty) {
-            alert('请先在画布上创建设计再提交订单！');
+            alert('请先在画布上创建设计！');
             return;
         }
         
-        designer.createOrder();
+        designer.designComplete();
     });
     
     // 初始化文字添加按钮事件
@@ -3352,7 +3267,7 @@ window.saveDesign = () => designer?.saveCanvas();
 window.exportDesign = (format) => designer?.exportCanvas(format);
 window.exportWithTemplate = () => designer?.exportWithTemplate();
 window.generatePreview = () => designer?.updatePreview();
-window.createOrder = () => designer?.createOrder();
+window.designComplete = () => designer?.designComplete();
 window.submitDesign = () => designer?.submitDesign();
 window.saveToMyDesigns = () => designer?.saveToMyDesigns();
 window.saveToMyDesigns = () => designer?.saveToMyDesigns();

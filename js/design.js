@@ -398,20 +398,56 @@ function handleKeyDown(e) {
     }
 }
 
-// 保存设计
+// 保存设计到用户设计库
 function saveDesign() {
-    const canvas = document.getElementById('design-canvas');
-    const designImage = canvas.toDataURL('image/png');
-    
-    // 保存到本地存储，供定制页面使用
-    localStorage.setItem('lastDesignImage', designImage);
-    localStorage.setItem('lastDesignType', designState.designType);
-    
-    // 返回定制页面
-    if (window.navigationManager) {
-        window.navigationManager.navigateTo('customize.html');
-    } else {
-        window.location.href = 'customize.html';
+    try {
+        const canvas = document.getElementById('design-canvas');
+        const designImage = canvas.toDataURL('image/png');
+        
+        // 获取设计名称
+        const designName = `设计_${new Date().toLocaleString()}`;
+        
+        // 从localStorage获取用户信息
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        
+        // 创建设计数据
+        const designData = {
+            id: 'design_' + Date.now(),
+            userId: currentUser?.id || 'anonymous',
+            userName: currentUser?.displayName || currentUser?.email || '匿名用户',
+            name: designName,
+            description: '',
+            canvasData: designImage,
+            dessertType: designState.designType,
+            elements: JSON.stringify([]),
+            imagePosition: { x: 0, y: 0 },
+            imageScale: 1,
+            createTime: new Date().toISOString(),
+            status: 'saved'
+        };
+        
+        // 保存设计到本地存储
+        let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+        designs.push(designData);
+        localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+        
+        // 保存当前设计为最近设计
+        localStorage.setItem('lastDesignImage', designImage);
+        localStorage.setItem('lastDesignType', designState.designType);
+        
+        // 显示成功消息
+        showToast('设计已保存到"我的设计"中！');
+        
+        // 返回定制页面
+        if (window.navigationManager) {
+            window.navigationManager.navigateTo('customize.html');
+        } else {
+            window.location.href = 'customize.html';
+        }
+        
+    } catch (error) {
+        console.error('保存设计失败:', error);
+        showToast('设计保存失败，请重试');
     }
 }
 
