@@ -183,6 +183,11 @@ function navigateToPage(page) {
         if (targetPage) {
             targetPage.classList.add('active');
             console.log('显示页面:', page + '-page');
+            
+            // 如果是订单页面，加载订单数据
+            if (page === 'orders') {
+                loadOrders();
+            }
         } else {
             console.warn('未找到页面:', page + '-page');
         }
@@ -522,4 +527,132 @@ if (!document.getElementById('toast-animations')) {
         }
     `;
     document.head.appendChild(style);
+}
+
+// 加载订单数据
+async function loadOrders() {
+    console.log('开始加载订单数据...');
+    
+    const ordersList = document.getElementById('orders-list');
+    if (!ordersList) {
+        console.error('未找到订单列表容器');
+        return;
+    }
+    
+    // 获取当前用户
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        console.error('未找到当前用户信息');
+        ordersList.innerHTML = '<div class="no-orders"><p>请先登录查看订单</p></div>';
+        return;
+    }
+    
+    try {
+        // 使用Supabase获取用户订单
+        let orders = [];
+        
+        if (document.supabase && document.supabase.orders) {
+            orders = await document.supabase.orders.getUserOrders(currentUser.id);
+            console.log('从Supabase获取到订单:', orders);
+        } else {
+            // 降级到本地存储
+            const localOrders = JSON.parse(localStorage.getItem('orders')) || [];
+            orders = localOrders.filter(order => order.userId === currentUser.id || order.user_id === currentUser.id);
+            console.log('从本地存储获取到订单:', orders);
+        }
+        
+        // 按创建时间排序（最新的在前）
+        orders.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.createTime);
+            const dateB = new Date(b.created_at || b.createTime);
+            return dateB - dateA;
+        });
+        
+        if (orders.length === 0) {
+            ordersList.innerHTML = `
+                <div class="no-orders">
+                    <i class="fas fa-shopping-bag" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
+                    <h3>暂无订单</h3>
+                    <p>您还没有任何订单，快去定制您的专属甜点吧！</p>
+                    <button class="primary-btn" data-navigate="customize.html">
+                        <i class="fas fa-palette"></i> 开始定制
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        // 生成订单列表HTML
+        ordersList.innerHTML = orders.map(order => {
+            const orderId = order.id || order.order_id;
+            const productType = order.product_type || order.productType;
+            const selectedStyle = order.selected_style || order.selectedStyle;
+            const quantity = order.quantity;
+            const totalPrice = order.total_price || order.totalPrice;
+            const status = order.status || 'pending';
+            const createTime = order.created_at || order.createTime;
+            const customText = order.custom_text || order.customText;
+            const selectedPackaging = order.selected_packaging || order.selectedPackaging;
+            
+            // 格式化日期
+            const createDate = new Date(createTime).toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // 状态显示文本
+            let statusText = '待处理';
+            let statusClass = 'status-pending';
+            
+            if (status === 'completed') {
+                statusText = '已完成';
+                statusClass = 'status-completed';
+            } else if (status === 'cancelled') {
+                statusText = '已取消';
+                statusClass = 'status-cancelled';
+            }
+            
+            return `
+                <div class="order-item">
+                    <div class="order-header">
+                        <div class="order-id">订单号: ${orderId}</div>
+                        <div class="order-status ${statusClass}">${statusText}</div>
+                    </div>
+                    <div class="order-details">
+                        <div class="order-detail">
+                            <span class="detail-label">产品类型</span>
+                            <span class="detail-value">${productType}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="detail-label">样式</span>
+                            <span class="detail-value">${selectedStyle}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="detail-label">定制文字</span>
+                            <span class="detail-value">${customText || '无'}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="detail-label">包装</span>
+                            <span class="detail-value">${selectedPackaging || '标准包装'}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="detail-label">数量</span>
+                            <span class="detail-value">${quantity} 件</span>
+                        </div>
+                    </div>
+                    <div class="order-price">¥${totalPrice}</div>
+                    <div class="order-date">下单时间: ${createDate}</div>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('订单列表生成完成');
+        
+    } catch (error) {
+        console.error('加载订单失败:', error);
+        ordersList.innerHTML = '<div class="no-orders"><p>加载订单失败，请稍后重试</p></div>';
+    }
 }
