@@ -238,16 +238,28 @@ function navigateToPage(page) {
 // 切换登录标签页
 function switchTab(tab) {
     // 更新按钮状态
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tab}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
 
     // 更新内容显示
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    document.getElementById(`${tab}-tab`).classList.add('active');
+    const tabContents = document.querySelectorAll('.tab-content');
+    if (tabContents.length > 0) {
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        const activeContent = document.getElementById(`${tab}-tab`);
+        if (activeContent) {
+            activeContent.classList.add('active');
+        }
+    }
 }
 
 // 手机号验证
