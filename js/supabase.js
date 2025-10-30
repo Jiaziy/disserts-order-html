@@ -9,28 +9,48 @@ let supabaseClient = null;
 let usingLocalStorage = true;
 
 // 尝试初始化Supabase客户端
-try {
-  // 检查是否已加载Supabase客户端库
-  if (window.supabase) {
-    // 使用已加载的Supabase客户端
-    supabaseClient = window.supabase;
-    usingLocalStorage = false;
-    console.log('使用已加载的Supabase客户端');
-  } else if (typeof createClient === 'function') {
-    // 尝试直接使用全局的createClient函数
-    const SUPABASE_CONFIG = {
-      url: 'https://spxugyajxliackysdjkb.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNweHVneWFqeGxpYWNreXNkamtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MDcxNjIsImV4cCI6MjA3NzE4MzE2Mn0.h0xkb3PRuTtxYdetXCu2_V7nhGgATGLIOkxOWi0xjXA'
-    };
-    supabaseClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-    usingLocalStorage = false;
-    console.log('使用全局createClient函数初始化Supabase客户端');
-  } else {
-    console.warn('未找到Supabase客户端库，将使用本地存储');
+async function initializeSupabase() {
+  try {
+    // 检查是否已加载Supabase客户端库
+    if (window.supabase) {
+      // 使用已加载的Supabase客户端
+      supabaseClient = window.supabase;
+      usingLocalStorage = false;
+      console.log('使用已加载的Supabase客户端');
+      return true;
+    } else if (typeof createClient === 'function') {
+      // 尝试直接使用全局的createClient函数
+      const SUPABASE_CONFIG = {
+        url: 'https://spxugyajxliackysdjkb.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNweHVneWFqeGxpYWNreXNkamtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MDcxNjIsImV4cCI6MjA3NzE4MzE2Mn0.h0xkb3PRuTtxYdetXCu2_V7nhGgATGLIOkxOWi0xjXA'
+      };
+      supabaseClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+      
+      // 测试连接
+      const { data, error } = await supabaseClient.from('users').select('count').limit(1);
+      if (error) {
+        console.warn('Supabase连接测试失败，将使用本地存储:', error.message);
+        usingLocalStorage = true;
+        return false;
+      }
+      
+      usingLocalStorage = false;
+      console.log('Supabase客户端初始化成功');
+      return true;
+    } else {
+      console.warn('未找到Supabase客户端库，将使用本地存储');
+      usingLocalStorage = true;
+      return false;
+    }
+  } catch (error) {
+    console.warn('Supabase初始化失败，将使用本地存储:', error);
+    usingLocalStorage = true;
+    return false;
   }
-} catch (error) {
-  console.warn('Supabase初始化失败，将使用本地存储:', error);
 }
+
+// 立即初始化
+initializeSupabase();
 const localStorageAuth = {
   // 本地存储登录功能
   signIn(email, password) {
@@ -257,6 +277,50 @@ document.supabase = {
             return localStorageAuth.signIn(email, password);
           }
           
+          // 登录成功后，同步用户信息到users表
+          if (data.user) {
+            try {
+              // 检查用户是否已存在
+              const { data: existingUser, error: selectError } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+              
+              if (selectError && selectError.code === 'PGRST116') {
+                // 用户不存在，创建新记录
+                const { error: insertError } = await supabaseClient
+                  .from('users')
+                  .insert([{
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.user_metadata?.name || data.user.email.split('@')[0],
+                    avatar_url: data.user.user_metadata?.avatar_url || null,
+                    created_at: new Date().toISOString(),
+                    last_login_at: new Date().toISOString()
+                  }]);
+                
+                if (insertError) {
+                  console.warn('创建用户记录失败:', insertError.message);
+                } else {
+                  console.log('用户记录已创建');
+                }
+              } else if (!selectError) {
+                // 用户已存在，更新最后登录时间
+                const { error: updateError } = await supabaseClient
+                  .from('users')
+                  .update({ last_login_at: new Date().toISOString() })
+                  .eq('id', data.user.id);
+                
+                if (updateError) {
+                  console.warn('更新用户登录时间失败:', updateError.message);
+                }
+              }
+            } catch (syncError) {
+              console.warn('用户信息同步失败:', syncError);
+            }
+          }
+          
           return { success: true, user: {
             id: data.user.id,
             email: data.user.email,
@@ -291,6 +355,31 @@ document.supabase = {
             console.error('Supabase注册失败:', error.message);
             // 降级到本地存储
             return localStorageAuth.signUp(email, password, userData);
+          }
+          
+          // 注册成功后，将用户信息同步到users表
+          if (data.user) {
+            try {
+              const { error: insertError } = await supabaseClient
+                .from('users')
+                .insert([{
+                  id: data.user.id,
+                  email: data.user.email,
+                  name: userData.name || data.user.email.split('@')[0],
+                  avatar_url: userData.avatar_url || null,
+                  created_at: new Date().toISOString(),
+                  last_login_at: new Date().toISOString()
+                }]);
+              
+              if (insertError) {
+                console.warn('用户信息同步到users表失败:', insertError.message);
+                // 继续返回成功，因为认证已经成功
+              } else {
+                console.log('用户信息已同步到Supabase users表');
+              }
+            } catch (syncError) {
+              console.warn('用户信息同步失败:', syncError);
+            }
           }
           
           return { 
@@ -437,23 +526,167 @@ document.supabase = {
   
   designs: {
     // 获取用户设计列表
-    getUserDesigns(userId) {
-      return localStorageDesigns.getUserDesigns(userId);
+    async getUserDesigns(userId) {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase获取设计
+          const { data, error } = await supabaseClient
+            .from('designs')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          
+          if (error) {
+            console.error('Supabase设计获取失败:', error.message);
+            // 降级到本地存储
+            return localStorageDesigns.getUserDesigns(userId);
+          }
+          
+          // 转换数据格式以兼容现有代码
+          return (data || []).map(design => ({
+            id: design.id,
+            name: design.name || '未命名设计',
+            type: design.dessert_type || 'chocolate',
+            canvasData: design.canvas_data,
+            data: design.canvas_data,
+            dessertType: design.dessert_type,
+            createdAt: design.created_at,
+            updatedAt: design.updated_at,
+            userId: design.user_id
+          }));
+        } else {
+          // 使用本地存储
+          return localStorageDesigns.getUserDesigns(userId);
+        }
+      } catch (error) {
+        console.error('设计获取失败:', error);
+        // 降级到本地存储
+        return localStorageDesigns.getUserDesigns(userId);
+      }
     },
     
     // 创建设计
-    createDesign(designData) {
-      return localStorageDesigns.createDesign(designData);
+    async createDesign(designData) {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase保存设计
+          const { data, error } = await supabaseClient
+            .from('designs')
+            .insert([{
+              user_id: designData.userId,
+              name: designData.name || '未命名设计',
+              dessert_type: designData.dessertType || 'chocolate',
+              canvas_data: designData.canvasData || designData.data,
+              elements: designData.elements || [],
+              image_data: designData.imageData || null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select();
+          
+          if (error) {
+            console.error('Supabase设计保存失败:', error.message);
+            // 降级到本地存储
+            return localStorageDesigns.createDesign(designData);
+          }
+          
+          console.log('设计成功保存到Supabase:', data[0]);
+          
+          // 转换数据格式以兼容现有代码
+          return {
+            id: data[0].id,
+            name: data[0].name,
+            type: data[0].dessert_type,
+            canvasData: data[0].canvas_data,
+            data: data[0].canvas_data,
+            dessertType: data[0].dessert_type,
+            createdAt: data[0].created_at,
+            updatedAt: data[0].updated_at,
+            userId: data[0].user_id
+          };
+        } else {
+          // 使用本地存储
+          return localStorageDesigns.createDesign(designData);
+        }
+      } catch (error) {
+        console.error('设计保存失败:', error);
+        // 降级到本地存储
+        return localStorageDesigns.createDesign(designData);
+      }
     },
     
     // 更新设计
-    updateDesign(designId, updates) {
-      return localStorageDesigns.updateDesign(designId, updates);
+    async updateDesign(designId, updates) {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase更新设计
+          const { data, error } = await supabaseClient
+            .from('designs')
+            .update({
+              ...updates,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', designId)
+            .select();
+          
+          if (error) {
+            console.error('Supabase设计更新失败:', error.message);
+            // 降级到本地存储
+            return localStorageDesigns.updateDesign(designId, updates);
+          }
+          
+          console.log('设计成功更新到Supabase:', data[0]);
+          
+          // 转换数据格式以兼容现有代码
+          return {
+            id: data[0].id,
+            name: data[0].name,
+            type: data[0].dessert_type,
+            canvasData: data[0].canvas_data,
+            data: data[0].canvas_data,
+            dessertType: data[0].dessert_type,
+            createdAt: data[0].created_at,
+            updatedAt: data[0].updated_at,
+            userId: data[0].user_id
+          };
+        } else {
+          // 使用本地存储
+          return localStorageDesigns.updateDesign(designId, updates);
+        }
+      } catch (error) {
+        console.error('设计更新失败:', error);
+        // 降级到本地存储
+        return localStorageDesigns.updateDesign(designId, updates);
+      }
     },
     
     // 删除设计
-    deleteDesign(designId) {
-      return localStorageDesigns.deleteDesign(designId);
+    async deleteDesign(designId) {
+      try {
+        if (!usingLocalStorage && supabaseClient) {
+          // 使用Supabase删除设计
+          const { error } = await supabaseClient
+            .from('designs')
+            .delete()
+            .eq('id', designId);
+          
+          if (error) {
+            console.error('Supabase设计删除失败:', error.message);
+            // 降级到本地存储
+            return localStorageDesigns.deleteDesign(designId);
+          }
+          
+          console.log('设计成功从Supabase删除:', designId);
+          return true;
+        } else {
+          // 使用本地存储
+          return localStorageDesigns.deleteDesign(designId);
+        }
+      } catch (error) {
+        console.error('设计删除失败:', error);
+        // 降级到本地存储
+        return localStorageDesigns.deleteDesign(designId);
+      }
     }
   },
   

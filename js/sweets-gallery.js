@@ -12,9 +12,9 @@ class SweetsGallery {
         this.init();
     }
 
-    init() {
-        this.loadDesigns();
-        this.loadOrders();
+    async init() {
+        await this.loadDesigns();
+        await this.loadOrders();
         this.setupEventListeners();
         this.renderContent();
     }
@@ -22,13 +22,44 @@ class SweetsGallery {
     /**
      * 加载设计列表
      */
-    loadDesigns() {
+    async loadDesigns() {
+        try {
+            // 优先使用Supabase获取设计数据
+            if (window.Supabase && window.Supabase.auth) {
+                const currentUser = await window.Supabase.auth.getCurrentUser();
+                if (currentUser && currentUser.id) {
+                    this.designs = await window.Supabase.designs.getUserDesigns(currentUser.id);
+                    console.log('从Supabase加载设计数据:', this.designs.length, '个设计');
+                } else {
+                    // 用户未登录，使用本地存储
+                    this.designs = this.loadDesignsFromLocalStorage();
+                    console.log('用户未登录，从本地存储加载设计数据:', this.designs.length, '个设计');
+                }
+            } else {
+                // Supabase不可用，使用本地存储
+                this.designs = this.loadDesignsFromLocalStorage();
+                console.log('Supabase不可用，从本地存储加载设计数据:', this.designs.length, '个设计');
+            }
+            
+            this.filteredDesigns = [...this.designs];
+        } catch (error) {
+            console.error('加载设计失败:', error);
+            // 降级到本地存储
+            this.designs = this.loadDesignsFromLocalStorage();
+            this.filteredDesigns = [...this.designs];
+        }
+    }
+    
+    /**
+     * 从本地存储加载设计数据
+     */
+    loadDesignsFromLocalStorage() {
         try {
             // 优先使用StorageUtils获取设计数据
             if (window.StorageUtils) {
-                this.designs = StorageUtils.getDesigns();
+                const designs = StorageUtils.getDesigns();
                 // 统一数据字段
-                this.designs = this.designs.map(design => ({
+                return designs.map(design => ({
                     ...design,
                     data: design.canvasData || design.data,
                     type: design.dessertType || design.type || 'chocolate'
@@ -37,39 +68,64 @@ class SweetsGallery {
                 // 降级方案 - 兼容两种存储键名
                 const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
                 const designs = JSON.parse(localStorage.getItem('designs')) || [];
-                this.designs = [...sweetsDesigns, ...designs];
+                const allDesigns = [...sweetsDesigns, ...designs];
                 // 统一数据字段
-                this.designs = this.designs.map(design => ({
+                return allDesigns.map(design => ({
                     ...design,
                     data: design.canvasData || design.data,
                     type: design.dessertType || design.type || 'chocolate'
                 }));
             }
-            this.filteredDesigns = [...this.designs];
-            console.log('加载设计数据:', this.designs.length, '个设计');
         } catch (error) {
-            console.error('加载设计失败:', error);
-            this.designs = [];
-            this.filteredDesigns = [];
+            console.error('从本地存储加载设计失败:', error);
+            return [];
         }
     }
 
     /**
      * 加载订单列表
      */
-    loadOrders() {
+    async loadOrders() {
         try {
-            if (window.StorageUtils) {
-                this.orders = StorageUtils.getOrders();
+            // 优先使用Supabase获取订单数据
+            if (window.Supabase && window.Supabase.auth) {
+                const currentUser = await window.Supabase.auth.getCurrentUser();
+                if (currentUser && currentUser.id) {
+                    this.orders = await window.Supabase.orders.getUserOrders(currentUser.id);
+                    console.log('从Supabase加载订单数据:', this.orders.length, '个订单');
+                } else {
+                    // 用户未登录，使用本地存储
+                    this.orders = this.loadOrdersFromLocalStorage();
+                    console.log('用户未登录，从本地存储加载订单数据:', this.orders.length, '个订单');
+                }
             } else {
-                this.orders = JSON.parse(localStorage.getItem('orders')) || [];
+                // Supabase不可用，使用本地存储
+                this.orders = this.loadOrdersFromLocalStorage();
+                console.log('Supabase不可用，从本地存储加载订单数据:', this.orders.length, '个订单');
             }
+            
             this.filteredOrders = [...this.orders];
-            console.log('加载订单数据:', this.orders.length, '个订单');
         } catch (error) {
             console.error('加载订单失败:', error);
-            this.orders = [];
-            this.filteredOrders = [];
+            // 降级到本地存储
+            this.orders = this.loadOrdersFromLocalStorage();
+            this.filteredOrders = [...this.orders];
+        }
+    }
+    
+    /**
+     * 从本地存储加载订单数据
+     */
+    loadOrdersFromLocalStorage() {
+        try {
+            if (window.StorageUtils) {
+                return StorageUtils.getOrders();
+            } else {
+                return JSON.parse(localStorage.getItem('orders')) || [];
+            }
+        } catch (error) {
+            console.error('从本地存储加载订单失败:', error);
+            return [];
         }
     }
 
@@ -77,8 +133,8 @@ class SweetsGallery {
         // 标签页切换
         const tabBtns = document.querySelectorAll('.tab-btn');
         tabBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const tab = e.currentTarget.getAttribute('data-tab');
+            btn.addEventListener('click', () => {
+                const tab = btn.getAttribute('data-tab');
                 this.switchTab(tab);
             });
         });
@@ -86,7 +142,7 @@ class SweetsGallery {
         // 搜索功能
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
+            searchInput.addEventListener('input', () => {
                 if (this.currentTab === 'designs') {
                     this.filterDesigns();
                 } else {
@@ -98,7 +154,7 @@ class SweetsGallery {
         // 类型筛选
         const typeFilter = document.getElementById('type-filter');
         if (typeFilter) {
-            typeFilter.addEventListener('change', (e) => {
+            typeFilter.addEventListener('change', () => {
                 if (this.currentTab === 'designs') {
                     this.filterDesigns();
                 }
@@ -108,7 +164,7 @@ class SweetsGallery {
         // 排序筛选
         const sortFilter = document.getElementById('sort-filter');
         if (sortFilter) {
-            sortFilter.addEventListener('change', (e) => {
+            sortFilter.addEventListener('change', () => {
                 if (this.currentTab === 'designs') {
                     this.sortDesigns();
                 } else {
@@ -134,44 +190,6 @@ class SweetsGallery {
                     this.closeOrderModal();
                 }
             });
-        }
-    }
-
-    renderContent() {
-        if (this.currentTab === 'designs') {
-            this.renderDesigns();
-        } else {
-            this.renderOrders();
-        }
-    }
-
-    switchTab(tab) {
-        // 更新标签页状态
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
-        });
-
-        // 更新当前标签页
-        this.currentTab = tab;
-
-        // 更新页面标题和筛选器
-        this.updateTabContent();
-
-        // 渲染对应内容
-        this.renderContent();
-    }
-
-    updateTabContent() {
-        const header = document.querySelector('.gallery-header h2');
-        const typeFilter = document.getElementById('type-filter');
-        
-        if (this.currentTab === 'designs') {
-            if (header) header.textContent = '我的设计作品';
-            if (typeFilter) typeFilter.style.display = 'block';
-        } else {
-            if (header) header.textContent = '我的订单';
-            if (typeFilter) typeFilter.style.display = 'none';
         }
     }
 
@@ -509,7 +527,7 @@ class SweetsGallery {
     }
 
     renderOrders() {
-        const grid = document.getElementById('content-grid');
+        const grid = document.getElementById('designs-grid');
         const emptyState = document.getElementById('empty-state');
         
         if (!grid) return;
@@ -576,6 +594,9 @@ class SweetsGallery {
                             <i class="fas fa-times"></i>取消
                         </button>
                         ` : ''}
+                        <button class="danger" onclick="event.stopPropagation(); gallery.deleteOrder('${order.id}')">
+                            <i class="fas fa-trash"></i>删除
+                        </button>
                     </div>
                 </div>
             </div>
@@ -680,6 +701,39 @@ class SweetsGallery {
             
             this.renderOrders();
             this.showToast('订单已取消');
+        }
+    }
+
+    /**
+     * 删除订单（永久删除）
+     */
+    deleteOrder(orderId) {
+        if (!confirm('确定要永久删除这个订单吗？此操作不可撤销，订单数据将无法恢复。')) {
+            return;
+        }
+        
+        const orderIndex = this.orders.findIndex(o => o.id == orderId);
+        if (orderIndex !== -1) {
+            // 从订单列表中删除
+            this.orders.splice(orderIndex, 1);
+            
+            // 更新筛选后的订单列表
+            this.filteredOrders = this.filteredOrders.filter(o => o.id != orderId);
+            
+            // 保存到本地存储
+            if (window.StorageUtils) {
+                StorageUtils.saveOrders(this.orders);
+            } else {
+                localStorage.setItem('orders', JSON.stringify(this.orders));
+            }
+            
+            // 如果当前查看的订单被删除，关闭模态框
+            if (this.currentOrder && this.currentOrder.id == orderId) {
+                this.closeOrderModal();
+            }
+            
+            this.renderOrders();
+            this.showToast('订单已删除');
         }
     }
 }
