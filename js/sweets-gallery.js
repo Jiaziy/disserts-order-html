@@ -282,7 +282,8 @@ class SweetsGallery {
             'star': '星形'
         };
 
-        const date = new Date(design.createdAt).toLocaleDateString('zh-CN');
+        const createDate = new Date(design.createdAt).toLocaleDateString('zh-CN');
+        const modifiedDate = design.modifiedAt ? new Date(design.modifiedAt).toLocaleDateString('zh-CN') : createDate;
 
         return `
             <div class="design-card" data-id="${design.id}">
@@ -293,7 +294,9 @@ class SweetsGallery {
                     <div class="design-title">${design.name}</div>
                     <div class="design-meta">
                         <span class="design-type">${typeNames[design.type] || design.type}</span>
-                        <span class="design-date">${date}</span>
+                        <span class="design-shape">${shapeNames[design.shape] || design.shape || '圆形'}</span>
+                        <span class="design-date">创建: ${createDate}</span>
+                        <span class="design-modified">修改: ${modifiedDate}</span>
                     </div>
                     <div class="design-actions">
                         <button class="primary" onclick="event.stopPropagation(); gallery.viewDesign('${design.id}')">
@@ -558,7 +561,7 @@ class SweetsGallery {
                     <div class="order-title">${order.productType} - ${order.selectedStyle}</div>
                     <div class="order-meta">
                         <span class="order-status ${status.class}">${status.text}</span>
-                        <span class="order-date">${date}</span>
+                        <span class="order-date">创建: ${date}</span>
                         <span class="order-price">¥${order.totalPrice}</span>
                     </div>
                     <div class="order-actions">

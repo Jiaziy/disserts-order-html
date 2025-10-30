@@ -97,23 +97,28 @@
     border-color: #FF6B95;
 }
 
-/* 作品网格 */
+/* 作品网格 - 单行列表样式 */
 .designs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 30px;
-    margin-bottom: 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 30px;
 }
 
 .design-card {
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 1px solid #f0f0f0;
     position: relative;
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    height: 100px;
+    gap: 20px;
 }
 
 .design-card::before {
@@ -139,14 +144,16 @@
 }
 
 .design-image {
-    width: 100%;
-    height: 240px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+    border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .design-image::before {
@@ -172,36 +179,54 @@
 }
 
 .design-info {
-    padding: 20px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0;
 }
 
 .design-title {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 600;
     color: #2d3748;
-    margin-bottom: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-family: 'Segoe UI', system-ui, sans-serif;
+    min-width: 200px;
+    flex-shrink: 0;
 }
 
 .design-meta {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    gap: 20px;
+    flex: 1;
 }
 
 .design-type {
-    padding: 6px 16px;
+    padding: 4px 12px;
     background: linear-gradient(135deg, #FF6B95 0%, #FF9F43 100%);
     color: white;
-    border-radius: 20px;
-    font-size: 12px;
+    border-radius: 16px;
+    font-size: 11px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
+    box-shadow: 0 1px 4px rgba(255, 107, 149, 0.3);
     transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.design-shape {
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .design-card:hover .design-type {
@@ -209,32 +234,35 @@
     box-shadow: 0 4px 12px rgba(255, 107, 149, 0.4);
 }
 
-.design-date {
-    font-size: 12px;
-    color: #999;
+.design-date, .design-modified {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
 }
 
 .design-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .design-actions button {
-    flex: 1;
-    padding: 10px 16px;
-    border: 2px solid transparent;
-    border-radius: 10px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
     position: relative;
     overflow: hidden;
+    white-space: nowrap;
+    min-width: 60px;
 }
 
 .design-actions button::before {
@@ -583,16 +611,21 @@
     box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
 }
 
-/* 订单卡片样式 */
+/* 订单卡片样式 - 单行列表样式 */
 .order-card {
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 1px solid #f0f0f0;
     position: relative;
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    height: 100px;
+    gap: 20px;
 }
 
 .order-card::before {
@@ -618,14 +651,16 @@
 }
 
 .order-image {
-    width: 100%;
-    height: 200px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+    border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .order-image::before {
@@ -651,7 +686,11 @@
 }
 
 .order-info {
-    padding: 20px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0;
 }
 
 .order-title {
@@ -666,20 +705,19 @@
 
 .order-meta {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 20px;
+    flex: 1;
 }
 
 .order-status {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 11px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .order-status.pending {
@@ -717,20 +755,17 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.order-date {
-    font-size: 12px;
-    color: #999;
+.order-date, .order-price {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
 }
 
 .order-price {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     color: #FF6B95;
-    background: linear-gradient(135deg, #FF6B95 0%, #FF9F43 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .order-card:hover .order-price {
@@ -739,22 +774,24 @@
 
 .order-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .order-actions button {
-    flex: 1;
-    padding: 8px 12px;
+    padding: 4px 8px;
     border: 1px solid #e9ecef;
-    border-radius: 6px;
+    border-radius: 4px;
     background: #f8f9fa;
-    font-size: 12px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
+    white-space: nowrap;
+    min-width: 50px;
 }
 
 .order-actions button:hover {
@@ -857,16 +894,21 @@
     box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
 }
 
-/* 订单卡片样式 */
+/* 订单卡片样式 - 单行列表样式 */
 .order-card {
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 1px solid #f0f0f0;
     position: relative;
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    height: 100px;
+    gap: 20px;
 }
 
 .order-card::before {
@@ -892,14 +934,16 @@
 }
 
 .order-image {
-    width: 100%;
-    height: 200px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+    border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .order-image::before {
@@ -925,7 +969,11 @@
 }
 
 .order-info {
-    padding: 20px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0;
 }
 
 .order-title {
@@ -940,20 +988,19 @@
 
 .order-meta {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 20px;
+    flex: 1;
 }
 
 .order-status {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 11px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .order-status.pending {
@@ -991,20 +1038,17 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.order-date {
-    font-size: 12px;
-    color: #999;
+.order-date, .order-price {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
 }
 
 .order-price {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     color: #FF6B95;
-    background: linear-gradient(135deg, #FF6B95 0%, #FF9F43 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .order-card:hover .order-price {
@@ -1013,22 +1057,24 @@
 
 .order-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .order-actions button {
-    flex: 1;
-    padding: 8px 12px;
+    padding: 4px 8px;
     border: 1px solid #e9ecef;
-    border-radius: 6px;
+    border-radius: 4px;
     background: #f8f9fa;
-    font-size: 12px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
+    white-space: nowrap;
+    min-width: 50px;
 }
 
 .order-actions button:hover {
@@ -1131,16 +1177,21 @@
     box-shadow: 0 2px 8px rgba(255, 107, 149, 0.3);
 }
 
-/* 订单卡片样式 */
+/* 订单卡片样式 - 单行列表样式 */
 .order-card {
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 1px solid #f0f0f0;
     position: relative;
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    height: 100px;
+    gap: 20px;
 }
 
 .order-card::before {
@@ -1166,14 +1217,16 @@
 }
 
 .order-image {
-    width: 100%;
-    height: 200px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+    border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .order-image::before {
@@ -1199,7 +1252,11 @@
 }
 
 .order-info {
-    padding: 20px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0;
 }
 
 .order-title {
@@ -1214,20 +1271,19 @@
 
 .order-meta {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 20px;
+    flex: 1;
 }
 
 .order-status {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 11px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .order-status.pending {
@@ -1265,20 +1321,17 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.order-date {
-    font-size: 12px;
-    color: #999;
+.order-date, .order-price {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
 }
 
 .order-price {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     color: #FF6B95;
-    background: linear-gradient(135deg, #FF6B95 0%, #FF9F43 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .order-card:hover .order-price {
@@ -1287,22 +1340,24 @@
 
 .order-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .order-actions button {
-    flex: 1;
-    padding: 8px 12px;
+    padding: 4px 8px;
     border: 1px solid #e9ecef;
-    border-radius: 6px;
+    border-radius: 4px;
     background: #f8f9fa;
-    font-size: 12px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
+    white-space: nowrap;
+    min-width: 50px;
 }
 
 .order-actions button:hover {
