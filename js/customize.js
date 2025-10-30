@@ -393,9 +393,9 @@ async function submitOrder() {
             
             showToast('订单提交成功！');
             
-            // 2秒后返回首页
+            // 2秒后返回主页
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = 'main.html';
             }, 2000);
         } else {
             showToast('订单提交失败，请稍后重试');
@@ -568,7 +568,7 @@ function checkDesignResult() {
 // 返回上一页
 function goBack() {
     // 直接返回主页，不检查步骤
-    window.location.href = 'index.html';
+    window.location.href = 'main.html';
 }
 
 // 显示提示信息
