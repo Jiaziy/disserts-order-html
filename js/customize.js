@@ -567,11 +567,8 @@ function checkDesignResult() {
 
 // 返回上一页
 function goBack() {
-    if (customizeState.currentStep > 1) {
-        prevStep();
-    } else {
-        window.location.href = 'index.html';
-    }
+    // 直接返回主页，不检查步骤
+    window.location.href = 'index.html';
 }
 
 // 显示提示信息
