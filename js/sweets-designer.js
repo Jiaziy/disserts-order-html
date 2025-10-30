@@ -94,7 +94,7 @@ class SweetsDesigner {
      */
     loadDesignFromStorage() {
         try {
-            // 检查是否有待编辑的设计
+            // 检查是否有待编辑的设计（从我的设计页面）
             const savedDesign = localStorage.getItem('currentEditDesign');
             if (savedDesign) {
                 console.log('发现待编辑的设计数据:', savedDesign.substring(0, 100) + '...');
@@ -104,12 +104,61 @@ class SweetsDesigner {
                 // 加载后清除临时存储，避免重复加载
                 localStorage.removeItem('currentEditDesign');
                 console.log('设计数据加载完成并已清除临时存储');
-            } else {
-                console.log('没有发现待编辑的设计数据');
+                return;
             }
+            
+            // 检查是否有重新下单的设计（从我的订单页面）
+            const reorderDesign = localStorage.getItem('currentReorder');
+            if (reorderDesign) {
+                console.log('发现重新下单的设计数据:', reorderDesign.substring(0, 100) + '...');
+                const order = JSON.parse(reorderDesign);
+                
+                // 从订单数据中提取设计信息
+                const design = {
+                    id: order.id,
+                    name: `${order.productType} - ${order.selectedStyle}`,
+                    type: 'chocolate',
+                    shape: this.extractShapeFromOrder(order),
+                    data: order.designImage || '',
+                    createdAt: order.createTime || new Date().toISOString(),
+                    // 其他设计相关字段
+                    canvasData: order.designImage || '',
+                    dessertType: 'chocolate'
+                };
+                
+                this.loadDesign(design);
+                
+                // 加载后清除临时存储，避免重复加载
+                localStorage.removeItem('currentReorder');
+                console.log('重新下单设计数据加载完成并已清除临时存储');
+                return;
+            }
+            
+            console.log('没有发现待加载的设计数据');
         } catch (error) {
             console.error('加载设计失败:', error);
         }
+    }
+    
+    /**
+     * 从订单数据中提取形状信息
+     */
+    extractShapeFromOrder(order) {
+        // 根据订单的样式信息推断形状
+        const style = order.selectedStyle || '';
+        
+        if (style.includes('圆形') || style.includes('circle')) {
+            return 'circle';
+        } else if (style.includes('方形') || style.includes('square')) {
+            return 'square';
+        } else if (style.includes('心形') || style.includes('heart')) {
+            return 'heart';
+        } else if (style.includes('星形') || style.includes('star')) {
+            return 'star';
+        }
+        
+        // 默认返回圆形
+        return 'circle';
     }
     
     /**
