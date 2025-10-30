@@ -151,11 +151,20 @@ function openSweetsDesigner() {
 
 // 检查设计结果
 function checkDesignResult() {
-    const savedDesign = localStorage.getItem('sweetsDesignResult');
+    let savedDesign;
+    
+    // 优先使用StorageUtils获取设计结果
+    if (window.StorageUtils) {
+        savedDesign = StorageUtils.getDesignResult();
+    } else {
+        // 降级方案 - 从localStorage获取设计结果
+        savedDesign = localStorage.getItem('sweetsDesignResult');
+    }
     
     if (savedDesign) {
         try {
-            const designData = JSON.parse(savedDesign);
+            // 如果是字符串，需要解析
+            const designData = typeof savedDesign === 'string' ? JSON.parse(savedDesign) : savedDesign;
             
             // 更新定制状态
             customizeState.designImage = designData.imageData;
@@ -165,7 +174,11 @@ function checkDesignResult() {
             updateDesignPreview();
             
             // 清除存储的设计结果
-            localStorage.removeItem('sweetsDesignResult');
+            if (window.StorageUtils) {
+                StorageUtils.clearDesignResult();
+            } else {
+                localStorage.removeItem('sweetsDesignResult');
+            }
             
             showToast('设计已加载完成！');
         } catch (error) {
@@ -373,39 +386,58 @@ async function submitOrder() {
         };
         
         // 使用 document.supabase 创建订单
-        const newOrder = document.supabase.orders.createOrder(orderData);
-        
-        if (newOrder) {
-            // 保持向后兼容，同时保存到本地存储
-            let localOrders = JSON.parse(localStorage.getItem('orders')) || [];
-            localOrders.push({
-                ...newOrder,
-                id: newOrder.id || 'order_' + Date.now(),
-                userId: newOrder.user_id,
-                selectedStyle: newOrder.selected_style,
-                flavorIndex: newOrder.flavor_index,
-                customText: newOrder.custom_text,
-                selectedPackaging: newOrder.selected_packaging,
-                designImage: newOrder.design_image,
-                createTime: newOrder.created_at || new Date().toISOString()
-            });
-            localStorage.setItem('orders', JSON.stringify(localOrders));
-            
-            showToast('订单提交成功！');
-            
-            // 2秒后返回主页
-            setTimeout(() => {
-                window.location.href = 'main.html';
-            }, 2000);
-        } else {
-            showToast('订单提交失败，请稍后重试');
+        let newOrder = null;
+        if (document.supabase && document.supabase.orders) {
+            newOrder = await document.supabase.orders.createOrder(orderData);
         }
+        
+        // 确保订单数据正确保存到本地存储
+        const fallbackOrder = {
+            id: 'order_' + Date.now(),
+            userId: currentUser?.id || 'anonymous',
+            productType: customizeState.productType,
+            selectedStyle: customizeState.selectedStyle,
+            flavorIndex: customizeState.flavorIndex,
+            customText: customizeState.customText,
+            quantity: customizeState.quantity,
+            selectedPackaging: customizeState.selectedPackaging,
+            designImage: customizeState.designImage,
+            totalPrice: calculateTotalPrice(),
+            createTime: new Date().toISOString(),
+            status: 'pending'
+        };
+        
+        // 合并Supabase返回的数据（如果有）
+        if (newOrder) {
+            Object.assign(fallbackOrder, {
+                id: newOrder.id || fallbackOrder.id,
+                userId: newOrder.user_id || fallbackOrder.userId,
+                createTime: newOrder.created_at || fallbackOrder.createTime
+            });
+        }
+        
+        // 保存到本地存储
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        orders.push(fallbackOrder);
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        console.log('订单已保存:', fallbackOrder);
+        showToast('订单提交成功！');
+        
+        // 2秒后返回主页
+        setTimeout(() => {
+            window.location.href = 'main.html';
+        }, 2000);
+        
     } catch (error) {
         console.error('提交订单错误:', error);
-        // 即使 Supabase 失败，仍然尝试保存到本地
+        
+        // 即使出错，也尝试保存到本地
         try {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             const fallbackOrder = {
                 id: 'order_' + Date.now(),
+                userId: currentUser?.id || 'anonymous',
                 productType: customizeState.productType,
                 selectedStyle: customizeState.selectedStyle,
                 flavorIndex: customizeState.flavorIndex,
@@ -413,6 +445,7 @@ async function submitOrder() {
                 quantity: customizeState.quantity,
                 selectedPackaging: customizeState.selectedPackaging,
                 designImage: customizeState.designImage,
+                totalPrice: calculateTotalPrice(),
                 createTime: new Date().toISOString(),
                 status: 'pending'
             };
@@ -421,12 +454,14 @@ async function submitOrder() {
             orders.push(fallbackOrder);
             localStorage.setItem('orders', JSON.stringify(orders));
             
-            showToast('订单已保存到本地，网络恢复后将同步');
+            console.log('订单已保存到本地:', fallbackOrder);
+            showToast('订单已保存到本地');
             
             setTimeout(() => {
                 window.location.href = 'main.html';
             }, 2000);
         } catch (fallbackError) {
+            console.error('本地保存失败:', fallbackError);
             showToast('订单保存失败，请检查网络连接');
         }
     }

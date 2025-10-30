@@ -184,9 +184,19 @@ function navigateToPage(page) {
             targetPage.classList.add('active');
             console.log('显示页面:', page + '-page');
             
-            // 如果是订单页面，加载订单数据
+            // 根据页面类型加载相应数据
             if (page === 'orders') {
                 loadOrders();
+            } else if (page === 'designs') {
+                loadDesigns();
+            } else if (page === 'sweets-gallery') {
+                // 如果是作品库页面，确保数据已加载
+                setTimeout(() => {
+                    if (window.gallery) {
+                        window.gallery.loadDesigns();
+                        window.gallery.renderDesigns();
+                    }
+                }, 100);
             }
         } else {
             console.warn('未找到页面:', page + '-page');
@@ -429,20 +439,49 @@ function loadDesigns() {
     const designsList = document.getElementById('designs-list');
     if (!designsList) return;
     
-    if (appState.designs.length === 0) {
-        designsList.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无设计作品</p>';
+    // 从本地存储加载设计数据（兼容两种存储键名）
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (allDesigns.length === 0) {
+        designsList.innerHTML = `
+            <div class="no-designs">
+                <i class="fas fa-drafting-compass" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
+                <h3>暂无设计作品</h3>
+                <p>您还没有任何设计作品，快去设计您的专属甜点吧！</p>
+                <button class="primary-btn" onclick="navigateToPage('sweets-designer')">
+                    <i class="fas fa-palette"></i> 开始设计
+                </button>
+            </div>
+        `;
         return;
     }
     
-    designsList.innerHTML = appState.designs.map((design, index) => `
-        <div class="design-item" onclick="viewDesign(${index})">
-            <div style="background: #f0f0f0; height: 150px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #999;">
-                <i class="fas fa-image" style="font-size: 48px;"></i>
+    designsList.innerHTML = allDesigns.map((design, index) => {
+        const designName = design.name || design.designName || '未命名设计';
+        const createDate = design.createTime || design.created_at || design.date;
+        const formattedDate = createDate ? new Date(createDate).toLocaleDateString('zh-CN') : '未知日期';
+        const designType = design.type || design.dessertType || '甜点';
+        
+        return `
+            <div class="design-item" onclick="viewDesign(${index})">
+                <div class="design-preview">
+                    ${design.imageData ? 
+                        `<img src="${design.imageData}" alt="${designName}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px;">` :
+                        `<div style="background: #f0f0f0; height: 150px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #999;">
+                            <i class="fas fa-image" style="font-size: 48px;"></i>
+                        </div>`
+                    }
+                </div>
+                <div class="design-info">
+                    <div class="design-title">${designName}</div>
+                    <div class="design-type">${designType}</div>
+                    <div class="design-date">${formattedDate}</div>
+                </div>
             </div>
-            <div class="design-title">${design.name}</div>
-            <div style="font-size: 12px; color: #999;">${design.date}</div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 查看设计详情
@@ -557,8 +596,12 @@ async function loadOrders() {
         } else {
             // 降级到本地存储
             const localOrders = JSON.parse(localStorage.getItem('orders')) || [];
-            orders = localOrders.filter(order => order.userId === currentUser.id || order.user_id === currentUser.id);
-            console.log('从本地存储获取到订单:', orders);
+            console.log('本地存储中的所有订单:', localOrders);
+            orders = localOrders.filter(order => {
+                const userId = order.userId || order.user_id;
+                return userId === currentUser.id;
+            });
+            console.log('从本地存储获取到用户订单:', orders);
         }
         
         // 按创建时间排序（最新的在前）

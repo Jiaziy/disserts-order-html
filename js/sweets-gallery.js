@@ -14,10 +14,27 @@ class SweetsGallery {
         this.renderDesigns();
     }
 
+    /**
+     * 加载设计列表
+     */
     loadDesigns() {
-        const savedDesigns = localStorage.getItem('sweetsDesigns');
-        this.designs = savedDesigns ? JSON.parse(savedDesigns) : [];
-        this.filteredDesigns = [...this.designs];
+        try {
+            // 优先使用StorageUtils获取设计数据
+            if (window.StorageUtils) {
+                this.designs = StorageUtils.getAllDesigns();
+            } else {
+                // 降级方案 - 兼容两种存储键名
+                const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                const designs = JSON.parse(localStorage.getItem('designs')) || [];
+                this.designs = [...sweetsDesigns, ...designs];
+            }
+            this.filteredDesigns = [...this.designs];
+            console.log('加载设计数据:', this.designs.length, '个设计');
+        } catch (error) {
+            console.error('加载设计失败:', error);
+            this.designs = [];
+            this.filteredDesigns = [];
+        }
     }
 
     setupEventListeners() {

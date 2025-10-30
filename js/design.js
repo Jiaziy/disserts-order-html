@@ -426,14 +426,35 @@ function saveDesign() {
             status: 'saved'
         };
         
-        // 保存设计到本地存储
-        let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
-        designs.push(designData);
-        localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
-        
-        // 保存当前设计为最近设计
-        localStorage.setItem('lastDesignImage', designImage);
-        localStorage.setItem('lastDesignType', designState.designType);
+        // 优先使用StorageUtils保存设计
+        if (window.StorageUtils) {
+            StorageUtils.addDesign(designData);
+            StorageUtils.saveLastDesignImage(designImage);
+            StorageUtils.saveLastDesignType(designState.designType);
+        } else {
+            // 降级保存到本地存储 - 'sweetsDesigns'键
+            let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            designs.push(designData);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+            
+            // 同时保存到'designs'键，确保兼容性
+            let altDesigns = JSON.parse(localStorage.getItem('designs')) || [];
+            // 转换为altDesigns期望的格式
+            const altDesign = {
+                ...designData,
+                user_id: designData.userId,
+                canvas_data: designData.canvasData,
+                dessert_type: designData.dessertType,
+                image_position: JSON.stringify(designData.imagePosition),
+                created_at: designData.createTime
+            };
+            altDesigns.push(altDesign);
+            localStorage.setItem('designs', JSON.stringify(altDesigns));
+            
+            // 保存当前设计为最近设计
+            localStorage.setItem('lastDesignImage', designImage);
+            localStorage.setItem('lastDesignType', designState.designType);
+        }
         
         // 显示成功消息
         showToast('设计已保存到"我的设计"中！');
