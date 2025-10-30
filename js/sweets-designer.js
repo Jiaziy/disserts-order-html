@@ -81,8 +81,10 @@ class SweetsDesigner {
             console.log('历史记录初始化完成，当前索引:', this.historyIndex, '历史记录数量:', this.history.length);
         }
         
-        // 尝试从localStorage加载设计数据
-        this.loadDesignFromStorage();
+        // 延迟加载设计数据，确保画布完全初始化
+        setTimeout(() => {
+            this.loadDesignFromStorage();
+        }, 300);
         
         this.updateUI();
     }
@@ -95,11 +97,15 @@ class SweetsDesigner {
             // 检查是否有待编辑的设计
             const savedDesign = localStorage.getItem('currentEditDesign');
             if (savedDesign) {
+                console.log('发现待编辑的设计数据:', savedDesign.substring(0, 100) + '...');
                 const design = JSON.parse(savedDesign);
                 this.loadDesign(design);
                 
                 // 加载后清除临时存储，避免重复加载
                 localStorage.removeItem('currentEditDesign');
+                console.log('设计数据加载完成并已清除临时存储');
+            } else {
+                console.log('没有发现待编辑的设计数据');
             }
         } catch (error) {
             console.error('加载设计失败:', error);
@@ -3454,4 +3460,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDesigner();
     // 延迟一下，确保designer对象已经创建
     setTimeout(initializeTools, 100);
+    
+    // 注意：设计数据的加载现在在designer.init()方法中处理
+    // 这里不再重复加载，避免数据被覆盖
+    console.log('设计器页面初始化完成，数据加载由designer.init()处理');
 });
