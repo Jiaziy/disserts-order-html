@@ -97,14 +97,37 @@
 
         <!-- 主内容区域 -->
         <main class="gallery-container">
+            <!-- 标签页切换 -->
+            <div class="tab-container">
+                <button class="tab-btn active" data-tab="designs">
+                    <i class="fas fa-palette"></i>
+                    我的设计
+                </button>
+                <button class="tab-btn" data-tab="orders">
+                    <i class="fas fa-shopping-cart"></i>
+                    我的订单
+                </button>
+            </div>
+
             <!-- 筛选和搜索 -->
             <div class="gallery-header">
-                <h2>我的订单</h2>
+                <h2>我的设计作品</h2>
                 <div class="filter-controls">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="search-input" placeholder="搜索订单...">
+                        <input type="text" id="search-input" placeholder="搜索...">
                     </div>
+                    
+                    <select id="type-filter">
+                        <option value="all">所有类型</option>
+                        <option value="chocolate">巧克力</option>
+                    </select>
+                    
+                    <select id="sort-filter">
+                        <option value="newest">最新创建</option>
+                        <option value="oldest">最早创建</option>
+                        <option value="name">按名称</option>
+                    </select>
                     
                     <button class="refresh-btn" onclick="refreshData()">
                         <i class="fas fa-sync-alt"></i>
@@ -115,19 +138,76 @@
 
             <!-- 内容网格 -->
             <div class="content-grid" id="content-grid">
-                <!-- 订单网格 -->
-                <div id="orders-grid" class="orders-grid">
-                    <!-- 订单内容将动态加载 -->
+                <!-- 设计网格 -->
+                <div id="designs-grid" class="designs-grid">
+                    <!-- 设计内容将动态加载 -->
                 </div>
                 
                 <!-- 空状态 -->
                 <div class="empty-state" id="empty-state">
-                    <i class="fas fa-shopping-cart"></i>
-                    <h3>还没有订单</h3>
+                    <i class="fas fa-palette"></i>
+                    <h3>还没有设计作品</h3>
                     <p>开始您的第一个甜点设计吧！</p>
                     <button class="primary-btn" data-navigate="sweets-designer.html">
                         开始设计
                     </button>
+                </div>
+            </div>
+
+            <!-- 作品详情模态框 -->
+            <div class="modal" id="design-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modal-title">设计详情</h3>
+                        <button class="close-btn" onclick="closeModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="design-preview">
+                            <img id="modal-image" src="" alt="设计预览">
+                        </div>
+                        
+                        <div class="design-info">
+                            <div class="info-section">
+                                <h4>设计信息</h4>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span>名称:</span>
+                                        <span id="info-name"></span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span>类型:</span>
+                                        <span id="info-type"></span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span>形状:</span>
+                                        <span id="info-shape"></span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span>创建时间:</span>
+                                        <span id="info-date"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="btn secondary" onclick="editDesign()">
+                                    <i class="fas fa-edit"></i>编辑
+                                </button>
+                                <button class="btn primary" onclick="exportDesign()">
+                                    <i class="fas fa-download"></i>导出
+                                </button>
+                                <button class="btn success" onclick="useDesign()">
+                                    <i class="fas fa-shopping-cart"></i>使用
+                                </button>
+                                <button class="btn danger" onclick="deleteDesign()">
+                                    <i class="fas fa-trash"></i>删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

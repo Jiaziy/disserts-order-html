@@ -7,7 +7,7 @@ class SweetsGallery {
         this.filteredOrders = [];
         this.currentDesign = null;
         this.currentOrder = null;
-        this.currentTab = 'designs'; // designs 或 orders
+        this.currentTab = 'orders'; // 只显示订单，移除设计标签
         
         this.init();
     }
@@ -130,34 +130,11 @@ class SweetsGallery {
     }
 
     setupEventListeners() {
-        // 标签页切换
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = btn.getAttribute('data-tab');
-                this.switchTab(tab);
-            });
-        });
-
         // 搜索功能
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
-                if (this.currentTab === 'designs') {
-                    this.filterDesigns();
-                } else {
-                    this.filterOrders();
-                }
-            });
-        }
-
-        // 类型筛选
-        const typeFilter = document.getElementById('type-filter');
-        if (typeFilter) {
-            typeFilter.addEventListener('change', () => {
-                if (this.currentTab === 'designs') {
-                    this.filterDesigns();
-                }
+                this.filterOrders();
             });
         }
 
@@ -165,11 +142,7 @@ class SweetsGallery {
         const sortFilter = document.getElementById('sort-filter');
         if (sortFilter) {
             sortFilter.addEventListener('change', () => {
-                if (this.currentTab === 'designs') {
-                    this.sortDesigns();
-                } else {
-                    this.sortOrders();
-                }
+                this.sortOrders();
             });
         }
 
@@ -194,41 +167,7 @@ class SweetsGallery {
     }
 
     renderContent() {
-        if (this.currentTab === 'designs') {
-            this.renderDesigns();
-        } else {
-            this.renderOrders();
-        }
-    }
-
-    switchTab(tab) {
-        // 更新标签页状态
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
-        });
-
-        // 更新当前标签页
-        this.currentTab = tab;
-
-        // 更新页面标题和筛选器
-        this.updateTabContent();
-
-        // 渲染对应内容
-        this.renderContent();
-    }
-
-    updateTabContent() {
-        const header = document.querySelector('.gallery-header h2');
-        const typeFilter = document.getElementById('type-filter');
-        
-        if (this.currentTab === 'designs') {
-            if (header) header.textContent = '我的设计作品';
-            if (typeFilter) typeFilter.style.display = 'block';
-        } else {
-            if (header) header.textContent = '我的订单';
-            if (typeFilter) typeFilter.style.display = 'none';
-        }
+        this.renderOrders();
     }
 
     filterDesigns() {

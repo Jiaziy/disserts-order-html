@@ -235,6 +235,150 @@ function navigateToPage(page) {
     }
 }
 
+// 标签页切换功能
+function switchTab(tab) {
+    console.log('切换到标签页:', tab);
+    
+    // 更新按钮状态
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tab}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    // 根据标签页加载相应数据
+    if (tab === 'designs') {
+        loadDesigns();
+    } else if (tab === 'orders') {
+        loadOrders();
+    }
+}
+
+// 查看设计详情
+function viewDesign(index) {
+    console.log('查看设计:', index);
+    
+    // 从本地存储加载设计数据
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (index >= 0 && index < allDesigns.length) {
+        const design = allDesigns[index];
+        showToast(`查看设计: ${design.name || design.designName || '未命名设计'}`);
+        
+        // 这里可以跳转到设计详情页面或显示模态框
+        // 暂时使用简单的提示
+    } else {
+        showToast('设计不存在');
+    }
+}
+
+// 编辑设计
+function editDesign(index) {
+    console.log('编辑设计:', index);
+    
+    // 从本地存储加载设计数据
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (index >= 0 && index < allDesigns.length) {
+        const design = allDesigns[index];
+        showToast(`编辑设计: ${design.name || design.designName || '未命名设计'}`);
+        
+        // 跳转到设计器页面，携带设计数据
+        if (window.navigationManager) {
+            window.navigationManager.navigateTo(`sweets-designer.html?edit=${index}`);
+        } else {
+            window.location.href = `sweets-designer.html?edit=${index}`;
+        }
+    } else {
+        showToast('设计不存在');
+    }
+}
+
+// 删除设计
+function deleteDesign(index) {
+    console.log('删除设计:', index);
+    
+    if (confirm('确定要删除这个设计吗？')) {
+        // 从本地存储加载设计数据
+        const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+        const designs = JSON.parse(localStorage.getItem('designs')) || [];
+        
+        // 根据索引删除对应的设计
+        if (index < sweetsDesigns.length) {
+            sweetsDesigns.splice(index, 1);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(sweetsDesigns));
+        } else {
+            const designIndex = index - sweetsDesigns.length;
+            if (designIndex < designs.length) {
+                designs.splice(designIndex, 1);
+                localStorage.setItem('designs', JSON.stringify(designs));
+            }
+        }
+        
+        showToast('设计已删除');
+        
+        // 重新加载设计列表
+        loadDesigns();
+    }
+}
+
+// 查看订单详情
+function viewOrder(orderId) {
+    console.log('查看订单:', orderId);
+    showToast(`查看订单: ${orderId}`);
+    
+    // 这里可以显示订单详情模态框
+    // 暂时使用简单的提示
+}
+
+// 重新下单
+function reorder(orderId) {
+    console.log('重新下单:', orderId);
+    showToast(`重新下单: ${orderId}`);
+    
+    // 这里可以实现重新下单逻辑
+    // 暂时使用简单的提示
+}
+
+// 取消订单
+function cancelOrder(orderId) {
+    console.log('取消订单:', orderId);
+    
+    if (confirm('确定要取消这个订单吗？')) {
+        showToast(`订单已取消: ${orderId}`);
+        
+        // 这里可以实现取消订单逻辑
+        // 暂时使用简单的提示
+    }
+}
+
+// 刷新数据
+function refreshData() {
+    console.log('刷新数据');
+    
+    // 获取当前激活的标签页
+    const activeTabBtn = document.querySelector('.tab-btn.active');
+    if (activeTabBtn) {
+        const activeTab = activeTabBtn.getAttribute('data-tab');
+        if (activeTab === 'designs') {
+            loadDesigns();
+        } else if (activeTab === 'orders') {
+            loadOrders();
+        }
+    }
+    
+    showToast('数据已刷新');
+}
+
 // 切换登录标签页
 function switchTab(tab) {
     // 更新按钮状态
@@ -260,6 +404,150 @@ function switchTab(tab) {
             activeContent.classList.add('active');
         }
     }
+}
+
+// 标签页切换功能
+function switchTab(tab) {
+    console.log('切换到标签页:', tab);
+    
+    // 更新按钮状态
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tab}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    // 根据标签页加载相应数据
+    if (tab === 'designs') {
+        loadDesigns();
+    } else if (tab === 'orders') {
+        loadOrders();
+    }
+}
+
+// 查看设计详情
+function viewDesign(index) {
+    console.log('查看设计:', index);
+    
+    // 从本地存储加载设计数据
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (index >= 0 && index < allDesigns.length) {
+        const design = allDesigns[index];
+        showToast(`查看设计: ${design.name || design.designName || '未命名设计'}`);
+        
+        // 这里可以跳转到设计详情页面或显示模态框
+        // 暂时使用简单的提示
+    } else {
+        showToast('设计不存在');
+    }
+}
+
+// 编辑设计
+function editDesign(index) {
+    console.log('编辑设计:', index);
+    
+    // 从本地存储加载设计数据
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (index >= 0 && index < allDesigns.length) {
+        const design = allDesigns[index];
+        showToast(`编辑设计: ${design.name || design.designName || '未命名设计'}`);
+        
+        // 跳转到设计器页面，携带设计数据
+        if (window.navigationManager) {
+            window.navigationManager.navigateTo(`sweets-designer.html?edit=${index}`);
+        } else {
+            window.location.href = `sweets-designer.html?edit=${index}`;
+        }
+    } else {
+        showToast('设计不存在');
+    }
+}
+
+// 删除设计
+function deleteDesign(index) {
+    console.log('删除设计:', index);
+    
+    if (confirm('确定要删除这个设计吗？')) {
+        // 从本地存储加载设计数据
+        const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+        const designs = JSON.parse(localStorage.getItem('designs')) || [];
+        
+        // 根据索引删除对应的设计
+        if (index < sweetsDesigns.length) {
+            sweetsDesigns.splice(index, 1);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(sweetsDesigns));
+        } else {
+            const designIndex = index - sweetsDesigns.length;
+            if (designIndex < designs.length) {
+                designs.splice(designIndex, 1);
+                localStorage.setItem('designs', JSON.stringify(designs));
+            }
+        }
+        
+        showToast('设计已删除');
+        
+        // 重新加载设计列表
+        loadDesigns();
+    }
+}
+
+// 查看订单详情
+function viewOrder(orderId) {
+    console.log('查看订单:', orderId);
+    showToast(`查看订单: ${orderId}`);
+    
+    // 这里可以显示订单详情模态框
+    // 暂时使用简单的提示
+}
+
+// 重新下单
+function reorder(orderId) {
+    console.log('重新下单:', orderId);
+    showToast(`重新下单: ${orderId}`);
+    
+    // 这里可以实现重新下单逻辑
+    // 暂时使用简单的提示
+}
+
+// 取消订单
+function cancelOrder(orderId) {
+    console.log('取消订单:', orderId);
+    
+    if (confirm('确定要取消这个订单吗？')) {
+        showToast(`订单已取消: ${orderId}`);
+        
+        // 这里可以实现取消订单逻辑
+        // 暂时使用简单的提示
+    }
+}
+
+// 刷新数据
+function refreshData() {
+    console.log('刷新数据');
+    
+    // 获取当前激活的标签页
+    const activeTabBtn = document.querySelector('.tab-btn.active');
+    if (activeTabBtn) {
+        const activeTab = activeTabBtn.getAttribute('data-tab');
+        if (activeTab === 'designs') {
+            loadDesigns();
+        } else if (activeTab === 'orders') {
+            loadOrders();
+        }
+    }
+    
+    showToast('数据已刷新');
 }
 
 // 手机号验证
@@ -448,52 +736,77 @@ function navigateToCustomize(type) {
 
 // 加载设计列表
 function loadDesigns() {
-    const designsList = document.getElementById('designs-list');
-    if (!designsList) return;
+    console.log('开始加载设计数据...');
+    
+    const designsGrid = document.getElementById('designs-grid');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (!designsGrid) {
+        console.error('未找到设计网格容器');
+        return;
+    }
     
     // 从本地存储加载设计数据（兼容两种存储键名）
     const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
     const designs = JSON.parse(localStorage.getItem('designs')) || [];
     const allDesigns = [...sweetsDesigns, ...designs];
     
+    console.log('从本地存储获取到的设计数据:', allDesigns);
+    
     if (allDesigns.length === 0) {
-        designsList.innerHTML = `
-            <div class="no-designs">
-                <i class="fas fa-drafting-compass" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
-                <h3>暂无设计作品</h3>
-                <p>您还没有任何设计作品，快去设计您的专属甜点吧！</p>
-                <button class="primary-btn" onclick="navigateToPage('sweets-designer')">
-                    <i class="fas fa-palette"></i> 开始设计
+        designsGrid.innerHTML = '';
+        if (emptyState) {
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `
+                <i class="fas fa-palette"></i>
+                <h3>还没有设计作品</h3>
+                <p>开始您的第一个甜点设计吧！</p>
+                <button class="primary-btn" data-navigate="sweets-designer.html">
+                    开始设计
                 </button>
-            </div>
-        `;
+            `;
+        }
         return;
     }
     
-    designsList.innerHTML = allDesigns.map((design, index) => {
+    // 隐藏空状态
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    // 生成设计卡片HTML
+    designsGrid.innerHTML = allDesigns.map((design, index) => {
         const designName = design.name || design.designName || '未命名设计';
         const createDate = design.createTime || design.created_at || design.date;
         const formattedDate = createDate ? new Date(createDate).toLocaleDateString('zh-CN') : '未知日期';
         const designType = design.type || design.dessertType || '甜点';
+        const imageData = design.imageData || design.canvasData;
         
         return `
-            <div class="design-item" onclick="viewDesign(${index})">
-                <div class="design-preview">
-                    ${design.imageData ? 
-                        `<img src="${design.imageData}" alt="${designName}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px;">` :
-                        `<div style="background: #f0f0f0; height: 150px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #999;">
-                            <i class="fas fa-image" style="font-size: 48px;"></i>
-                        </div>`
+            <div class="design-card">
+                <div class="design-image">
+                    ${imageData ? 
+                        `<img src="${imageData}" alt="${designName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` :
+                        `<i class="fas fa-image" style="font-size: 32px; color: #999;"></i>`
                     }
                 </div>
                 <div class="design-info">
                     <div class="design-title">${designName}</div>
-                    <div class="design-type">${designType}</div>
-                    <div class="design-date">${formattedDate}</div>
+                    <div class="design-meta">
+                        <span class="design-type">${designType}</span>
+                        <span class="design-date">${formattedDate}</span>
+                    </div>
+                    <div class="design-actions">
+                        <button class="primary" onclick="viewDesign(${index})">查看</button>
+                        <button class="secondary" onclick="editDesign(${index})">编辑</button>
+                        <button class="danger" onclick="deleteDesign(${index})">删除</button>
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
+    
+    console.log('设计列表生成完成');
 }
 
 // 查看设计详情
@@ -584,9 +897,11 @@ if (!document.getElementById('toast-animations')) {
 async function loadOrders() {
     console.log('开始加载订单数据...');
     
-    const ordersList = document.getElementById('orders-list');
-    if (!ordersList) {
-        console.error('未找到订单列表容器');
+    const designsGrid = document.getElementById('designs-grid');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (!designsGrid) {
+        console.error('未找到设计网格容器');
         return;
     }
     
@@ -594,7 +909,15 @@ async function loadOrders() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) {
         console.error('未找到当前用户信息');
-        ordersList.innerHTML = '<div class="no-orders"><p>请先登录查看订单</p></div>';
+        designsGrid.innerHTML = '';
+        if (emptyState) {
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `
+                <i class="fas fa-shopping-cart"></i>
+                <h3>请先登录查看订单</h3>
+                <p>登录后可以查看您的订单信息</p>
+            `;
+        }
         return;
     }
     
@@ -624,21 +947,28 @@ async function loadOrders() {
         });
         
         if (orders.length === 0) {
-            ordersList.innerHTML = `
-                <div class="no-orders">
-                    <i class="fas fa-shopping-bag" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
-                    <h3>暂无订单</h3>
+            designsGrid.innerHTML = '';
+            if (emptyState) {
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>还没有订单</h3>
                     <p>您还没有任何订单，快去定制您的专属甜点吧！</p>
                     <button class="primary-btn" data-navigate="customize.html">
                         <i class="fas fa-palette"></i> 开始定制
                     </button>
-                </div>
-            `;
+                `;
+            }
             return;
         }
         
-        // 生成订单列表HTML
-        ordersList.innerHTML = orders.map(order => {
+        // 隐藏空状态
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // 生成订单卡片HTML
+        designsGrid.innerHTML = orders.map(order => {
             const orderId = order.id || order.order_id;
             const productType = order.product_type || order.productType;
             const selectedStyle = order.selected_style || order.selectedStyle;
@@ -671,35 +1001,23 @@ async function loadOrders() {
             }
             
             return `
-                <div class="order-item">
-                    <div class="order-header">
-                        <div class="order-id">订单号: ${orderId}</div>
-                        <div class="order-status ${statusClass}">${statusText}</div>
+                <div class="order-card">
+                    <div class="order-image">
+                        <i class="fas fa-shopping-bag" style="font-size: 32px; color: #999;"></i>
                     </div>
-                    <div class="order-details">
-                        <div class="order-detail">
-                            <span class="detail-label">产品类型</span>
-                            <span class="detail-value">${productType}</span>
+                    <div class="order-info">
+                        <div class="order-title">订单号: ${orderId}</div>
+                        <div class="order-meta">
+                            <span class="order-type">${productType}</span>
+                            <span class="order-status ${statusClass}">${statusText}</span>
+                            <span class="order-date">${createDate}</span>
                         </div>
-                        <div class="order-detail">
-                            <span class="detail-label">样式</span>
-                            <span class="detail-value">${selectedStyle}</span>
-                        </div>
-                        <div class="order-detail">
-                            <span class="detail-label">定制文字</span>
-                            <span class="detail-value">${customText || '无'}</span>
-                        </div>
-                        <div class="order-detail">
-                            <span class="detail-label">包装</span>
-                            <span class="detail-value">${selectedPackaging || '标准包装'}</span>
-                        </div>
-                        <div class="order-detail">
-                            <span class="detail-label">数量</span>
-                            <span class="detail-value">${quantity} 件</span>
+                        <div class="order-actions">
+                            <button class="primary" onclick="viewOrder('${orderId}')">查看详情</button>
+                            <button class="secondary" onclick="reorder('${orderId}')">重新下单</button>
+                            <button class="danger" onclick="cancelOrder('${orderId}')">取消订单</button>
                         </div>
                     </div>
-                    <div class="order-price">¥${totalPrice}</div>
-                    <div class="order-date">下单时间: ${createDate}</div>
                 </div>
             `;
         }).join('');
@@ -708,6 +1026,158 @@ async function loadOrders() {
         
     } catch (error) {
         console.error('加载订单失败:', error);
-        ordersList.innerHTML = '<div class="no-orders"><p>加载订单失败，请稍后重试</p></div>';
+        designsGrid.innerHTML = '';
+        if (emptyState) {
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>加载订单失败</h3>
+                <p>请稍后重试</p>
+            `;
+        }
     }
+}
+
+// 标签页切换功能
+function switchTab(tab) {
+    console.log('切换到标签页:', tab);
+    
+    // 更新按钮状态
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tab}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    // 根据标签页加载相应数据
+    if (tab === 'designs') {
+        loadDesigns();
+    } else if (tab === 'orders') {
+        loadOrders();
+    }
+}
+
+// 查看设计详情
+function viewDesign(index) {
+    console.log('查看设计:', index);
+    
+    // 从本地存储加载设计数据
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (index >= 0 && index < allDesigns.length) {
+        const design = allDesigns[index];
+        showToast(`查看设计: ${design.name || design.designName || '未命名设计'}`);
+        
+        // 这里可以跳转到设计详情页面或显示模态框
+        // 暂时使用简单的提示
+    } else {
+        showToast('设计不存在');
+    }
+}
+
+// 编辑设计
+function editDesign(index) {
+    console.log('编辑设计:', index);
+    
+    // 从本地存储加载设计数据
+    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+    const designs = JSON.parse(localStorage.getItem('designs')) || [];
+    const allDesigns = [...sweetsDesigns, ...designs];
+    
+    if (index >= 0 && index < allDesigns.length) {
+        const design = allDesigns[index];
+        showToast(`编辑设计: ${design.name || design.designName || '未命名设计'}`);
+        
+        // 跳转到设计器页面，携带设计数据
+        if (window.navigationManager) {
+            window.navigationManager.navigateTo(`sweets-designer.html?edit=${index}`);
+        } else {
+            window.location.href = `sweets-designer.html?edit=${index}`;
+        }
+    } else {
+        showToast('设计不存在');
+    }
+}
+
+// 删除设计
+function deleteDesign(index) {
+    console.log('删除设计:', index);
+    
+    if (confirm('确定要删除这个设计吗？')) {
+        // 从本地存储加载设计数据
+        const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+        const designs = JSON.parse(localStorage.getItem('designs')) || [];
+        
+        // 根据索引删除对应的设计
+        if (index < sweetsDesigns.length) {
+            sweetsDesigns.splice(index, 1);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(sweetsDesigns));
+        } else {
+            const designIndex = index - sweetsDesigns.length;
+            if (designIndex < designs.length) {
+                designs.splice(designIndex, 1);
+                localStorage.setItem('designs', JSON.stringify(designs));
+            }
+        }
+        
+        showToast('设计已删除');
+        
+        // 重新加载设计列表
+        loadDesigns();
+    }
+}
+
+// 查看订单详情
+function viewOrder(orderId) {
+    console.log('查看订单:', orderId);
+    showToast(`查看订单: ${orderId}`);
+    
+    // 这里可以显示订单详情模态框
+    // 暂时使用简单的提示
+}
+
+// 重新下单
+function reorder(orderId) {
+    console.log('重新下单:', orderId);
+    showToast(`重新下单: ${orderId}`);
+    
+    // 这里可以实现重新下单逻辑
+    // 暂时使用简单的提示
+}
+
+// 取消订单
+function cancelOrder(orderId) {
+    console.log('取消订单:', orderId);
+    
+    if (confirm('确定要取消这个订单吗？')) {
+        showToast(`订单已取消: ${orderId}`);
+        
+        // 这里可以实现取消订单逻辑
+        // 暂时使用简单的提示
+    }
+}
+
+// 刷新数据
+function refreshData() {
+    console.log('刷新数据');
+    
+    // 获取当前激活的标签页
+    const activeTabBtn = document.querySelector('.tab-btn.active');
+    if (activeTabBtn) {
+        const activeTab = activeTabBtn.getAttribute('data-tab');
+        if (activeTab === 'designs') {
+            loadDesigns();
+        } else if (activeTab === 'orders') {
+            loadOrders();
+        }
+    }
+    
+    showToast('数据已刷新');
 }
