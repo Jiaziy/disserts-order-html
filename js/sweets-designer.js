@@ -2990,35 +2990,9 @@ class SweetsDesigner {
     }
     
     /**
-     * 设计完成 - 只保存设计到"我的设计"，不创建订单
+     * 设计完成 - 保存设计并返回步骤二
      */
     designComplete() {
-        try {
-            // 保存设计到用户设计库（我的设计页面）
-            this.saveCanvas();
-            
-            // 显示成功消息
-            this.showNotification('设计已保存到"我的设计"中！', 'success');
-            
-            // 2秒后返回定制页面
-            setTimeout(() => {
-                if (window.navigationManager) {
-                    window.navigationManager.navigateTo('customize.html');
-                } else {
-                    window.location.href = 'customize.html';
-                }
-            }, 2000);
-            
-        } catch (error) {
-            console.error('设计完成失败:', error);
-            this.showNotification('设计保存失败，请重试', 'error');
-        }
-    }
-    
-    /**
-     * 提交订单 - 保存设计并创建订单
-     */
-    submitDesign() {
         try {
             // 先保存设计到用户设计库（我的设计页面）
             this.saveCanvas();
@@ -3084,20 +3058,20 @@ class SweetsDesigner {
             }
             
             // 显示成功消息
-            this.showNotification('订单已提交！已保存到我的设计和订单页面，正在返回定制页面...', 'success');
+            this.showNotification('设计已完成！已保存到我的设计和订单页面，正在返回定制页面...', 'success');
             
-            // 2秒后返回定制页面
+            // 2秒后返回步骤二页面
             setTimeout(() => {
                 if (window.navigationManager) {
-                    window.navigationManager.navigateTo('customize.html');
+                    window.navigationManager.navigateTo('customize.html?step=2');
                 } else {
-                    window.location.href = 'customize.html';
+                    window.location.href = 'customize.html?step=2';
                 }
             }, 2000);
             
         } catch (error) {
-            console.error('提交订单失败:', error);
-            this.showNotification('订单提交失败，请重试', 'error');
+            console.error('设计完成失败:', error);
+            this.showNotification('设计完成失败，请重试', 'error');
         }
     }
     
@@ -3482,7 +3456,7 @@ function initializeTools() {
     
     // 初始化提交订单按钮
     document.getElementById('create-order-btn')?.addEventListener('click', () => {
-        if (!designer || !designer.canvas || !designer.submitDesign) return;
+        if (!designer || !designer.canvas || !designer.designComplete) return;
         
         // 检查设计是否为空
         const context = designer.canvas.getContext('2d');
@@ -3503,7 +3477,7 @@ function initializeTools() {
             return;
         }
         
-        designer.submitDesign();
+        designer.designComplete();
     });
     
     // 初始化文字添加按钮事件
