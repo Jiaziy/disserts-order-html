@@ -94,6 +94,35 @@ class SweetsDesigner {
      */
     loadDesignFromStorage() {
         try {
+            // 检查URL参数，看是否是编辑模式
+            const urlParams = new URLSearchParams(window.location.search);
+            const editIndex = urlParams.get('edit');
+            
+            if (editIndex !== null) {
+                console.log('编辑模式，加载指定设计，索引:', editIndex);
+                
+                // 从本地存储加载设计数据
+                const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                const designs = JSON.parse(localStorage.getItem('designs')) || [];
+                const allDesigns = [...sweetsDesigns, ...designs];
+                
+                if (editIndex >= 0 && editIndex < allDesigns.length) {
+                    const design = allDesigns[editIndex];
+                    console.log('找到要编辑的设计:', design.name || design.designName || '未命名设计');
+                    
+                    // 设置编辑模式标识
+                    this.isEditMode = true;
+                    this.editIndex = parseInt(editIndex);
+                    
+                    // 加载设计数据
+                    this.loadDesign(design);
+                    console.log('编辑设计数据加载完成');
+                    return;
+                } else {
+                    console.error('指定的设计索引不存在:', editIndex);
+                }
+            }
+            
             // 检查是否有待编辑的设计（从我的设计页面）
             const savedDesign = localStorage.getItem('currentEditDesign');
             if (savedDesign) {
@@ -139,7 +168,6 @@ class SweetsDesigner {
             const lastDesignType = localStorage.getItem('lastDesignType');
             
             // 检查是否是全新的设计会话（通过URL参数或sessionStorage标记）
-            const urlParams = new URLSearchParams(window.location.search);
             const isNewDesign = urlParams.has('new') || sessionStorage.getItem('isNewDesignSession') === 'true';
             
             if (lastDesignImage && !isNewDesign) {
@@ -2705,33 +2733,65 @@ class SweetsDesigner {
                 type: this.dessertType // 用于兼容旧版本
             };
             
-            // 确保StorageUtils已加载
-            if (window.StorageUtils) {
-                // 使用StorageUtils保存设计
-                const savedDesign = StorageUtils.addDesign(designData);
+            // 检查是否是编辑模式
+            if (this.isEditMode && this.editIndex !== undefined) {
+                console.log('编辑模式，更新原有设计，索引:', this.editIndex);
                 
-                if (savedDesign) {
+                // 从本地存储加载设计数据
+                const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                const designs = JSON.parse(localStorage.getItem('designs')) || [];
+                const allDesigns = [...sweetsDesigns, ...designs];
+                
+                if (this.editIndex >= 0 && this.editIndex < allDesigns.length) {
+                    // 更新原有设计数据
+                    allDesigns[this.editIndex] = designData;
+                    
+                    // 保存回本地存储
+                    localStorage.setItem('sweetsDesigns', JSON.stringify(allDesigns));
+                    
                     // 保存当前设计为最近设计
-                    StorageUtils.saveLastDesignImage(canvasData);
-                    StorageUtils.saveLastDesignType(this.dessertType);
+                    localStorage.setItem('lastDesignImage', canvasData);
+                    localStorage.setItem('lastDesignType', this.dessertType);
+                    
+                    // 显示成功消息
+                    this.showNotification('设计已更新！', 'success');
+                    console.log('设计更新完成');
+                } else {
+                    console.error('指定的设计索引不存在:', this.editIndex);
+                    this.showNotification('设计更新失败，索引不存在', 'error');
+                }
+            } else {
+                // 正常模式，创建新设计
+                console.log('正常模式，创建新设计');
+                
+                // 确保StorageUtils已加载
+                if (window.StorageUtils) {
+                    // 使用StorageUtils保存设计
+                    const savedDesign = StorageUtils.addDesign(designData);
+                    
+                    if (savedDesign) {
+                        // 保存当前设计为最近设计
+                        StorageUtils.saveLastDesignImage(canvasData);
+                        StorageUtils.saveLastDesignType(this.dessertType);
+                        
+                        // 显示成功消息
+                        this.showNotification('设计已保存！', 'success');
+                    } else {
+                        this.showNotification('设计保存失败，请重试', 'error');
+                    }
+                } else {
+                    // 降级保存到localStorage
+                    let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                    designs.push(designData);
+                    localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                    
+                    // 保存当前设计为最近设计
+                    localStorage.setItem('lastDesignImage', canvasData);
+                    localStorage.setItem('lastDesignType', this.dessertType);
                     
                     // 显示成功消息
                     this.showNotification('设计已保存！', 'success');
-                } else {
-                    this.showNotification('设计保存失败，请重试', 'error');
                 }
-            } else {
-                // 降级保存到localStorage
-                let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
-                designs.push(designData);
-                localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
-                
-                // 保存当前设计为最近设计
-                localStorage.setItem('lastDesignImage', canvasData);
-                localStorage.setItem('lastDesignType', this.dessertType);
-                
-                // 显示成功消息
-                this.showNotification('设计已保存！', 'success');
             }
             
         } catch (error) {
