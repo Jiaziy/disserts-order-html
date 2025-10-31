@@ -331,35 +331,44 @@ function deleteDesign(index) {
     }
 }
 
-// 查看订单详情
-function viewOrder(orderId) {
-    console.log('查看订单:', orderId);
-    showToast(`查看订单: ${orderId}`);
-    
-    // 这里可以显示订单详情模态框
-    // 暂时使用简单的提示
+
+
+// 关闭订单详情模态框
+function closeOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
 }
 
 // 重新下单
 function reorder(orderId) {
     console.log('重新下单:', orderId);
-    showToast(`重新下单: ${orderId}`);
     
-    // 这里可以实现重新下单逻辑
-    // 暂时使用简单的提示
-}
-
-// 取消订单
-function cancelOrder(orderId) {
-    console.log('取消订单:', orderId);
+    // 从本地存储加载订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
     
-    if (confirm('确定要取消这个订单吗？')) {
-        showToast(`订单已取消: ${orderId}`);
+    if (order) {
+        // 将订单数据保存为重新下单数据
+        localStorage.setItem('currentReorder', JSON.stringify(order));
+        showToast('正在跳转到设计页面...');
         
-        // 这里可以实现取消订单逻辑
-        // 暂时使用简单的提示
+        // 跳转到设计页面
+        setTimeout(() => {
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('sweets-designer.html');
+            } else {
+                window.location.href = 'sweets-designer.html';
+            }
+        }, 1000);
+    } else {
+        showToast('订单不存在');
     }
 }
+
+
 
 // 刷新数据
 function refreshData() {
@@ -502,35 +511,44 @@ function deleteDesign(index) {
     }
 }
 
-// 查看订单详情
-function viewOrder(orderId) {
-    console.log('查看订单:', orderId);
-    showToast(`查看订单: ${orderId}`);
-    
-    // 这里可以显示订单详情模态框
-    // 暂时使用简单的提示
+
+
+// 关闭订单详情模态框
+function closeOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
 }
 
 // 重新下单
 function reorder(orderId) {
     console.log('重新下单:', orderId);
-    showToast(`重新下单: ${orderId}`);
     
-    // 这里可以实现重新下单逻辑
-    // 暂时使用简单的提示
-}
-
-// 取消订单
-function cancelOrder(orderId) {
-    console.log('取消订单:', orderId);
+    // 从本地存储加载订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
     
-    if (confirm('确定要取消这个订单吗？')) {
-        showToast(`订单已取消: ${orderId}`);
+    if (order) {
+        // 将订单数据保存为重新下单数据
+        localStorage.setItem('currentReorder', JSON.stringify(order));
+        showToast('正在跳转到设计页面...');
         
-        // 这里可以实现取消订单逻辑
-        // 暂时使用简单的提示
+        // 跳转到设计页面
+        setTimeout(() => {
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('sweets-designer.html');
+            } else {
+                window.location.href = 'sweets-designer.html';
+            }
+        }, 1000);
+    } else {
+        showToast('订单不存在');
     }
 }
+
+
 
 // 刷新数据
 function refreshData() {
@@ -1134,35 +1152,44 @@ function deleteDesign(index) {
     }
 }
 
-// 查看订单详情
-function viewOrder(orderId) {
-    console.log('查看订单:', orderId);
-    showToast(`查看订单: ${orderId}`);
-    
-    // 这里可以显示订单详情模态框
-    // 暂时使用简单的提示
+
+
+// 关闭订单详情模态框
+function closeOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
 }
 
 // 重新下单
 function reorder(orderId) {
     console.log('重新下单:', orderId);
-    showToast(`重新下单: ${orderId}`);
     
-    // 这里可以实现重新下单逻辑
-    // 暂时使用简单的提示
-}
-
-// 取消订单
-function cancelOrder(orderId) {
-    console.log('取消订单:', orderId);
+    // 从本地存储加载订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
     
-    if (confirm('确定要取消这个订单吗？')) {
-        showToast(`订单已取消: ${orderId}`);
+    if (order) {
+        // 将订单数据保存为重新下单数据
+        localStorage.setItem('currentReorder', JSON.stringify(order));
+        showToast('正在跳转到设计页面...');
         
-        // 这里可以实现取消订单逻辑
-        // 暂时使用简单的提示
+        // 跳转到设计页面
+        setTimeout(() => {
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('sweets-designer.html');
+            } else {
+                window.location.href = 'sweets-designer.html';
+            }
+        }, 1000);
+    } else {
+        showToast('订单不存在');
     }
 }
+
+
 
 // 刷新数据
 function refreshData() {
