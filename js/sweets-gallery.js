@@ -234,12 +234,10 @@ class SweetsGallery {
     filterDesigns() {
         const searchTerm = document.getElementById('search-input').value.toLowerCase();
 
-        // 只显示巧克力类型的设计
+        // 显示所有类型的设计（移除类型限制）
         this.filteredDesigns = this.designs.filter(design => {
             const matchesSearch = design.name.toLowerCase().includes(searchTerm);
-            const matchesType = design.type === 'chocolate'; // 只筛选巧克力类型
-            
-            return matchesSearch && matchesType;
+            return matchesSearch;
         });
 
         this.sortDesigns();

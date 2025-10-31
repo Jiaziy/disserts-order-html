@@ -2716,10 +2716,7 @@ class SweetsDesigner {
                     StorageUtils.saveLastDesignType(this.dessertType);
                     
                     // 显示成功消息
-                    this.showNotification('设计已保存到"我的设计"中！', 'success');
-                    
-                    // 自动导出图片作为备份
-                    this.exportCanvas('png');
+                    this.showNotification('设计已保存！', 'success');
                 } else {
                     this.showNotification('设计保存失败，请重试', 'error');
                 }
@@ -2734,10 +2731,7 @@ class SweetsDesigner {
                 localStorage.setItem('lastDesignType', this.dessertType);
                 
                 // 显示成功消息
-                this.showNotification('设计已保存到"我的设计"中！', 'success');
-                
-                // 自动导出图片作为备份
-                this.exportCanvas('png');
+                this.showNotification('设计已保存！', 'success');
             }
             
         } catch (error) {

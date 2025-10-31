@@ -134,7 +134,10 @@ class StorageUtils {
                 imagePosition: designData.imagePosition || { x: 0, y: 0 },
                 imageScale: designData.imageScale || 1,
                 createTime: designData.createTime || new Date().toISOString(),
-                status: designData.status || 'saved'
+                status: designData.status || 'saved',
+                // 添加兼容字段
+                type: designData.dessertType || designData.type || '',
+                data: designData.canvasData || designData.data || ''
             };
             
             designs.push(newDesign);
