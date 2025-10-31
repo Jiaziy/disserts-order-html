@@ -134,6 +134,27 @@ class SweetsDesigner {
                 return;
             }
             
+            // 检查是否有上次保存的设计数据
+            const lastDesignImage = localStorage.getItem('lastDesignImage');
+            const lastDesignType = localStorage.getItem('lastDesignType');
+            if (lastDesignImage) {
+                console.log('发现上次保存的设计数据');
+                const design = {
+                    id: 'last_design_' + Date.now(),
+                    name: '上次的设计',
+                    type: lastDesignType || 'chocolate',
+                    shape: 'circle',
+                    data: lastDesignImage,
+                    createdAt: new Date().toISOString(),
+                    canvasData: lastDesignImage,
+                    dessertType: lastDesignType || 'chocolate'
+                };
+                
+                this.loadDesign(design);
+                console.log('上次设计数据加载完成');
+                return;
+            }
+            
             console.log('没有发现待加载的设计数据');
         } catch (error) {
             console.error('加载设计失败:', error);
@@ -268,6 +289,10 @@ class SweetsDesigner {
                 this.saveState();
                 // 渲染画布
                 this.renderCanvas();
+                
+                // 标记模板已选择，允许绘图
+                this.templateSelected = true;
+                console.log('画布状态还原完成，templateSelected设置为:', this.templateSelected);
             };
             img.src = canvasData;
         } catch (error) {
@@ -2631,7 +2656,7 @@ class SweetsDesigner {
             
             // 获取设计名称
             const designNameElement = document.getElementById('design-name');
-            const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
+            const designName = designNameElement ? designNameElement.value.trim() : `设计_${new Date().toLocaleString()}`;
             
             // 从localStorage获取用户信息
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -2677,6 +2702,14 @@ class SweetsDesigner {
                     // 保存当前设计为最近设计
                     StorageUtils.saveLastDesignImage(canvasData);
                     StorageUtils.saveLastDesignType(this.dessertType);
+                    
+                    // 显示成功消息
+                    this.showNotification('设计已保存到"我的设计"中！', 'success');
+                    
+                    // 自动导出图片作为备份
+                    this.exportCanvas('png');
+                } else {
+                    this.showNotification('设计保存失败，请重试', 'error');
                 }
             } else {
                 // 降级保存到localStorage
@@ -2687,13 +2720,13 @@ class SweetsDesigner {
                 // 保存当前设计为最近设计
                 localStorage.setItem('lastDesignImage', canvasData);
                 localStorage.setItem('lastDesignType', this.dessertType);
+                
+                // 显示成功消息
+                this.showNotification('设计已保存到"我的设计"中！', 'success');
+                
+                // 自动导出图片作为备份
+                this.exportCanvas('png');
             }
-            
-            // 显示成功消息
-            this.showNotification('设计已保存到"我的设计"中！', 'success');
-            
-            // 自动导出图片作为备份
-            this.exportCanvas('png');
             
         } catch (error) {
             console.error('保存设计失败:', error);
