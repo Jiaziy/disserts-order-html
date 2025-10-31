@@ -6,6 +6,71 @@
     <title>作品库 - 甜点DIY设计平台</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/sweets-gallery.css">
+    <style>
+        /* 确保样式正确加载的临时修复 */
+        .designs-grid, .content-grid {
+            display: block !important;
+        }
+        .design-card, .order-card {
+            display: flex !important;
+            align-items: center !important;
+            padding: 16px !important;
+            background: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+            margin-bottom: 12px !important;
+        }
+        .design-image, .order-image {
+            width: 80px !important;
+            height: 80px !important;
+            background: #f8f9fa !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-right: 20px !important;
+        }
+        .design-info, .order-info {
+            flex: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+        }
+        .design-title, .order-title {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            color: #333 !important;
+            min-width: 200px !important;
+        }
+        .design-meta, .order-meta {
+            display: flex !important;
+            gap: 20px !important;
+            align-items: center !important;
+        }
+        .design-actions, .order-actions {
+            display: flex !important;
+            gap: 10px !important;
+        }
+        .design-actions button, .order-actions button {
+            padding: 6px 12px !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-size: 12px !important;
+            cursor: pointer !important;
+        }
+        .primary {
+            background: #FF6B95 !important;
+            color: white !important;
+        }
+        .secondary {
+            background: #6c757d !important;
+            color: white !important;
+        }
+        .danger {
+            background: #dc3545 !important;
+            color: white !important;
+        }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>

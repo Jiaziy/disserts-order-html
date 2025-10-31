@@ -6,6 +6,166 @@
     <title>设计界面 - 糖果定制平台</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/design.css">
+    <style>
+        /* 确保设计页面样式正确加载 */
+        .design-tools {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 20px !important;
+            padding: 15px 20px !important;
+            background: white !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+        }
+        .tool-group {
+            display: flex !important;
+            gap: 10px !important;
+            align-items: center !important;
+        }
+        .tool-btn {
+            padding: 10px 15px !important;
+            border: 2px solid #f0f0f0 !important;
+            background: white !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 5px !important;
+            min-width: 70px !important;
+        }
+        .tool-btn.active {
+            border-color: #FF6B95 !important;
+            background: #fff5f7 !important;
+        }
+        .design-area {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 20px !important;
+            background: #f8f8f8 !important;
+            min-height: calc(100vh - 200px) !important;
+        }
+        .canvas-container {
+            position: relative !important;
+            background: white !important;
+            border: 2px solid #f0f0f0 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            overflow: hidden !important;
+        }
+        #design-canvas {
+            display: block !important;
+            max-width: 100% !important;
+            height: auto !important;
+            cursor: crosshair !important;
+        }
+        .design-footer {
+            background: white !important;
+            padding: 15px 20px !important;
+            border-top: 1px solid #f0f0f0 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+        .btn {
+            padding: 12px 30px !important;
+            border: none !important;
+            border-radius: 25px !important;
+            font-size: 16px !important;
+            cursor: pointer !important;
+            min-width: 120px !important;
+        }
+        .secondary-btn {
+            background: #f0f0f0 !important;
+            color: #666 !important;
+        }
+        .primary-btn {
+            background: #FF6B95 !important;
+            color: white !important;
+        }
+    </style>
+    <style>
+        /* 确保设计页面样式正确加载 */
+        .design-tools {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 20px !important;
+            padding: 15px 20px !important;
+            background: white !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+        }
+        .tool-group {
+            display: flex !important;
+            gap: 10px !important;
+            align-items: center !important;
+        }
+        .tool-btn {
+            padding: 10px 15px !important;
+            border: 2px solid #f0f0f0 !important;
+            background: white !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 5px !important;
+            min-width: 70px !important;
+        }
+        .tool-btn.active {
+            border-color: #FF6B95 !important;
+            background: #fff5f7 !important;
+        }
+        .design-area {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 20px !important;
+            background: #f8f8f8 !important;
+            min-height: calc(100vh - 200px) !important;
+        }
+        .canvas-container {
+            position: relative !important;
+            background: white !important;
+            border: 2px solid #f0f0f0 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            overflow: hidden !important;
+        }
+        #design-canvas {
+            display: block !important;
+            max-width: 100% !important;
+            height: auto !important;
+            cursor: crosshair !important;
+        }
+        .design-footer {
+            background: white !important;
+            padding: 15px 20px !important;
+            border-top: 1px solid #f0f0f0 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+        .btn {
+            padding: 12px 30px !important;
+            border: none !important;
+            border-radius: 25px !important;
+            font-size: 16px !important;
+            cursor: pointer !important;
+            min-width: 120px !important;
+        }
+        .secondary-btn {
+            background: #f0f0f0 !important;
+            color: #666 !important;
+        }
+        .primary-btn {
+            background: #FF6B95 !important;
+            color: white !important;
+        }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
