@@ -185,6 +185,12 @@ class NavigationManager {
         // 添加过渡效果
         await this.applyTransitionEffect();
         
+        // 检查是否是导航到设计器页面
+        if (destination.includes('sweets-designer.html')) {
+            // 标记为全新设计会话
+            sessionStorage.setItem('isNewDesignSession', 'true');
+        }
+        
         // 处理页面内导航（单页应用模式）
         if (this.isSinglePageNavigation(destination)) {
             await this.handleSinglePageNavigation(destination);

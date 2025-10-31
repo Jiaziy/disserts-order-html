@@ -137,8 +137,13 @@ class SweetsDesigner {
             // 检查是否有上次保存的设计数据
             const lastDesignImage = localStorage.getItem('lastDesignImage');
             const lastDesignType = localStorage.getItem('lastDesignType');
-            if (lastDesignImage) {
-                console.log('发现上次保存的设计数据');
+            
+            // 检查是否是全新的设计会话（通过URL参数或sessionStorage标记）
+            const urlParams = new URLSearchParams(window.location.search);
+            const isNewDesign = urlParams.has('new') || sessionStorage.getItem('isNewDesignSession') === 'true';
+            
+            if (lastDesignImage && !isNewDesign) {
+                console.log('发现上次保存的设计数据，自动加载');
                 const design = {
                     id: 'last_design_' + Date.now(),
                     name: '上次的设计',
@@ -153,6 +158,10 @@ class SweetsDesigner {
                 this.loadDesign(design);
                 console.log('上次设计数据加载完成');
                 return;
+            } else if (lastDesignImage && isNewDesign) {
+                console.log('发现上次保存的设计数据，但当前是全新设计会话，不自动加载');
+                // 清除sessionStorage标记，避免影响后续会话
+                sessionStorage.removeItem('isNewDesignSession');
             }
             
             console.log('没有发现待加载的设计数据');
@@ -213,7 +222,7 @@ class SweetsDesigner {
                     this.imagePosition = { ...(design.imagePosition || { x: 0, y: 0 }) };
                     this.imageScale = design.imageScale || 1.0;
                     this.imageConfirmed = design.imageConfirmed || false;
-                    this.renderCanvas();
+                    this.updateUI();
                     console.log('图片已加载并渲染');
                 };
                 img.src = design.imageData;
@@ -290,8 +299,8 @@ class SweetsDesigner {
                 this.syncOffscreenCanvas();
                 // 保存这个状态到历史记录
                 this.saveState();
-                // 渲染画布
-                this.renderCanvas();
+                // 更新UI
+                this.updateUI();
                 
                 // 标记模板已选择，允许绘图
                 this.templateSelected = true;
@@ -3438,6 +3447,32 @@ function initializeTools() {
                 imageData[i] < 255 || 
                 imageData[i + 1] < 255 || 
                 imageData[i + 2] < 255) {
+                isEmpty = false;
+                break;
+            }
+        }
+        
+        if (isEmpty) {
+            alert('请先在画布上创建设计！');
+            return;
+        }
+        
+        designer.designComplete();
+    });
+    
+    // 初始化提交订单按钮
+    document.getElementById('create-order-btn')?.addEventListener('click', () => {
+        if (!designer || !designer.canvas || !designer.designComplete) return;
+        
+        // 检查设计是否为空
+        const context = designer.canvas.getContext('2d');
+        const imageData = context.getImageData(0, 0, designer.canvas.width, designer.canvas.height).data;
+        let isEmpty = true;
+        
+        // 检查画布是否有内容
+        for (let i = 0; i < imageData.length; i += 4) {
+            // 如果像素不是完全透明（alpha > 0），则认为有内容
+            if (imageData[i + 3] > 0) {
                 isEmpty = false;
                 break;
             }
