@@ -368,7 +368,132 @@ function reorder(orderId) {
     }
 }
 
+// 查看订单详情
+function viewOrder(orderId) {
+    console.log('查看订单详情:', orderId);
+    
+    // 获取订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
+    
+    if (!order) {
+        showToast('订单不存在');
+        return;
+    }
+    
+    // 显示订单详情模态框
+    const modal = document.getElementById('order-modal');
+    const modalTitle = document.getElementById('order-modal-title');
+    const productType = document.getElementById('order-product-type');
+    const orderStyle = document.getElementById('order-style');
+    const orderQuantity = document.getElementById('order-quantity');
+    const orderTotalPrice = document.getElementById('order-total-price');
+    const orderStatus = document.getElementById('order-status');
+    const orderCreateTime = document.getElementById('order-create-time');
+    
+    if (modal && modalTitle) {
+        modalTitle.textContent = `订单详情 - ${orderId}`;
+        productType.textContent = order.product_type || order.productType || '未知';
+        orderStyle.textContent = order.selected_style || order.selectedStyle || '默认';
+        orderQuantity.textContent = order.quantity || 1;
+        orderTotalPrice.textContent = `¥${order.total_price || order.totalPrice || 0}`;
+        
+        // 状态显示
+        const statusMap = {
+            'pending': '待处理',
+            'completed': '已完成',
+            'cancelled': '已取消'
+        };
+        orderStatus.textContent = statusMap[order.status] || '未知状态';
+        
+        // 格式化时间
+        const createTime = order.created_at || order.createTime;
+        orderCreateTime.textContent = createTime ? new Date(createTime).toLocaleString('zh-CN') : '未知时间';
+        
+        modal.classList.add('show');
+    } else {
+        showToast(`查看订单: ${orderId}`);
+    }
+}
 
+// 重新下单
+function reorder(orderId) {
+    console.log('重新下单:', orderId);
+    
+    // 获取订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
+    
+    if (!order) {
+        showToast('订单不存在');
+        return;
+    }
+    
+    // 创建新订单（复制原订单信息）
+    const newOrder = {
+        id: 'order_' + Date.now(),
+        user_id: order.user_id || order.userId,
+        product_type: order.product_type || order.productType,
+        selected_style: order.selected_style || order.selectedStyle,
+        quantity: order.quantity || 1,
+        total_price: order.total_price || order.totalPrice,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        custom_text: order.custom_text || order.customText,
+        selected_packaging: order.selected_packaging || order.selectedPackaging
+    };
+    
+    // 保存新订单
+    orders.push(newOrder);
+    localStorage.setItem('orders', JSON.stringify(orders));
+    
+    showToast('重新下单成功！');
+    
+    // 重新加载订单列表
+    loadOrders();
+    
+    // 关闭模态框
+    closeOrderModal();
+}
+
+// 取消订单
+function cancelOrder(orderId) {
+    console.log('取消订单:', orderId);
+    
+    if (confirm('确定要取消这个订单吗？')) {
+        // 获取订单数据
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
+        
+        if (orderIndex === -1) {
+            showToast('订单不存在');
+            return;
+        }
+        
+        // 更新订单状态为已取消
+        orders[orderIndex].status = 'cancelled';
+        orders[orderIndex].updated_at = new Date().toISOString();
+        
+        // 保存更新
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        showToast('订单已取消');
+        
+        // 重新加载订单列表
+        loadOrders();
+        
+        // 关闭模态框
+        closeOrderModal();
+    }
+}
+
+// 关闭订单模态框
+function closeOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
 
 // 刷新数据
 function refreshData() {
@@ -548,7 +673,132 @@ function reorder(orderId) {
     }
 }
 
+// 查看订单详情
+function viewOrder(orderId) {
+    console.log('查看订单详情:', orderId);
+    
+    // 获取订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
+    
+    if (!order) {
+        showToast('订单不存在');
+        return;
+    }
+    
+    // 显示订单详情模态框
+    const modal = document.getElementById('order-modal');
+    const modalTitle = document.getElementById('order-modal-title');
+    const productType = document.getElementById('order-product-type');
+    const orderStyle = document.getElementById('order-style');
+    const orderQuantity = document.getElementById('order-quantity');
+    const orderTotalPrice = document.getElementById('order-total-price');
+    const orderStatus = document.getElementById('order-status');
+    const orderCreateTime = document.getElementById('order-create-time');
+    
+    if (modal && modalTitle) {
+        modalTitle.textContent = `订单详情 - ${orderId}`;
+        productType.textContent = order.product_type || order.productType || '未知';
+        orderStyle.textContent = order.selected_style || order.selectedStyle || '默认';
+        orderQuantity.textContent = order.quantity || 1;
+        orderTotalPrice.textContent = `¥${order.total_price || order.totalPrice || 0}`;
+        
+        // 状态显示
+        const statusMap = {
+            'pending': '待处理',
+            'completed': '已完成',
+            'cancelled': '已取消'
+        };
+        orderStatus.textContent = statusMap[order.status] || '未知状态';
+        
+        // 格式化时间
+        const createTime = order.created_at || order.createTime;
+        orderCreateTime.textContent = createTime ? new Date(createTime).toLocaleString('zh-CN') : '未知时间';
+        
+        modal.classList.add('show');
+    } else {
+        showToast(`查看订单: ${orderId}`);
+    }
+}
 
+// 重新下单
+function reorder(orderId) {
+    console.log('重新下单:', orderId);
+    
+    // 获取订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
+    
+    if (!order) {
+        showToast('订单不存在');
+        return;
+    }
+    
+    // 创建新订单（复制原订单信息）
+    const newOrder = {
+        id: 'order_' + Date.now(),
+        user_id: order.user_id || order.userId,
+        product_type: order.product_type || order.productType,
+        selected_style: order.selected_style || order.selectedStyle,
+        quantity: order.quantity || 1,
+        total_price: order.total_price || order.totalPrice,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        custom_text: order.custom_text || order.customText,
+        selected_packaging: order.selected_packaging || order.selectedPackaging
+    };
+    
+    // 保存新订单
+    orders.push(newOrder);
+    localStorage.setItem('orders', JSON.stringify(orders));
+    
+    showToast('重新下单成功！');
+    
+    // 重新加载订单列表
+    loadOrders();
+    
+    // 关闭模态框
+    closeOrderModal();
+}
+
+// 取消订单
+function cancelOrder(orderId) {
+    console.log('取消订单:', orderId);
+    
+    if (confirm('确定要取消这个订单吗？')) {
+        // 获取订单数据
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
+        
+        if (orderIndex === -1) {
+            showToast('订单不存在');
+            return;
+        }
+        
+        // 更新订单状态为已取消
+        orders[orderIndex].status = 'cancelled';
+        orders[orderIndex].updated_at = new Date().toISOString();
+        
+        // 保存更新
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        showToast('订单已取消');
+        
+        // 重新加载订单列表
+        loadOrders();
+        
+        // 关闭模态框
+        closeOrderModal();
+    }
+}
+
+// 关闭订单模态框
+function closeOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
 
 // 刷新数据
 function refreshData() {
@@ -1189,7 +1439,132 @@ function reorder(orderId) {
     }
 }
 
+// 查看订单详情
+function viewOrder(orderId) {
+    console.log('查看订单详情:', orderId);
+    
+    // 获取订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
+    
+    if (!order) {
+        showToast('订单不存在');
+        return;
+    }
+    
+    // 显示订单详情模态框
+    const modal = document.getElementById('order-modal');
+    const modalTitle = document.getElementById('order-modal-title');
+    const productType = document.getElementById('order-product-type');
+    const orderStyle = document.getElementById('order-style');
+    const orderQuantity = document.getElementById('order-quantity');
+    const orderTotalPrice = document.getElementById('order-total-price');
+    const orderStatus = document.getElementById('order-status');
+    const orderCreateTime = document.getElementById('order-create-time');
+    
+    if (modal && modalTitle) {
+        modalTitle.textContent = `订单详情 - ${orderId}`;
+        productType.textContent = order.product_type || order.productType || '未知';
+        orderStyle.textContent = order.selected_style || order.selectedStyle || '默认';
+        orderQuantity.textContent = order.quantity || 1;
+        orderTotalPrice.textContent = `¥${order.total_price || order.totalPrice || 0}`;
+        
+        // 状态显示
+        const statusMap = {
+            'pending': '待处理',
+            'completed': '已完成',
+            'cancelled': '已取消'
+        };
+        orderStatus.textContent = statusMap[order.status] || '未知状态';
+        
+        // 格式化时间
+        const createTime = order.created_at || order.createTime;
+        orderCreateTime.textContent = createTime ? new Date(createTime).toLocaleString('zh-CN') : '未知时间';
+        
+        modal.classList.add('show');
+    } else {
+        showToast(`查看订单: ${orderId}`);
+    }
+}
 
+// 重新下单
+function reorder(orderId) {
+    console.log('重新下单:', orderId);
+    
+    // 获取订单数据
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
+    
+    if (!order) {
+        showToast('订单不存在');
+        return;
+    }
+    
+    // 创建新订单（复制原订单信息）
+    const newOrder = {
+        id: 'order_' + Date.now(),
+        user_id: order.user_id || order.userId,
+        product_type: order.product_type || order.productType,
+        selected_style: order.selected_style || order.selectedStyle,
+        quantity: order.quantity || 1,
+        total_price: order.total_price || order.totalPrice,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        custom_text: order.custom_text || order.customText,
+        selected_packaging: order.selected_packaging || order.selectedPackaging
+    };
+    
+    // 保存新订单
+    orders.push(newOrder);
+    localStorage.setItem('orders', JSON.stringify(orders));
+    
+    showToast('重新下单成功！');
+    
+    // 重新加载订单列表
+    loadOrders();
+    
+    // 关闭模态框
+    closeOrderModal();
+}
+
+// 取消订单
+function cancelOrder(orderId) {
+    console.log('取消订单:', orderId);
+    
+    if (confirm('确定要取消这个订单吗？')) {
+        // 获取订单数据
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
+        
+        if (orderIndex === -1) {
+            showToast('订单不存在');
+            return;
+        }
+        
+        // 更新订单状态为已取消
+        orders[orderIndex].status = 'cancelled';
+        orders[orderIndex].updated_at = new Date().toISOString();
+        
+        // 保存更新
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        showToast('订单已取消');
+        
+        // 重新加载订单列表
+        loadOrders();
+        
+        // 关闭模态框
+        closeOrderModal();
+    }
+}
+
+// 关闭订单模态框
+function closeOrderModal() {
+    const modal = document.getElementById('order-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
 
 // 刷新数据
 function refreshData() {
