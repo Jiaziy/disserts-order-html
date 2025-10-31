@@ -342,29 +342,33 @@ function closeOrderModal() {
     }
 }
 
-// 重新下单
-function reorder(orderId) {
-    console.log('重新下单:', orderId);
+// 删除订单
+function deleteOrder(orderId) {
+    console.log('删除订单:', orderId);
     
-    // 从本地存储加载订单数据
-    const orders = JSON.parse(localStorage.getItem('orders')) || [];
-    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
-    
-    if (order) {
-        // 将订单数据保存为重新下单数据
-        localStorage.setItem('currentReorder', JSON.stringify(order));
-        showToast('正在跳转到设计页面...');
+    if (confirm('确定要删除这个订单吗？此操作不可撤销。')) {
+        // 获取订单数据
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
         
-        // 跳转到设计页面
-        setTimeout(() => {
-            if (window.navigationManager) {
-                window.navigationManager.navigateTo('sweets-designer.html');
-            } else {
-                window.location.href = 'sweets-designer.html';
-            }
-        }, 1000);
-    } else {
-        showToast('订单不存在');
+        if (orderIndex === -1) {
+            showToast('订单不存在');
+            return;
+        }
+        
+        // 从数组中删除订单
+        orders.splice(orderIndex, 1);
+        
+        // 保存更新
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        showToast('订单已删除');
+        
+        // 重新加载订单列表
+        loadOrders();
+        
+        // 关闭模态框
+        closeOrderModal();
     }
 }
 
@@ -416,45 +420,7 @@ function viewOrder(orderId) {
     }
 }
 
-// 重新下单
-function reorder(orderId) {
-    console.log('重新下单:', orderId);
-    
-    // 获取订单数据
-    const orders = JSON.parse(localStorage.getItem('orders')) || [];
-    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
-    
-    if (!order) {
-        showToast('订单不存在');
-        return;
-    }
-    
-    // 创建新订单（复制原订单信息）
-    const newOrder = {
-        id: 'order_' + Date.now(),
-        user_id: order.user_id || order.userId,
-        product_type: order.product_type || order.productType,
-        selected_style: order.selected_style || order.selectedStyle,
-        quantity: order.quantity || 1,
-        total_price: order.total_price || order.totalPrice,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        custom_text: order.custom_text || order.customText,
-        selected_packaging: order.selected_packaging || order.selectedPackaging
-    };
-    
-    // 保存新订单
-    orders.push(newOrder);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    showToast('重新下单成功！');
-    
-    // 重新加载订单列表
-    loadOrders();
-    
-    // 关闭模态框
-    closeOrderModal();
-}
+
 
 // 取消订单
 function cancelOrder(orderId) {
@@ -647,29 +613,33 @@ function closeOrderModal() {
     }
 }
 
-// 重新下单
-function reorder(orderId) {
-    console.log('重新下单:', orderId);
+// 删除订单
+function deleteOrder(orderId) {
+    console.log('删除订单:', orderId);
     
-    // 从本地存储加载订单数据
-    const orders = JSON.parse(localStorage.getItem('orders')) || [];
-    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
-    
-    if (order) {
-        // 将订单数据保存为重新下单数据
-        localStorage.setItem('currentReorder', JSON.stringify(order));
-        showToast('正在跳转到设计页面...');
+    if (confirm('确定要删除这个订单吗？此操作不可撤销。')) {
+        // 获取订单数据
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
         
-        // 跳转到设计页面
-        setTimeout(() => {
-            if (window.navigationManager) {
-                window.navigationManager.navigateTo('sweets-designer.html');
-            } else {
-                window.location.href = 'sweets-designer.html';
-            }
-        }, 1000);
-    } else {
-        showToast('订单不存在');
+        if (orderIndex === -1) {
+            showToast('订单不存在');
+            return;
+        }
+        
+        // 从数组中删除订单
+        orders.splice(orderIndex, 1);
+        
+        // 保存更新
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        showToast('订单已删除');
+        
+        // 重新加载订单列表
+        loadOrders();
+        
+        // 关闭模态框
+        closeOrderModal();
     }
 }
 
@@ -721,45 +691,7 @@ function viewOrder(orderId) {
     }
 }
 
-// 重新下单
-function reorder(orderId) {
-    console.log('重新下单:', orderId);
-    
-    // 获取订单数据
-    const orders = JSON.parse(localStorage.getItem('orders')) || [];
-    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
-    
-    if (!order) {
-        showToast('订单不存在');
-        return;
-    }
-    
-    // 创建新订单（复制原订单信息）
-    const newOrder = {
-        id: 'order_' + Date.now(),
-        user_id: order.user_id || order.userId,
-        product_type: order.product_type || order.productType,
-        selected_style: order.selected_style || order.selectedStyle,
-        quantity: order.quantity || 1,
-        total_price: order.total_price || order.totalPrice,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        custom_text: order.custom_text || order.customText,
-        selected_packaging: order.selected_packaging || order.selectedPackaging
-    };
-    
-    // 保存新订单
-    orders.push(newOrder);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    showToast('重新下单成功！');
-    
-    // 重新加载订单列表
-    loadOrders();
-    
-    // 关闭模态框
-    closeOrderModal();
-}
+
 
 // 取消订单
 function cancelOrder(orderId) {
@@ -1282,8 +1214,7 @@ async function loadOrders() {
                         </div>
                         <div class="order-actions">
                             <button class="primary" onclick="viewOrder('${orderId}')">查看详情</button>
-                            <button class="secondary" onclick="reorder('${orderId}')">重新下单</button>
-                            <button class="danger" onclick="cancelOrder('${orderId}')">取消订单</button>
+                            <button class="danger" onclick="deleteOrder('${orderId}')">删除订单</button>
                         </div>
                     </div>
                 </div>
@@ -1413,29 +1344,33 @@ function closeOrderModal() {
     }
 }
 
-// 重新下单
-function reorder(orderId) {
-    console.log('重新下单:', orderId);
+// 删除订单
+function deleteOrder(orderId) {
+    console.log('删除订单:', orderId);
     
-    // 从本地存储加载订单数据
-    const orders = JSON.parse(localStorage.getItem('orders')) || [];
-    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
-    
-    if (order) {
-        // 将订单数据保存为重新下单数据
-        localStorage.setItem('currentReorder', JSON.stringify(order));
-        showToast('正在跳转到设计页面...');
+    if (confirm('确定要删除这个订单吗？此操作不可撤销。')) {
+        // 获取订单数据
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
         
-        // 跳转到设计页面
-        setTimeout(() => {
-            if (window.navigationManager) {
-                window.navigationManager.navigateTo('sweets-designer.html');
-            } else {
-                window.location.href = 'sweets-designer.html';
-            }
-        }, 1000);
-    } else {
-        showToast('订单不存在');
+        if (orderIndex === -1) {
+            showToast('订单不存在');
+            return;
+        }
+        
+        // 从数组中删除订单
+        orders.splice(orderIndex, 1);
+        
+        // 保存更新
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        showToast('订单已删除');
+        
+        // 重新加载订单列表
+        loadOrders();
+        
+        // 关闭模态框
+        closeOrderModal();
     }
 }
 
@@ -1487,45 +1422,7 @@ function viewOrder(orderId) {
     }
 }
 
-// 重新下单
-function reorder(orderId) {
-    console.log('重新下单:', orderId);
-    
-    // 获取订单数据
-    const orders = JSON.parse(localStorage.getItem('orders')) || [];
-    const order = orders.find(o => o.id === orderId || o.order_id === orderId);
-    
-    if (!order) {
-        showToast('订单不存在');
-        return;
-    }
-    
-    // 创建新订单（复制原订单信息）
-    const newOrder = {
-        id: 'order_' + Date.now(),
-        user_id: order.user_id || order.userId,
-        product_type: order.product_type || order.productType,
-        selected_style: order.selected_style || order.selectedStyle,
-        quantity: order.quantity || 1,
-        total_price: order.total_price || order.totalPrice,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        custom_text: order.custom_text || order.customText,
-        selected_packaging: order.selected_packaging || order.selectedPackaging
-    };
-    
-    // 保存新订单
-    orders.push(newOrder);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    showToast('重新下单成功！');
-    
-    // 重新加载订单列表
-    loadOrders();
-    
-    // 关闭模态框
-    closeOrderModal();
-}
+
 
 // 取消订单
 function cancelOrder(orderId) {

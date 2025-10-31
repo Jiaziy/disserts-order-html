@@ -523,14 +523,6 @@ class SweetsGallery {
                         <button class="primary" onclick="event.stopPropagation(); gallery.viewOrder('${order.id}')">
                             <i class="fas fa-eye"></i>查看
                         </button>
-                        <button class="secondary" onclick="event.stopPropagation(); gallery.reorder('${order.id}')">
-                            <i class="fas fa-redo"></i>重新下单
-                        </button>
-                        ${order.status === 'pending' ? `
-                        <button class="danger" onclick="event.stopPropagation(); gallery.cancelOrder('${order.id}')">
-                            <i class="fas fa-times"></i>取消
-                        </button>
-                        ` : ''}
                         <button class="danger" onclick="event.stopPropagation(); gallery.deleteOrder('${order.id}')">
                             <i class="fas fa-trash"></i>删除
                         </button>
