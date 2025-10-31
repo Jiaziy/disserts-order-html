@@ -168,13 +168,16 @@ class SweetsDesigner {
         // 根据订单的样式信息推断形状
         const style = order.selectedStyle || '';
         
-        if (style.includes('圆形') || style.includes('circle')) {
+        // 确保style是字符串
+        const styleString = String(style);
+        
+        if (styleString.includes('圆形') || styleString.includes('circle')) {
             return 'circle';
-        } else if (style.includes('方形') || style.includes('square')) {
+        } else if (styleString.includes('方形') || styleString.includes('square')) {
             return 'square';
-        } else if (style.includes('心形') || style.includes('heart')) {
+        } else if (styleString.includes('心形') || styleString.includes('heart')) {
             return 'heart';
-        } else if (style.includes('星形') || style.includes('star')) {
+        } else if (styleString.includes('星形') || styleString.includes('star')) {
             return 'star';
         }
         

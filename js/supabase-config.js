@@ -27,5 +27,5 @@ const SUPABASE_CONFIG = {
     }
 };
 
-// 导出配置
-export default SUPABASE_CONFIG;
+// 将配置暴露到全局作用域，以便其他脚本可以访问
+window.SUPABASE_CONFIG = SUPABASE_CONFIG;
