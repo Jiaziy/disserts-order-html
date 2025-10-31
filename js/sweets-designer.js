@@ -2991,7 +2991,7 @@ class SweetsDesigner {
      */
     designComplete() {
         try {
-            // 先保存设计到用户设计库
+            // 先保存设计到用户设计库（我的设计页面）
             this.saveCanvas();
             
             // 获取画布数据
@@ -2999,7 +2999,41 @@ class SweetsDesigner {
             
             // 获取设计名称
             const designNameElement = document.getElementById('design-name');
-            const designName = designNameElement ? designNameElement.textContent.trim() : `设计_${new Date().toLocaleString()}`;
+            const designName = designNameElement ? designNameElement.value.trim() : `设计_${new Date().toLocaleString()}`;
+            
+            // 从localStorage获取用户信息
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            // 创建订单数据
+            const orderData = {
+                id: 'order_' + Date.now(),
+                userId: currentUser?.id || 'anonymous',
+                userName: currentUser?.displayName || currentUser?.email || '匿名用户',
+                productType: this.dessertType,
+                designImage: canvasData,
+                designName: designName,
+                selectedStyle: this.currentTemplateId || 'circle',
+                size: 'M',
+                createTime: new Date().toISOString(),
+                status: 'pending'
+            };
+            
+            // 保存订单到订单页面
+            if (window.StorageUtils) {
+                // 使用StorageUtils保存订单
+                const savedOrder = StorageUtils.addOrder(orderData);
+                if (!savedOrder) {
+                    // 降级保存到localStorage
+                    let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                    orders.push(orderData);
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                }
+            } else {
+                // 降级保存到localStorage
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                orders.push(orderData);
+                localStorage.setItem('orders', JSON.stringify(orders));
+            }
             
             // 保存设计结果到localStorage，供步骤二页面使用
             const designResult = {
@@ -3021,7 +3055,7 @@ class SweetsDesigner {
             }
             
             // 显示成功消息
-            this.showNotification('设计已完成！正在返回定制页面...', 'success');
+            this.showNotification('设计已完成！已保存到我的设计和订单页面，正在返回定制页面...', 'success');
             
             // 2秒后返回步骤二页面
             setTimeout(() => {
