@@ -592,18 +592,7 @@ class SweetsGallery {
         document.getElementById('order-create-time').textContent = date;
     }
 
-    reorder(orderId) {
-        const order = this.orders.find(o => o.id == orderId);
-        if (order) {
-            // 将订单数据传递到设计页面
-            localStorage.setItem('currentReorder', JSON.stringify(order));
-            if (window.navigationManager) {
-                window.navigationManager.navigateTo('sweets-designer.html');
-            } else {
-                window.location.href = 'sweets-designer.html';
-            }
-        }
-    }
+
 
     cancelOrder(orderId) {
         if (!confirm('确定要取消这个订单吗？此操作不可撤销。')) {
@@ -704,11 +693,7 @@ function closeOrderModal() {
     }
 }
 
-function reorder() {
-    if (gallery && gallery.currentOrder) {
-        gallery.reorder(gallery.currentOrder.id);
-    }
-}
+
 
 function cancelOrder() {
     if (gallery && gallery.currentOrder) {

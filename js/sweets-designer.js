@@ -71,6 +71,7 @@ class SweetsDesigner {
         
         this.setupPreview();
         this.setupEventListeners();
+        this.setupButtonHandlers(); // 设置按钮事件处理器
         
         // 初始化历史记录（确保在updateUI之前已经有初始状态）
         if (this.ctx) {
@@ -711,6 +712,85 @@ class SweetsDesigner {
         if (imageToolBtn) {
             imageToolBtn.addEventListener('click', () => {
                 this.selectTool('image');
+            });
+        }
+    }
+
+    /**
+     * 设置按钮事件处理器
+     */
+    setupButtonHandlers() {
+        // 重置视图按钮
+        const resetViewBtn = document.getElementById('reset-view-btn');
+        const canvasResetBtn = document.getElementById('canvas-reset-btn');
+        
+        if (resetViewBtn) {
+            resetViewBtn.addEventListener('click', () => this.resetView());
+        }
+        
+        if (canvasResetBtn) {
+            canvasResetBtn.addEventListener('click', () => this.resetView());
+        }
+        
+        // 保存设计按钮 - 处理桌面端和移动端
+        const saveDesignBtns = document.querySelectorAll('#save-design-btn, .mobile-actions .btn:nth-child(1)');
+        saveDesignBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.saveDesign());
+        });
+        
+        // 导出图片按钮 - 处理桌面端和移动端
+        const exportImageBtns = document.querySelectorAll('#export-image-btn, .mobile-actions .btn:nth-child(2)');
+        exportImageBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.exportImage());
+        });
+        
+        // 导出带模板按钮 - 处理桌面端和移动端
+        const exportWithTemplateBtns = document.querySelectorAll('#export-with-template-btn, .mobile-actions .btn:nth-child(3)');
+        exportWithTemplateBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.exportWithTemplate());
+        });
+        
+        // 设计完成按钮 - 处理桌面端和移动端
+        const designCompleteBtns = document.querySelectorAll('#design-complete-btn, .mobile-actions .btn:nth-child(4)');
+        designCompleteBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.completeDesign());
+        });
+        
+        // 创建订单按钮
+        const createOrderBtn = document.getElementById('create-order-btn');
+        if (createOrderBtn) {
+            createOrderBtn.addEventListener('click', () => this.createOrder());
+        }
+        
+        // 重命名按钮
+        const renameDesignBtn = document.getElementById('rename-design');
+        if (renameDesignBtn) {
+            renameDesignBtn.addEventListener('click', () => {
+                const designNameElement = document.getElementById('design-name');
+                if (designNameElement && designNameElement.tagName === 'INPUT') {
+                    designNameElement.focus();
+                }
+            });
+        }
+        
+        // 保存设计名称按钮
+        const saveDesignNameBtn = document.getElementById('save-design-name-btn');
+        if (saveDesignNameBtn) {
+            saveDesignNameBtn.addEventListener('click', () => {
+                const designNameElement = document.getElementById('design-name');
+                if (designNameElement) {
+                    this.setDesignName(designNameElement.value);
+                }
+            });
+        }
+        
+        // 设计名称输入框回车事件
+        const designNameInput = document.getElementById('design-name');
+        if (designNameInput) {
+            designNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.setDesignName(e.target.value);
+                }
             });
         }
     }

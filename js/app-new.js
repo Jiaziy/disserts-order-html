@@ -422,36 +422,7 @@ function viewOrder(orderId) {
 
 
 
-// 取消订单
-function cancelOrder(orderId) {
-    console.log('取消订单:', orderId);
-    
-    if (confirm('确定要取消这个订单吗？')) {
-        // 获取订单数据
-        const orders = JSON.parse(localStorage.getItem('orders')) || [];
-        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
-        
-        if (orderIndex === -1) {
-            showToast('订单不存在');
-            return;
-        }
-        
-        // 更新订单状态为已取消
-        orders[orderIndex].status = 'cancelled';
-        orders[orderIndex].updated_at = new Date().toISOString();
-        
-        // 保存更新
-        localStorage.setItem('orders', JSON.stringify(orders));
-        
-        showToast('订单已取消');
-        
-        // 重新加载订单列表
-        loadOrders();
-        
-        // 关闭模态框
-        closeOrderModal();
-    }
-}
+
 
 // 关闭订单模态框
 function closeOrderModal() {
@@ -693,36 +664,7 @@ function viewOrder(orderId) {
 
 
 
-// 取消订单
-function cancelOrder(orderId) {
-    console.log('取消订单:', orderId);
-    
-    if (confirm('确定要取消这个订单吗？')) {
-        // 获取订单数据
-        const orders = JSON.parse(localStorage.getItem('orders')) || [];
-        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
-        
-        if (orderIndex === -1) {
-            showToast('订单不存在');
-            return;
-        }
-        
-        // 更新订单状态为已取消
-        orders[orderIndex].status = 'cancelled';
-        orders[orderIndex].updated_at = new Date().toISOString();
-        
-        // 保存更新
-        localStorage.setItem('orders', JSON.stringify(orders));
-        
-        showToast('订单已取消');
-        
-        // 重新加载订单列表
-        loadOrders();
-        
-        // 关闭模态框
-        closeOrderModal();
-    }
-}
+
 
 // 关闭订单模态框
 function closeOrderModal() {
@@ -1424,36 +1366,7 @@ function viewOrder(orderId) {
 
 
 
-// 取消订单
-function cancelOrder(orderId) {
-    console.log('取消订单:', orderId);
-    
-    if (confirm('确定要取消这个订单吗？')) {
-        // 获取订单数据
-        const orders = JSON.parse(localStorage.getItem('orders')) || [];
-        const orderIndex = orders.findIndex(o => o.id === orderId || o.order_id === orderId);
-        
-        if (orderIndex === -1) {
-            showToast('订单不存在');
-            return;
-        }
-        
-        // 更新订单状态为已取消
-        orders[orderIndex].status = 'cancelled';
-        orders[orderIndex].updated_at = new Date().toISOString();
-        
-        // 保存更新
-        localStorage.setItem('orders', JSON.stringify(orders));
-        
-        showToast('订单已取消');
-        
-        // 重新加载订单列表
-        loadOrders();
-        
-        // 关闭模态框
-        closeOrderModal();
-    }
-}
+
 
 // 关闭订单模态框
 function closeOrderModal() {
