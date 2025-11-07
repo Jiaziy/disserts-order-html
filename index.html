@@ -3,682 +3,587 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>巧克力定制平台 - 登录/注册</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <title>巧克力定制平台 - 首页</title>
+    <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 首页特定样式 */
+        .landing-hero {
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .hero-content h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            animation: fadeInUp 1s ease;
+        }
+
+        .hero-content p {
+            font-size: 20px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            animation: fadeInUp 1s ease 0.4s both;
+        }
+
+        .btn-primary {
+            padding: 15px 30px;
+            background: white;
+            color: #8B4513;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-secondary {
+            padding: 15px 30px;
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #8B4513;
+        }
+
+        /* 特色功能区域 */
+        .features-section {
+            padding: 80px 0;
+            background: #f8f8f8;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 60px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .feature-icon i {
+            font-size: 32px;
+            color: white;
+        }
+
+        .feature-card h3 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* 产品展示区域 */
+        .products-section {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .product-card {
+            background: #f8f8f8;
+            padding: 30px 20px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            background: linear-gradient(135deg, #f5f0e6, #fff);
+            transform: translateY(-5px);
+        }
+
+        .product-icon {
+            font-size: 48px;
+            color: #8B4513;
+            margin-bottom: 20px;
+        }
+
+        .product-card h4 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .product-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 页脚 */
+        .landing-footer {
+            background: #333;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .footer-links a {
+            color: #ccc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .copyright {
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* 顶部导航栏 - 首页版本 */
+        .landing-navbar {
+            background: rgba(139, 69, 19, 0.95);
+            color: white;
+            padding: 0 20px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-brand h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .nav-brand i {
+            font-size: 28px;
+        }
+
+        .nav-auth {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .login-btn {
+            padding: 10px 25px;
+            background: white;
+            color: #8B4513;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .register-btn {
+            padding: 10px 25px;
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .register-btn:hover {
+            background: white;
+            color: #8B4513;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 36px;
+            }
+
+            .hero-content p {
+                font-size: 18px;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .features-grid, .products-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .nav-auth {
+                gap: 10px;
+            }
+
+            .login-btn, .register-btn {
+                padding: 8px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
 </head>
 <body>
-        <!-- 登录页面 -->
-        <div id="login-page" class="page active">
-            <!-- 错误消息显示区域 -->
-        <div id="error-message" style="color: #ff6b6b; text-align: center; padding: 10px; margin-bottom: 15px; background-color: #fff5f5; border-radius: 8px; display: none;"></div>
+    <!-- 顶部导航栏 -->
+    <nav class="landing-navbar">
+        <div class="nav-brand">
+            <i class="fas fa-candy-cane"></i>
+            <h1>巧克力定制平台</h1>
+        </div>
         
-        <div class="login-container">
-                <div id="error-message" style="color: #ef4444; text-align: center; padding: 10px; margin-bottom: 15px; background-color: #fef2f2; border-radius: 8px; display: none;"></div>
-                <div class="login-header">
-                    <h1>巧克力定制平台</h1>
-                    <p>个性化定制您的专属巧克力</p>
-                </div>
-                
-                <div class="login-form">
-                    <!-- 登录/注册切换 -->
-                    <div class="auth-mode-tabs">
-                        <button id="login-mode" class="mode-btn active">登录</button>
-                        <button id="register-mode" class="mode-btn">注册</button>
-                    </div>
-                    
-                    <!-- 登录表单 -->
-                    <div id="login-form-container" class="auth-container active">
-                        <!-- 标签页切换 -->
-                        <div class="tabs">
-                            <button class="tab-btn active" data-tab="phone">手机登录</button>
-                            <button class="tab-btn" data-tab="email">邮箱登录</button>
-                        </div>
+        <div class="nav-auth">
+            <a href="admin-login.html" class="register-btn" style="margin-right: 10px;">
+                <i class="fas fa-cog"></i> 管理员
+            </a>
+            <a href="main.html" class="login-btn">登录</a>
+            <a href="main.html" class="register-btn">注册</a>
+        </div>
+    </nav>
 
-                        <!-- 手机登录标签页 -->
-                        <div id="phone-tab" class="tab-content active">
-                            <div class="form-group">
-                                <label for="phone">手机号</label>
-                                <input type="tel" id="phone" placeholder="请输入手机号" maxlength="11">
-                            </div>
-                            <div class="form-group">
-                                <label for="sms-code">验证码</label>
-                                <div class="code-input-group">
-                                    <input type="text" id="sms-code" placeholder="请输入验证码" maxlength="6">
-                                    <button id="get-sms" class="code-btn">获取验证码</button>
-                                </div>
-                            </div>
-                            <button id="phone-login-btn" class="login-btn">登录</button>
-                        </div>
-
-                        <!-- 邮箱登录标签页 -->
-                        <div id="email-tab" class="tab-content">
-                            <div class="form-group">
-                                <label for="email">邮箱</label>
-                                <input type="email" id="email" placeholder="请输入邮箱地址">
-                            </div>
-                            <div class="form-group">
-                                <label for="email-password">密码</label>
-                                <input type="password" id="email-password" placeholder="请输入密码">
-                            </div>
-                            <div class="remember-me">
-                                <input type="checkbox" id="remember">
-                                <label for="remember">记住我</label>
-                            </div>
-                            <button id="email-login-btn" class="login-btn">登录</button>
-                        </div>
-                    </div>
-                    
-                    <!-- 注册表单 -->
-                    <div id="register-form-container" class="auth-container">
-                        <!-- 标签页切换 -->
-                        <div class="tabs">
-                            <button class="tab-btn active" data-tab="register-phone">手机注册</button>
-                            <button class="tab-btn" data-tab="register-email">邮箱注册</button>
-                        </div>
-                         
-                        <!-- 手机注册标签页 -->
-                        <div id="register-phone-tab" class="tab-content active">
-                            <div class="form-group">
-                                <label for="register-phone">手机号</label>
-                                <input type="tel" id="register-phone" placeholder="请输入手机号" maxlength="11">
-                            </div>
-                            <div class="form-group">
-                                <label for="register-sms-code">验证码</label>
-                                <div class="code-input-group">
-                                    <input type="text" id="register-sms-code" placeholder="请输入验证码" maxlength="6">
-                                    <button id="register-get-sms" class="code-btn">获取验证码</button>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="register-phone-password">密码</label>
-                                <input type="password" id="register-phone-password" placeholder="请设置6-20位密码">
-                            </div>
-                            <div class="form-group">
-                                <label for="register-phone-confirm-password">确认密码</label>
-                                <input type="password" id="register-phone-confirm-password" placeholder="请再次输入密码">
-                            </div>
-                            <button id="phone-register-btn" class="login-btn">注册</button>
-                        </div>
-                         
-                        <!-- 邮箱注册标签页 -->
-                        <div id="register-email-tab" class="tab-content">
-                            <div class="form-group">
-                                <label for="register-email">邮箱</label>
-                                <input type="email" id="register-email" placeholder="请输入邮箱地址">
-                            </div>
-                            <div class="form-group">
-                                <label for="register-password">密码</label>
-                                <input type="password" id="register-password" placeholder="请设置6-20位密码">
-                            </div>
-                            <div class="form-group">
-                                <label for="register-confirm-password">确认密码</label>
-                                <input type="password" id="register-confirm-password" placeholder="请再次输入密码">
-                            </div>
-                            <button id="email-register-btn" class="login-btn">注册</button>
-                        </div>
-                        
-                        <div class="login-footer">
-                            <p>注册即表示同意<a href="#">用户协议</a>和<a href="#">隐私政策</a></p>
-                        </div>
-                    </div>
+    <!-- 主内容区域 -->
+    <main>
+        <!-- 英雄区域 -->
+        <section class="landing-hero">
+            <div class="hero-content">
+                <h1>个性化巧克力定制平台</h1>
+                <p>打造属于您的专属甜蜜体验，从口味到包装，完全由您定制。无论是个性化礼物、企业礼品还是节日庆祝，我们都能为您创作独一无二的巧克力作品。</p>
+                <div class="hero-buttons">
+                    <a href="main.html" class="btn-primary">立即体验</a>
+                    <a href="#features" class="btn-secondary">了解更多</a>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- 全局脚本 -->
-        <script src="js/storage-utils.js"></script>
-        <!-- 引入Supabase客户端库 -->
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-        <!-- 引入Supabase配置和工具 -->
-        <script src="js/supabase-config.js"></script>
-        <script src="js/supabase.js"></script>
-        <script src="js/navigation-manager.js"></script>
-        
-        <script>
-            // 登录功能脚本
-            console.log('登录脚本已加载');
+        <!-- 特色功能区域 -->
+        <section id="features" class="features-section">
+            <h2 class="section-title">平台特色功能</h2>
+            <p class="section-subtitle">我们的平台为您提供全方位的巧克力定制体验，让创意变成现实</p>
             
-            // 初始化Supabase
-            async function initSupabase() {
-                try {
-                    // 等待Supabase初始化完成
-                    await new Promise(resolve => {
-                        const checkSupabase = () => {
-                            if (document.supabase) {
-                                resolve();
-                            } else {
-                                setTimeout(checkSupabase, 100);
-                            }
-                        };
-                        checkSupabase();
-                    });
-                    
-                    // 初始化Supabase
-                    await document.supabase.init();
-                    console.log('Supabase初始化完成');
-                    
-                    // 检查是否已登录
-                    const user = await document.supabase.auth.getCurrentUser();
-                    if (user) {
-                        console.log('用户已登录:', user.displayName);
-                        // 这里可以跳转到首页或其他页面
-                    }
-                } catch (error) {
-                    console.error('Supabase初始化失败:', error);
-                }
-            }
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <h3>可视化设计工具</h3>
+                    <p>直观的拖拽式设计界面，实时预览您的巧克力作品。支持多种形状、颜色和图案定制。</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h3>丰富口味选择</h3>
+                    <p>提供黑巧克力、牛奶巧克力、白巧克力等多种口味，还可添加坚果、水果干等配料。</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <h3>个性化包装</h3>
+                    <p>精美包装设计，支持定制贺卡、丝带等配件，让您的礼物更加特别。</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shipping-fast"></i>
+                    </div>
+                    <h3>快速配送服务</h3>
+                    <p>全国范围快速配送，确保巧克力新鲜送达，支持到店自提。</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <h3>照片定制</h3>
+                    <p>支持上传照片，我们将您的照片打印在巧克力上，创造独特的纪念品。</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>专业定制服务</h3>
+                    <p>企业礼品、婚礼定制、活动纪念品等专业定制服务，满足您的各种需求。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 产品展示区域 -->
+        <section class="products-section">
+            <h2 class="section-title">我们的产品系列</h2>
+            <p class="section-subtitle">探索丰富的巧克力定制选择，找到最适合您的方案</p>
             
-            // 显示错误消息
-            function showError(message) {
-                const errorElement = document.getElementById('error-message');
-                if (errorElement) {
-                    errorElement.textContent = message;
-                    errorElement.style.display = 'block';
-                    // 3秒后自动隐藏错误消息
-                    setTimeout(() => {
-                        errorElement.style.display = 'none';
-                    }, 3000);
-                }
-            }
+            <div class="products-grid">
+                <div class="product-card">
+                    <i class="fas fa-cookie-bite product-icon"></i>
+                    <h4>个性化巧克力</h4>
+                    <p>自定义文字、图案和形状的巧克力，适合各种场合</p>
+                </div>
+                
+                <div class="product-card">
+                    <i class="fas fa-birthday-cake product-icon"></i>
+                    <h4>节日巧克力</h4>
+                    <p>情人节、生日、圣诞节等节日特色巧克力</p>
+                </div>
+                
+                <div class="product-card">
+                    <i class="fas fa-graduation-cap product-icon"></i>
+                    <h4>纪念巧克力</h4>
+                    <p>毕业纪念、企业庆典、婚礼纪念等特殊场合</p>
+                </div>
+                
+                <div class="product-card">
+                    <i class="fas fa-award product-icon"></i>
+                    <h4>定制礼盒</h4>
+                    <p>精美包装的巧克力礼盒，适合商务送礼和特殊场合</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 操作流程展示 -->
+        <section class="features-section" style="background: linear-gradient(135deg, #f5f0e6, #fff);">
+            <h2 class="section-title">简单四步定制</h2>
+            <p class="section-subtitle">从设计到收货，全程简单便捷</p>
             
-            // 显示成功消息
-            function showSuccess(message) {
-                const successElement = document.createElement('div');
-                successElement.className = 'success-message';
-                successElement.style.cssText = 'color: #4ade80; text-align: center; padding: 10px; margin-bottom: 15px; background-color: #f0fdf4; border-radius: 8px;';
-                successElement.textContent = message;
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #4CAF50, #45a049);">
+                        <i class="fas fa-pencil-alt"></i>
+                    </div>
+                    <h3>1. 创意设计</h3>
+                    <p>使用我们的在线设计工具，自由创作您的巧克力作品</p>
+                </div>
                 
-                const container = document.querySelector('.login-container');
-                if (container) {
-                    const firstChild = container.firstChild;
-                    container.insertBefore(successElement, firstChild);
-                    
-                    // 3秒后自动移除成功消息
-                    setTimeout(() => {
-                        successElement.remove();
-                    }, 3000);
-                }
-            }
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #2196F3, #1976D2);">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>2. 确认方案</h3>
+                    <p>预览并确认最终设计效果，选择口味和包装</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3>3. 专业制作</h3>
+                    <p>我们的专业团队为您精心制作每一个细节</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h3>4. 快速送达</h3>
+                    <p>新鲜包装，快速配送到您手中</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="landing-footer">
+        <div class="footer-content">
+            <h3>巧克力定制平台</h3>
+            <p>让每一份甜蜜都充满个性与创意</p>
             
-            // 表单验证函数
-            function validatePhone(phone) {
-                const phoneRegex = /^1[3-9]\d{9}$/;
-                return phoneRegex.test(phone);
-            }
+            <div class="footer-links">
+                <a href="#">关于我们</a>
+                <a href="#">服务条款</a>
+                <a href="#">隐私政策</a>
+                <a href="#">联系我们</a>
+            </div>
             
-            function validateEmail(email) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                return emailRegex.test(email);
-            }
+            <p class="copyright">© 2024 巧克力定制平台. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <script>
+        // 简单的页面滚动效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 导航栏滚动效果
+            const navbar = document.querySelector('.landing-navbar');
             
-            function validatePassword(password) {
-                return password.length >= 6 && password.length <= 20;
-            }
-            
-            // 验证码倒计时功能
-            function startCountdown(button) {
-                let seconds = 60;
-                const originalText = button.textContent;
-                button.disabled = true;
-                button.textContent = `${seconds}秒后重新获取`;
-                
-                const timer = setInterval(() => {
-                    seconds--;
-                    button.textContent = `${seconds}秒后重新获取`;
-                    
-                    if (seconds <= 0) {
-                        clearInterval(timer);
-                        button.disabled = false;
-                        button.textContent = originalText;
-                    }
-                }, 1000);
-            }
-            
-            // 为所有按钮添加点击事件处理
-            document.addEventListener('DOMContentLoaded', async function() {
-                console.log('DOM加载完成，开始绑定事件');
-                
-                // 初始化Supabase
-                await initSupabase();
-                
-                // 登录/注册模式切换
-                const loginModeBtn = document.getElementById('login-mode');
-                const registerModeBtn = document.getElementById('register-mode');
-                const loginForm = document.getElementById('login-form-container');
-                const registerForm = document.getElementById('register-form-container');
-                
-                if (loginModeBtn) {
-                    loginModeBtn.onclick = function() {
-                        console.log('切换到登录模式');
-                        if (loginForm) loginForm.style.display = 'block';
-                        if (registerForm) registerForm.style.display = 'none';
-                        this.classList.add('active');
-                        if (registerModeBtn) registerModeBtn.classList.remove('active');
-                    };
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 100) {
+                    navbar.style.background = 'rgba(139, 69, 19, 0.98)';
+                    navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
+                } else {
+                    navbar.style.background = 'rgba(139, 69, 19, 0.95)';
+                    navbar.style.boxShadow = 'none';
                 }
-                
-                if (registerModeBtn) {
-                    registerModeBtn.onclick = function() {
-                        console.log('切换到注册模式');
-                        if (loginForm) loginForm.style.display = 'none';
-                        if (registerForm) registerForm.style.display = 'block';
-                        this.classList.add('active');
-                        if (loginModeBtn) loginModeBtn.classList.remove('active');
-                    };
-                }
-                
-                // 登录方式切换
-                const phoneTabBtn = document.querySelector('.tab-btn[data-tab="phone"]');
-                const emailTabBtn = document.querySelector('.tab-btn[data-tab="email"]');
-                const phoneTab = document.getElementById('phone-tab');
-                const emailTab = document.getElementById('email-tab');
-                
-                function setActiveTab(activeBtn, tabs, buttons) {
-                    // 隐藏所有标签页
-                    tabs.forEach(tab => {
-                        if (tab) tab.style.display = 'none';
-                    });
-                    
-                    // 移除所有按钮激活状态
-                    buttons.forEach(btn => {
-                        if (btn) btn.classList.remove('active');
-                    });
-                    
-                    // 显示选中的标签页并激活按钮
-                    const tabId = activeBtn.getAttribute('data-tab') + '-tab';
-                    const activeTab = document.getElementById(tabId);
-                    if (activeTab) activeTab.style.display = 'block';
-                    activeBtn.classList.add('active');
-                }
-                
-                if (phoneTabBtn) {
-                    phoneTabBtn.onclick = function() {
-                        console.log('切换到手机登录');
-                        setActiveTab(this, [phoneTab, emailTab], [phoneTabBtn, emailTabBtn]);
-                    };
-                }
-                
-                if (emailTabBtn) {
-                    emailTabBtn.onclick = function() {
-                        console.log('切换到邮箱登录');
-                        setActiveTab(this, [phoneTab, emailTab], [phoneTabBtn, emailTabBtn]);
-                    };
-                }
-                
-                // 注册方式切换
-                const registerPhoneTabBtn = document.querySelector('.tab-btn[data-tab="register-phone"]');
-                const registerEmailTabBtn = document.querySelector('.tab-btn[data-tab="register-email"]');
-                const registerPhoneTab = document.getElementById('register-phone-tab');
-                const registerEmailTab = document.getElementById('register-email-tab');
-                
-                if (registerPhoneTabBtn) {
-                    registerPhoneTabBtn.onclick = function() {
-                        console.log('切换到手机注册');
-                        if (registerPhoneTab) registerPhoneTab.style.display = 'block';
-                        if (registerEmailTab) registerEmailTab.style.display = 'none';
-                        this.classList.add('active');
-                        if (registerEmailTabBtn) registerEmailTabBtn.classList.remove('active');
-                    };
-                }
-                
-                if (registerEmailTabBtn) {
-                    registerEmailTabBtn.onclick = function() {
-                        console.log('切换到邮箱注册');
-                        if (registerPhoneTab) registerPhoneTab.style.display = 'none';
-                        if (registerEmailTab) registerEmailTab.style.display = 'block';
-                        this.classList.add('active');
-                        if (registerPhoneTabBtn) registerPhoneTabBtn.classList.remove('active');
-                    };
-                }
-                
-                // 显示验证码的函数
-                function showVerificationCode(code) {
-                    // 创建验证码显示元素
-                    const codeDisplay = document.createElement('div');
-                    codeDisplay.className = 'verification-code-display';
-                    codeDisplay.style.cssText = 'background-color: #f3f4f6; padding: 8px 16px; border-radius: 8px; margin-top: 8px; text-align: center; font-size: 14px; color: #374151;';
-                    codeDisplay.innerHTML = `开发环境验证码: <strong>${code}</strong> (5分钟内有效)`;
-                    
-                    return codeDisplay;
-                }
-                
-                // 登录验证码按钮
-                const getSmsBtn = document.getElementById('get-sms');
-                if (getSmsBtn) {
-                    getSmsBtn.onclick = async function() {
-                        console.log('获取登录验证码');
-                        const phoneInput = document.getElementById('phone');
-                        const phone = phoneInput?.value.trim();
-                        
-                        if (!phone) {
-                            showError('请输入手机号');
-                            return;
-                        }
-                        
-                        if (!validatePhone(phone)) {
-                            showError('请输入正确的手机号格式');
-                            return;
-                        }
-                        
-                        try {
-                            // 发送验证码
-                            const result = await document.supabase.auth.sendPhoneVerification(phone);
-                            if (result.success) {
-                                showSuccess('验证码已发送');
-                                
-                                // 在开发环境显示验证码
-                                if (result.code) {
-                                    const codeInput = document.getElementById('sms-code');
-                                    if (codeInput) {
-                                        // 移除旧的验证码显示
-                                        const oldCodeDisplay = document.querySelector('.verification-code-display');
-                                        if (oldCodeDisplay) {
-                                            oldCodeDisplay.remove();
-                                        }
-                                        
-                                        // 添加新的验证码显示
-                                        const codeDisplay = showVerificationCode(result.code);
-                                        codeInput.parentNode.appendChild(codeDisplay);
-                                    }
-                                }
-                                
-                                // 开始倒计时
-                                startCountdown(this);
-                            } else {
-                                showError(result.error || '发送验证码失败');
-                            }
-                        } catch (error) {
-                            console.error('发送验证码失败:', error);
-                            showError('发送验证码失败，请稍后重试');
-                        }
-                    };
-                }
-                
-                // 注册验证码按钮
-                const registerGetSmsBtn = document.getElementById('register-get-sms');
-                if (registerGetSmsBtn) {
-                    registerGetSmsBtn.onclick = async function() {
-                        console.log('获取注册验证码');
-                        const phoneInput = document.getElementById('register-phone');
-                        const phone = phoneInput?.value.trim();
-                        
-                        if (!phone) {
-                            showError('请输入手机号');
-                            return;
-                        }
-                        
-                        if (!validatePhone(phone)) {
-                            showError('请输入正确的手机号格式');
-                            return;
-                        }
-                        
-                        try {
-                            // 发送验证码
-                            const result = await document.supabase.auth.sendPhoneVerification(phone);
-                            if (result.success) {
-                                showSuccess('验证码已发送');
-                                
-                                // 在开发环境显示验证码
-                                if (result.code) {
-                                    const codeInput = document.getElementById('register-sms-code');
-                                    if (codeInput) {
-                                        // 移除旧的验证码显示
-                                        const oldCodeDisplay = document.querySelector('.verification-code-display');
-                                        if (oldCodeDisplay) {
-                                            oldCodeDisplay.remove();
-                                        }
-                                        
-                                        // 添加新的验证码显示
-                                        const codeDisplay = showVerificationCode(result.code);
-                                        codeInput.parentNode.appendChild(codeDisplay);
-                                    }
-                                }
-                                
-                                // 开始倒计时
-                                startCountdown(this);
-                            } else {
-                                showError(result.error || '发送验证码失败');
-                            }
-                        } catch (error) {
-                            console.error('发送验证码失败:', error);
-                            showError('发送验证码失败，请稍后重试');
-                        }
-                    };
-                }
-                
-                // 手机登录按钮
-                const phoneLoginBtn = document.getElementById('phone-login-btn');
-                if (phoneLoginBtn) {
-                    phoneLoginBtn.onclick = async function() {
-                        console.log('执行手机登录');
-                        const phoneInput = document.getElementById('phone');
-                        const codeInput = document.getElementById('sms-code');
-                        const phone = phoneInput?.value.trim();
-                        const code = codeInput?.value.trim();
-                        
-                        if (!phone) {
-                            showError('请输入手机号');
-                            return;
-                        }
-                        
-                        if (!validatePhone(phone)) {
-                            showError('请输入正确的手机号格式');
-                            return;
-                        }
-                        
-                        if (!code) {
-                            showError('请输入验证码');
-                            return;
-                        }
-                        
-                        try {
-                            // 执行手机登录
-                            const result = await document.supabase.auth.signInWithPhone(phone, code);
-                            if (result.success) {
-                                showSuccess('登录成功，欢迎回来！');
-                                console.log('登录成功，用户信息:', result.user);
-                                // 这里可以跳转到首页
-                                setTimeout(async () => {
-                                    if (window.navigationManager) {
-                                        try {
-                                            await window.navigationManager.navigateTo('main.html');
-                                        } catch (error) {
-                                            console.error('导航失败，使用降级方案:', error);
-                                            window.location.href = 'main.html';
-                                        }
-                                    } else {
-                                        window.location.href = 'main.html';
-                                    }
-                                }, 1500);
-                            } else {
-                                showError(result.error || '登录失败');
-                            }
-                        } catch (error) {
-                            console.error('登录失败:', error);
-                            showError('登录失败，请稍后重试');
-                        }
-                    };
-                }
-                
-                // 邮箱登录按钮
-                const emailLoginBtn = document.getElementById('email-login-btn');
-                if (emailLoginBtn) {
-                    emailLoginBtn.onclick = async function() {
-                        console.log('执行邮箱登录');
-                        const emailInput = document.getElementById('email');
-                        const passwordInput = document.getElementById('email-password');
-                        const email = emailInput?.value.trim();
-                        const password = passwordInput?.value.trim();
-                        
-                        if (!email) {
-                            showError('请输入邮箱');
-                            return;
-                        }
-                        
-                        if (!validateEmail(email)) {
-                            showError('请输入正确的邮箱格式');
-                            return;
-                        }
-                        
-                        if (!password) {
-                            showError('请输入密码');
-                            return;
-                        }
-                        
-                        try {
-                            // 执行邮箱登录
-                            const result = await document.supabase.auth.signIn(email, password);
-                            if (result.success) {
-                                showSuccess('登录成功，欢迎回来！');
-                                console.log('登录成功，用户信息:', result.user);
-                                // 这里可以跳转到首页
-                                setTimeout(async () => {
-                                    if (window.navigationManager) {
-                                        try {
-                                            await window.navigationManager.navigateTo('main.html');
-                                        } catch (error) {
-                                            console.error('导航失败，使用降级方案:', error);
-                                            window.location.href = 'main.html';
-                                        }
-                                    } else {
-                                        window.location.href = 'main.html';
-                                    }
-                                }, 1500);
-                            } else {
-                                showError(result.error || '邮箱或密码错误');
-                            }
-                        } catch (error) {
-                            console.error('登录失败:', error);
-                            showError('登录失败，请稍后重试');
-                        }
-                    };
-                }
-                
-                // 手机注册按钮
-                const phoneRegisterBtn = document.getElementById('phone-register-btn');
-                if (phoneRegisterBtn) {
-                    phoneRegisterBtn.onclick = async function() {
-                        console.log('执行手机注册');
-                        const phoneInput = document.getElementById('register-phone');
-                        const codeInput = document.getElementById('register-sms-code');
-                        const passwordInput = document.getElementById('register-phone-password');
-                        const confirmPasswordInput = document.getElementById('register-phone-confirm-password');
-                        
-                        const phone = phoneInput?.value.trim();
-                        const code = codeInput?.value.trim();
-                        const password = passwordInput?.value.trim();
-                        const confirmPassword = confirmPasswordInput?.value.trim();
-                        
-                        if (!phone) {
-                            showError('请输入手机号');
-                            return;
-                        }
-                        
-                        if (!validatePhone(phone)) {
-                            showError('请输入正确的手机号格式');
-                            return;
-                        }
-                        
-                        if (!code) {
-                            showError('请输入验证码');
-                            return;
-                        }
-                        
-                        if (!password) {
-                            showError('请设置密码');
-                            return;
-                        }
-                        
-                        if (!validatePassword(password)) {
-                            showError('密码长度应为6-20位');
-                            return;
-                        }
-                        
-                        if (password !== confirmPassword) {
-                            showError('两次输入的密码不一致');
-                            return;
-                        }
-                        
-                        try {
-                            // 模拟手机注册（实际项目中应该调用手机验证码验证）
-                            const email = phone + '@phone.user';
-                            const result = await document.supabase.auth.signUp(email, password, { phone });
-                            if (result.success) {
-                                showSuccess(result.message || '注册成功！');
-                                console.log('注册成功，用户信息:', result.user);
-                                // 登录成功后跳转到首页
-                                setTimeout(() => {
-                                    window.location.href = 'main.html';
-                                }, 1500);
-                            } else {
-                                showError(result.error || '注册失败');
-                            }
-                        } catch (error) {
-                            console.error('注册失败:', error);
-                            showError('注册失败，请稍后重试');
-                        }
-                    };
-                }
-                
-                // 邮箱注册按钮
-                const emailRegisterBtn = document.getElementById('email-register-btn');
-                if (emailRegisterBtn) {
-                    emailRegisterBtn.onclick = async function() {
-                        console.log('执行邮箱注册');
-                        const emailInput = document.getElementById('register-email');
-                        const passwordInput = document.getElementById('register-password');
-                        const confirmPasswordInput = document.getElementById('register-confirm-password');
-                        
-                        const email = emailInput?.value.trim();
-                        const password = passwordInput?.value.trim();
-                        const confirmPassword = confirmPasswordInput?.value.trim();
-                        
-                        if (!email) {
-                            showError('请输入邮箱');
-                            return;
-                        }
-                        
-                        if (!validateEmail(email)) {
-                            showError('请输入正确的邮箱格式');
-                            return;
-                        }
-                        
-                        if (!password) {
-                            showError('请设置密码');
-                            return;
-                        }
-                        
-                        if (!validatePassword(password)) {
-                            showError('密码长度应为6-20位');
-                            return;
-                        }
-                        
-                        if (password !== confirmPassword) {
-                            showError('两次输入的密码不一致');
-                            return;
-                        }
-                        
-                        try {
-                            // 执行邮箱注册
-                            const result = await document.supabase.auth.signUp(email, password);
-                            if (result.success) {
-                                showSuccess(result.message || '注册成功！');
-                                console.log('注册成功，用户信息:', result.user);
-                                // 注册成功后可能需要等待邮箱验证
-                                // 这里可以跳转到提示页面或登录页面
-                            } else {
-                                showError(result.error || '注册失败');
-                            }
-                        } catch (error) {
-                            console.error('注册失败:', error);
-                            showError('注册失败，请稍后重试');
-                        }
-                    };
-                }
-                
-                console.log('事件绑定完成');
             });
-        </script>
-    </body>
+
+            // 平滑滚动
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
+            // 动画效果
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // 为所有feature-card添加动画
+            document.querySelectorAll('.feature-card, .product-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
 </html>
