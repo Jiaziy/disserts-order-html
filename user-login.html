@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巧克力定制平台 - 用户登录</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .login-body {
+            padding: 40px 30px;
+        }
+
+        .login-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .login-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .login-tab.active {
+            color: #8B4513;
+            border-bottom-color: #8B4513;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #8B4513;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+        }
+
+        .sms-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .sms-group .form-control {
+            flex: 1;
+        }
+
+        .sms-btn {
+            padding: 12px 20px;
+            background: #8B4513;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .sms-btn:hover {
+            background: #6b3810;
+            transform: translateY(-1px);
+        }
+
+        .sms-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(139, 69, 19, 0.3);
+        }
+
+        .third-party-login {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .third-party-login::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .third-party-text {
+            background: white;
+            padding: 0 15px;
+            color: #666;
+            font-size: 14px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .third-party-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .third-party-btn {
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .third-party-btn:hover {
+            border-color: #8B4513;
+            color: #8B4513;
+            transform: translateY(-1px);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .login-footer a {
+            color: #8B4513;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .login-footer a:hover {
+            color: #6b3810;
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #c62828;
+            display: none;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #2e7d32;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 10px;
+            }
+            
+            .login-header {
+                padding: 30px 20px;
+            }
+            
+            .login-body {
+                padding: 30px 20px;
+            }
+            
+            .third-party-buttons {
+                flex-direction: column;
+            }
+        }
+
+        .form-tab {
+            display: none;
+        }
+
+        .form-tab.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>
+                <i class="fas fa-candy-cane"></i>
+                用户登录
+            </h1>
+            <p>欢迎回到巧克力定制平台</p>
+        </div>
+
+        <div class="login-body">
+            <div class="error-message" id="error-message"></div>
+            <div class="success-message" id="success-message"></div>
+
+            <!-- 登录方式切换 -->
+            <div class="login-tabs">
+                <button class="login-tab active" data-tab="phone">手机登录</button>
+                <button class="login-tab" data-tab="email">邮箱登录</button>
+                <button class="login-tab" data-tab="wechat">微信登录</button>
+            </div>
+
+            <!-- 手机登录表单 -->
+            <div id="phone-form" class="form-tab active">
+                <div class="form-group">
+                    <label for="phone">手机号码</label>
+                    <input type="tel" id="phone" class="form-control" placeholder="请输入手机号码" maxlength="11">
+                </div>
+                <div class="form-group">
+                    <label for="sms-code">验证码</label>
+                    <div class="sms-group">
+                        <input type="text" id="sms-code" class="form-control" placeholder="请输入验证码" maxlength="6">
+                        <button type="button" class="sms-btn" id="get-sms">获取验证码</button>
+                    </div>
+                </div>
+                <button type="button" class="login-btn" id="phone-login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    登录
+                </button>
+            </div>
+
+            <!-- 邮箱登录表单 -->
+            <div id="email-form" class="form-tab">
+                <div class="form-group">
+                    <label for="email">邮箱地址</label>
+                    <input type="email" id="email" class="form-control" placeholder="请输入邮箱地址">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" class="form-control" placeholder="请输入密码">
+                </div>
+                <button type="button" class="login-btn" id="email-login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    登录
+                </button>
+            </div>
+
+            <!-- 微信登录表单 -->
+            <div id="wechat-form" class="form-tab">
+                <div class="form-group" style="text-align: center;">
+                    <div style="background: #07C160; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <i class="fab fa-weixin" style="font-size: 48px;"></i>
+                    </div>
+                    <p style="color: #666; margin-bottom: 20px;">使用微信扫码快速登录</p>
+                </div>
+                <button type="button" class="login-btn" style="background: #07C160;" id="wechat-login-btn">
+                    <i class="fab fa-weixin"></i>
+                    微信扫码登录
+                </button>
+            </div>
+
+            <!-- 第三方登录 -->
+            <div class="third-party-login">
+                <div class="third-party-text">或使用其他方式登录</div>
+                <div class="third-party-buttons">
+                    <button type="button" class="third-party-btn" onclick="quickLogin('visitor')">
+                        <i class="fas fa-user"></i>
+                        游客体验
+                    </button>
+                    <button type="button" class="third-party-btn" onclick="quickLogin('demo')">
+                        <i class="fas fa-eye"></i>
+                        演示账号
+                    </button>
+                </div>
+            </div>
+
+            <div class="login-footer">
+                还没有账号？ <a href="#" onclick="showRegister()">立即注册</a>
+                <br>
+                <a href="index.html" style="font-size: 14px; color: #666;">
+                    <i class="fas fa-arrow-left"></i> 返回首页
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 登录方式切换
+        document.querySelectorAll('.login-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 移除所有激活状态
+                document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.form-tab').forEach(form => form.classList.remove('active'));
+                
+                // 激活当前标签
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId + '-form').classList.add('active');
+            });
+        });
+
+        // 获取验证码
+        document.getElementById('get-sms').addEventListener('click', function() {
+            const phone = document.getElementById('phone').value;
+            if (!phone) {
+                showError('请输入手机号码');
+                return;
+            }
+            
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                showError('请输入正确的手机号码');
+                return;
+            }
+            
+            // 禁用按钮并开始倒计时
+            this.disabled = true;
+            let countdown = 60;
+            const originalText = this.textContent;
+            
+            const timer = setInterval(() => {
+                this.textContent = `${countdown}秒后重新获取`;
+                countdown--;
+                
+                if (countdown < 0) {
+                    clearInterval(timer);
+                    this.disabled = false;
+                    this.textContent = originalText;
+                }
+            }, 1000);
+            
+            // 模拟发送验证码
+            showSuccess('验证码已发送到您的手机');
+        });
+
+        // 手机登录
+        document.getElementById('phone-login-btn').addEventListener('click', function() {
+            const phone = document.getElementById('phone').value;
+            const smsCode = document.getElementById('sms-code').value;
+            
+            if (!phone) {
+                showError('请输入手机号码');
+                return;
+            }
+            
+            if (!smsCode) {
+                showError('请输入验证码');
+                return;
+            }
+            
+            // 模拟登录过程
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+            
+            setTimeout(() => {
+                // 登录成功，跳转到主页面
+                window.location.href = 'main.html';
+            }, 1000);
+        });
+
+        // 邮箱登录
+        document.getElementById('email-login-btn').addEventListener('click', function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email) {
+                showError('请输入邮箱地址');
+                return;
+            }
+            
+            if (!password) {
+                showError('请输入密码');
+                return;
+            }
+            
+            // 模拟登录过程
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+            
+            setTimeout(() => {
+                // 登录成功，跳转到主页面
+                window.location.href = 'main.html';
+            }, 1000);
+        });
+
+        // 微信登录
+        document.getElementById('wechat-login-btn').addEventListener('click', function() {
+            // 模拟微信登录
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 准备扫码...';
+            
+            setTimeout(() => {
+                showSuccess('请使用微信扫描二维码登录');
+                // 模拟扫码成功
+                setTimeout(() => {
+                    window.location.href = 'main.html';
+                }, 2000);
+            }, 1000);
+        });
+
+        // 快速登录功能
+        function quickLogin(type) {
+            if (type === 'visitor') {
+                showSuccess('游客模式登录成功！部分功能可能受限');
+                setTimeout(() => {
+                    window.location.href = 'main.html?mode=visitor';
+                }, 1000);
+            } else if (type === 'demo') {
+                showSuccess('演示账号登录成功！');
+                setTimeout(() => {
+                    window.location.href = 'main.html';
+                }, 1000);
+            }
+        }
+
+        // 显示注册页面（简单跳转）
+        function showRegister() {
+            if (confirm('注册功能正在开发中，是否前往演示页面？')) {
+                window.location.href = 'main.html';
+            }
+        }
+
+        // 消息显示函数
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            
+            // 隐藏成功消息
+            document.getElementById('success-message').style.display = 'none';
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success-message');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            
+            // 隐藏错误消息
+            document.getElementById('error-message').style.display = 'none';
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                successEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('用户登录页面加载完成');
+        });
+    </script>
+</body>
+</html>
