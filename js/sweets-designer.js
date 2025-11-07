@@ -630,38 +630,74 @@ class SweetsDesigner {
      * 设置事件监听器
      */
     setupEventListeners() {
-        if (!this.canvas) return;
+        console.log('设置事件监听器...');
+        
+        if (!this.canvas) {
+            console.error('找不到主画布元素，无法设置事件监听器！');
+            return;
+        }
+        
+        console.log('主画布找到，开始添加事件监听器');
         
         // 鼠标事件
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
-        this.canvas.addEventListener('mouseout', () => this.handleMouseUp());
+        this.canvas.addEventListener('mousedown', (e) => {
+            console.log('鼠标按下事件触发');
+            this.handleMouseDown(e);
+        });
+        this.canvas.addEventListener('mousemove', (e) => {
+            // 减少控制台输出，只记录重要事件
+            if (this.isDrawing || this.isDragging || this.isDraggingText) {
+                console.log('鼠标移动事件触发（绘图/拖动状态）');
+            }
+            this.handleMouseMove(e);
+        });
+        this.canvas.addEventListener('mouseup', () => {
+            console.log('鼠标松开事件触发');
+            this.handleMouseUp();
+        });
+        this.canvas.addEventListener('mouseout', () => {
+            console.log('鼠标移出画布事件触发');
+            this.handleMouseUp();
+        });
         
         // 鼠标滚轮事件 - 图片缩放
-        this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+        this.canvas.addEventListener('wheel', (e) => {
+            console.log('鼠标滚轮事件触发');
+            this.handleWheel(e);
+        });
         
         // 触摸事件（移动端支持）
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault(); // 防止页面滚动
+            console.log('触摸开始事件触发');
             this.handleMouseDown(e.touches[0]);
         });
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault(); // 防止页面滚动
+            console.log('触摸移动事件触发');
             this.handleMouseMove(e.touches[0]);
         });
-        this.canvas.addEventListener('touchend', () => this.handleMouseUp());
+        this.canvas.addEventListener('touchend', () => {
+            console.log('触摸结束事件触发');
+            this.handleMouseUp();
+        });
+        
+        // 检查模板按钮
+        const templateButtons = document.querySelectorAll('.template-btn');
+        console.log('找到模板按钮:', templateButtons.length, '个');
         
         // 模板按钮事件监听
-        document.querySelectorAll('.template-btn').forEach(btn => {
+        templateButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('模板按钮点击:', btn.getAttribute('data-template'));
                 
                 // 获取模板类型
                 const template = btn.getAttribute('data-template');
                 
                 // 如果是点击当前已选中的模板，不做任何操作
                 if (this.currentTemplateId === template) {
+                    console.log('模板已选中，跳过');
                     return;
                 }
                 
@@ -670,14 +706,45 @@ class SweetsDesigner {
             });
         });
         
+        // 检查工具按钮
+        const toolButtons = document.querySelectorAll('.tool-btn');
+        console.log('找到工具按钮:', toolButtons.length, '个');
+        
+        // 工具按钮事件监听
+        toolButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tool = btn.getAttribute('data-tool');
+                console.log('工具按钮点击:', tool);
+                this.selectTool(tool);
+            });
+        });
+        
+        // 检查颜色选择器
+        const colorButtons = document.querySelectorAll('.color-btn');
+        console.log('找到颜色按钮:', colorButtons.length, '个');
+        
+        // 颜色按钮事件监听
+        colorButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const color = btn.getAttribute('data-color');
+                console.log('颜色按钮点击:', color);
+                this.selectColor(color);
+            });
+        });
+        
         // 图片上传事件
         const imageUploadInput = document.getElementById('image-upload-input');
         if (imageUploadInput) {
             imageUploadInput.addEventListener('change', (e) => {
+                console.log('图片上传选择事件触发');
                 if (e.target.files && e.target.files[0]) {
                     this.handleImageUpload(e.target.files[0]);
                 }
             });
+        } else {
+            console.error('图片上传输入框未找到！');
         }
         
         // 拖拽上传事件
@@ -687,32 +754,38 @@ class SweetsDesigner {
                 e.preventDefault();
                 e.stopPropagation();
                 uploadLabel.classList.add('drag-over');
+                console.log('拖拽进入区域');
             });
             
             uploadLabel.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 uploadLabel.classList.remove('drag-over');
+                console.log('拖拽离开区域');
             });
             
             uploadLabel.addEventListener('drop', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 uploadLabel.classList.remove('drag-over');
+                console.log('文件拖放事件触发');
                 
                 if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                     this.handleImageUpload(e.dataTransfer.files[0]);
                 }
             });
+        } else {
+            console.error('上传标签未找到！');
         }
         
-        // 图片工具选择事件
-        const imageToolBtn = document.querySelector('.tool-btn[data-tool="image"]');
-        if (imageToolBtn) {
-            imageToolBtn.addEventListener('click', () => {
-                this.selectTool('image');
+        // 为所有按钮添加点击事件日志
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                console.log('按钮点击:', this.id, this.className, this.textContent.trim());
             });
-        }
+        });
+        
+        console.log('事件监听器设置完成');
     }
 
     /**

@@ -1,4 +1,6 @@
 // Supabase 配置文件
+console.log('Supabase配置脚本开始加载...');
+
 // 请在此设置您的 Supabase 项目凭据
 const SUPABASE_CONFIG = {
     // Supabase 项目的 URL
@@ -29,3 +31,6 @@ const SUPABASE_CONFIG = {
 
 // 将配置暴露到全局作用域，以便其他脚本可以访问
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
+
+console.log('Supabase配置加载完成，URL:', SUPABASE_CONFIG.url ? '配置成功' : '配置失败');
+console.log('Supabase anonKey:', SUPABASE_CONFIG.anonKey ? '存在' : '不存在');
