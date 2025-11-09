@@ -546,6 +546,18 @@
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
             
             setTimeout(() => {
+                // 创建用户数据并保存到localStorage
+                const user = {
+                    id: 'user_' + Date.now(),
+                    phone: phone,
+                    name: '用户' + phone.slice(-4),
+                    loginType: 'phone',
+                    loginTime: new Date().toISOString()
+                };
+                
+                // 保存用户信息到localStorage
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                
                 // 登录成功，跳转到主页面
                 window.location.href = 'main.html';
             }, 1000);
@@ -571,6 +583,18 @@
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
             
             setTimeout(() => {
+                // 创建用户数据并保存到localStorage
+                const user = {
+                    id: 'user_' + Date.now(),
+                    email: email,
+                    name: email.split('@')[0],
+                    loginType: 'email',
+                    loginTime: new Date().toISOString()
+                };
+                
+                // 保存用户信息到localStorage
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                
                 // 登录成功，跳转到主页面
                 window.location.href = 'main.html';
             }, 1000);
