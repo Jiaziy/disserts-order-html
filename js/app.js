@@ -393,7 +393,8 @@ async function logout() {
         appState.currentUser = null;
         localStorage.removeItem('currentUser');
         
-        showLoginPage();
+        // 跳转到用户登录页面
+        window.location.href = 'user-login.html';
         showToast('已退出登录');
     } catch (error) {
         console.error('退出登录错误:', error);
