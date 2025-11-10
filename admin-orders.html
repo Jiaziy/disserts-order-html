@@ -614,7 +614,14 @@
                             </tr>
                         </thead>
                         <tbody id="ordersTable">
-                            <!-- 订单数据将通过JavaScript动态加载 -->
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 20px;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                        <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #8B4513; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                        <span style="color: #666;">正在加载订单数据...</span>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -641,6 +648,12 @@
     <script src="js/supabase-config.js"></script>
     <script src="js/supabase.js"></script>
     <script>
+        // 全局变量
+        let currentOrders = [];
+        let currentPage = 1;
+        let ordersPerPage = 10;
+        let currentFilters = {};
+
         // 订单管理逻辑
         document.addEventListener('DOMContentLoaded', function() {
             // 检查登录状态
@@ -654,7 +667,7 @@
         });
 
         // 检查管理员认证状态
-        function checkAdminAuth() {
+        async function checkAdminAuth() {
             const adminToken = localStorage.getItem('admin_token');
             const adminEmail = localStorage.getItem('admin_email');
             
@@ -668,70 +681,185 @@
             document.getElementById('adminEmail').textContent = adminEmail;
         }
 
-        // 加载订单数据
-        function loadOrdersData() {
-            // 模拟订单数据
-            const orders = [
-                {
-                    id: 'ORD-2024-001',
-                    customer: { name: '张先生', phone: '138****1234' },
-                    product: '个性化巧克力礼盒',
-                    quantity: 2,
-                    amount: '¥298.00',
-                    status: 'completed',
-                    statusText: '已完成',
-                    submitTime: '2024-01-15 14:30',
-                    designImage: 'design1.jpg'
-                },
-                {
-                    id: 'ORD-2024-002',
-                    customer: { name: '李女士', phone: '139****5678' },
-                    product: '情人节定制巧克力',
-                    quantity: 1,
-                    amount: '¥158.00',
-                    status: 'approved',
-                    statusText: '已审核',
-                    submitTime: '2024-01-15 10:15',
-                    designImage: 'design2.jpg'
-                },
-                {
-                    id: 'ORD-2024-003',
-                    customer: { name: '王先生', phone: '136****9012' },
-                    product: '企业礼品巧克力',
-                    quantity: 50,
-                    amount: '¥2,450.00',
-                    status: 'pending',
-                    statusText: '待审核',
-                    submitTime: '2024-01-15 09:00',
-                    designImage: 'design3.jpg'
-                },
-                {
-                    id: 'ORD-2024-004',
-                    customer: { name: '陈女士', phone: '137****3456' },
-                    product: '生日定制巧克力',
-                    quantity: 3,
-                    amount: '¥447.00',
-                    status: 'processing',
-                    statusText: '处理中',
-                    submitTime: '2024-01-14 16:45',
-                    designImage: 'design4.jpg'
-                },
-                {
-                    id: 'ORD-2024-005',
-                    customer: { name: '刘先生', phone: '135****7890' },
-                    product: '婚礼纪念巧克力',
-                    quantity: 1,
-                    amount: '¥198.00',
-                    status: 'rejected',
-                    statusText: '已拒绝',
-                    submitTime: '2024-01-14 11:20',
-                    designImage: 'design5.jpg'
-                }
-            ];
-
+        // 显示加载状态
+        function showLoading() {
             const tableBody = document.getElementById('ordersTable');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 20px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                            <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #8B4513; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span style="color: #666;">正在加载订单数据...</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const tableBody = document.getElementById('ordersTable');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 20px; color: #dc3545;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+                        ${message}
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 加载订单数据
+        async function loadOrdersData() {
+            showLoading();
             
-            tableBody.innerHTML = orders.map(order => `
+            try {
+                // 从Supabase获取所有订单数据
+                const allOrders = await getOrdersFromSupabase();
+                
+                // 应用客户端筛选
+                const filteredOrders = filterOrders(allOrders, currentFilters);
+                currentOrders = filteredOrders;
+                
+                if (filteredOrders.length === 0) {
+                    if (allOrders.length === 0) {
+                        showError('暂无订单数据');
+                    } else {
+                        showError('没有找到符合条件的订单');
+                    }
+                    return;
+                }
+                
+                renderOrdersTable(filteredOrders);
+                updatePagination();
+                
+            } catch (error) {
+                console.error('加载订单数据失败:', error);
+                showError('加载订单数据失败，请稍后重试');
+            }
+        }
+
+        // 从Supabase获取订单数据
+        async function getOrdersFromSupabase(filters = {}) {
+            try {
+                // 构建查询条件 - 由于用户表在auth模式，先只获取订单数据
+                let query = window.supabaseClient.from('orders').select('*');
+                
+                // 应用状态筛选
+                if (filters.status && filters.status !== '') {
+                    query = query.eq('status', filters.status);
+                }
+                
+                // 应用日期筛选
+                if (filters.date && filters.date !== '') {
+                    query = query.gte('created_at', filters.date + 'T00:00:00')
+                                .lte('created_at', filters.date + 'T23:59:59');
+                }
+                
+                // 应用订单号筛选
+                if (filters.orderId && filters.orderId !== '') {
+                    query = query.ilike('id', `%${filters.orderId}%`);
+                }
+                
+                const { data, error } = await query.order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('Supabase查询失败:', error);
+                    throw new Error('获取订单数据失败');
+                }
+                
+                if (!data) {
+                    return [];
+                }
+                
+                // 转换数据格式以兼容前端显示
+                return data.map(order => {
+                    let customerName = '未知用户';
+                    let customerPhone = '无联系方式';
+                    
+                    // 从customer_info JSON字段中提取客户信息
+                    if (order.customer_info) {
+                        try {
+                            const customerInfo = typeof order.customer_info === 'string' 
+                                ? JSON.parse(order.customer_info) 
+                                : order.customer_info;
+                            
+                            customerName = customerInfo.name || '未知用户';
+                            customerPhone = customerInfo.phone || '无联系方式';
+                        } catch (e) {
+                            console.warn('解析customer_info失败:', e);
+                        }
+                    }
+                    
+                    return {
+                        id: order.id,
+                        customer: {
+                            name: customerName,
+                            phone: customerPhone,
+                            email: order.user_id // 使用user_id作为临时标识
+                        },
+                        product: order.product_type || '定制巧克力',
+                        quantity: order.quantity || 1,
+                        amount: '¥' + (parseFloat(order.total_price) || 0).toFixed(2),
+                        status: order.status || 'pending',
+                        statusText: getStatusText(order.status),
+                        submitTime: formatDateTime(order.created_at),
+                        designImage: order.design_image,
+                        customer_info: order.customer_info,
+                        custom_text: order.custom_text,
+                        selected_style: order.selected_style,
+                        selected_packaging: order.selected_packaging,
+                        created_at: order.created_at
+                    };
+                });
+                
+            } catch (error) {
+                console.error('获取订单数据失败:', error);
+                throw error;
+            }
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待审核',
+                'approved': '已审核',
+                'processing': '处理中',
+                'completed': '已完成',
+                'rejected': '已拒绝',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || '未知状态';
+        }
+
+        // 格式化日期时间
+        function formatDateTime(dateString) {
+            if (!dateString) return '未知时间';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 渲染订单表格
+        function renderOrdersTable(orders) {
+            const tableBody = document.getElementById('ordersTable');
+            const startIndex = (currentPage - 1) * ordersPerPage;
+            const paginatedOrders = orders.slice(startIndex, startIndex + ordersPerPage);
+            
+            // 更新订单总数
+            document.getElementById('totalOrdersCount').textContent = orders.length;
+            
+            if (paginatedOrders.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 20px; color: #666;">
+                            暂无订单数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = paginatedOrders.map(order => `
                 <tr>
                     <td><strong>${order.id}</strong></td>
                     <td>
@@ -784,18 +912,146 @@
             });
         }
 
+        // 更新分页显示
+        function updatePagination() {
+            const totalPages = Math.ceil(currentOrders.length / ordersPerPage);
+            const pagination = document.querySelector('.pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let paginationHTML = `
+                <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+            
+            // 显示页码按钮
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            if (endPage < totalPages) {
+                paginationHTML += `<span>...</span>`;
+                paginationHTML += `
+                    <button class="page-btn" onclick="changePage(${totalPages})">
+                        ${totalPages}
+                    </button>
+                `;
+            }
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+            
+            pagination.innerHTML = paginationHTML;
+        }
+
+        // 切换页面
+        function changePage(page) {
+            const totalPages = Math.ceil(currentOrders.length / ordersPerPage);
+            
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            renderOrdersTable(currentOrders);
+            updatePagination();
+            
+            // 滚动到表格顶部
+            document.querySelector('.data-table').scrollIntoView({ behavior: 'smooth' });
+        }
+
         // 应用过滤器
-        function applyFilters() {
+        async function applyFilters() {
             const status = document.getElementById('orderStatus').value;
             const date = document.getElementById('orderDate').value;
-            const customerName = document.getElementById('customerName').value.toLowerCase();
-            const orderId = document.getElementById('orderId').value.toLowerCase();
+            const customerName = document.getElementById('customerName').value;
+            const orderId = document.getElementById('orderId').value;
 
-            console.log('应用过滤器:', { status, date, customerName, orderId });
+            // 更新过滤器
+            currentFilters = {
+                status: status,
+                date: date,
+                customerName: customerName,
+                orderId: orderId
+            };
             
-            // 这里应该发送过滤请求到后端
-            // 暂时只是模拟
-            alert('过滤器已应用，将显示符合条件的订单');
+            // 重置页码
+            currentPage = 1;
+            
+            // 重新加载数据
+            await loadOrdersData();
+        }
+        
+        // 客户端筛选函数
+        function filterOrders(orders, filters) {
+            return orders.filter(order => {
+                // 状态筛选
+                if (filters.status && filters.status !== '') {
+                    if (order.status !== filters.status) return false;
+                }
+                
+                // 日期筛选
+                if (filters.date && filters.date !== '') {
+                    const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+                    if (orderDate !== filters.date) return false;
+                }
+                
+                // 客户姓名筛选（前端筛选）
+                if (filters.customerName && filters.customerName !== '') {
+                    const customerName = order.customer.name.toLowerCase();
+                    if (!customerName.includes(filters.customerName.toLowerCase())) return false;
+                }
+                
+                // 订单号筛选
+                if (filters.orderId && filters.orderId !== '') {
+                    const orderId = order.id.toLowerCase();
+                    if (!orderId.includes(filters.orderId.toLowerCase())) return false;
+                }
+                
+                return true;
+            });
+        }
+        
+        // 客户端筛选函数
+        function filterOrders(orders, filters) {
+            return orders.filter(order => {
+                // 状态筛选
+                if (filters.status && filters.status !== '') {
+                    if (order.status !== filters.status) return false;
+                }
+                
+                // 日期筛选
+                if (filters.date && filters.date !== '') {
+                    const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+                    if (orderDate !== filters.date) return false;
+                }
+                
+                // 客户姓名筛选（前端筛选）
+                if (filters.customerName && filters.customerName !== '') {
+                    const customerName = order.customer.name.toLowerCase();
+                    if (!customerName.includes(filters.customerName.toLowerCase())) return false;
+                }
+                
+                // 订单号筛选
+                if (filters.orderId && filters.orderId !== '') {
+                    const orderId = order.id.toLowerCase();
+                    if (!orderId.includes(filters.orderId.toLowerCase())) return false;
+                }
+                
+                return true;
+            });
         }
 
         // 重置过滤器
@@ -815,60 +1071,353 @@
         }
 
         // 刷新订单
-        function refreshOrders() {
-            loadOrdersData();
+        async function refreshOrders() {
+            await loadOrdersData();
             alert('订单数据已刷新');
         }
 
         // 查看订单详情
-        function viewOrderDetail(orderId) {
-            alert(`查看订单详情: ${orderId}`);
-            // 这里应该跳转到订单详情页面或显示弹窗
+        async function viewOrderDetail(orderId) {
+            try {
+                // 从Supabase获取订单详情
+                const { data: order, error } = await window.supabaseClient
+                    .from('orders')
+                    .select('*')
+                    .eq('id', orderId)
+                    .single();
+                
+                if (error) {
+                    console.error('获取订单详情失败:', error);
+                    showOperationResult('获取订单详情失败', false);
+                    return;
+                }
+                
+                // 显示订单详情弹窗
+                showOrderDetailModal(order);
+                
+            } catch (error) {
+                console.error('查看订单详情失败:', error);
+                showOperationResult('查看订单详情失败', false);
+            }
+        }
+
+        // 显示订单详情弹窗
+        function showOrderDetailModal(order) {
+            const modalHTML = `
+                <div id="orderDetailModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin: 0;">订单详情</h3>
+                            <button onclick="closeOrderDetailModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h4>基本信息</h4>
+                                <p><strong>订单号:</strong> ${order.id}</p>
+                                <p><strong>创建时间:</strong> ${formatDateTime(order.created_at)}</p>
+                                <p><strong>状态:</strong> <span class="status-badge status-${order.status}">${getStatusText(order.status)}</span></p>
+                                <p><strong>产品类型:</strong> ${order.product_type || '定制巧克力'}</p>
+                                <p><strong>数量:</strong> ${order.quantity || 1}</p>
+                                <p><strong>总价:</strong> ¥${(order.total_price || 0).toFixed(2)}</p>
+                            </div>
+                            
+                            <div>
+                                <h4>客户信息</h4>
+                                <p><strong>姓名:</strong> ${order.users?.name || '未知'}</p>
+                                <p><strong>电话:</strong> ${order.users?.phone || '未提供'}</p>
+                                <p><strong>邮箱:</strong> ${order.users?.email || '未提供'}</p>
+                            </div>
+                        </div>
+                        
+                        ${order.custom_text ? `<div style="margin-top: 20px;"><h4>定制文字</h4><p>${order.custom_text}</p></div>` : ''}
+                        
+                        ${order.design_image ? `
+                            <div style="margin-top: 20px;">
+                                <h4>设计图</h4>
+                                <img src="${order.design_image}" alt="设计图" style="max-width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                        ` : ''}
+                        
+                        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="btn-secondary" onclick="closeOrderDetailModal()">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // 关闭订单详情弹窗
+        function closeOrderDetailModal() {
+            const modal = document.getElementById('orderDetailModal');
+            if (modal) {
+                modal.remove();
+            }
         }
 
         // 审核通过订单
-        function approveOrder(orderId) {
+        async function approveOrder(orderId) {
             if (confirm(`确定要通过订单 ${orderId} 吗？`)) {
-                alert(`订单 ${orderId} 已通过审核`);
-                // 这里应该发送请求到后端更新订单状态
+                try {
+                    await updateOrderStatus(orderId, 'approved');
+                    showOperationResult(`订单 ${orderId} 已通过审核`, true);
+                    await loadOrdersData();
+                } catch (error) {
+                    showOperationResult('审核订单失败', false);
+                }
             }
         }
 
         // 拒绝订单
-        function rejectOrder(orderId) {
+        async function rejectOrder(orderId) {
             const reason = prompt('请输入拒绝原因：');
             if (reason) {
-                alert(`订单 ${orderId} 已被拒绝，原因：${reason}`);
-                // 这里应该发送请求到后端更新订单状态
+                try {
+                    await updateOrderStatus(orderId, 'rejected', reason);
+                    showOperationResult(`订单 ${orderId} 已被拒绝，原因：${reason}`, true);
+                    await loadOrdersData();
+                } catch (error) {
+                    showOperationResult('拒绝订单失败', false);
+                }
             }
         }
 
         // 开始处理订单
-        function startProcessing(orderId) {
+        async function startProcessing(orderId) {
             if (confirm(`确定要开始处理订单 ${orderId} 吗？`)) {
-                alert(`订单 ${orderId} 已开始处理`);
-                // 这里应该发送请求到后端更新订单状态
+                try {
+                    await updateOrderStatus(orderId, 'processing');
+                    showOperationResult(`订单 ${orderId} 已开始处理`, true);
+                    await loadOrdersData();
+                } catch (error) {
+                    showOperationResult('开始处理订单失败', false);
+                }
             }
         }
 
         // 完成订单
-        function completeOrder(orderId) {
+        async function completeOrder(orderId) {
             if (confirm(`确定要标记订单 ${orderId} 为已完成吗？`)) {
-                alert(`订单 ${orderId} 已完成`);
-                // 这里应该发送请求到后端更新订单状态
+                try {
+                    await updateOrderStatus(orderId, 'completed');
+                    showOperationResult(`订单 ${orderId} 已完成`, true);
+                    await loadOrdersData();
+                } catch (error) {
+                    showOperationResult('完成订单失败', false);
+                }
             }
         }
 
         // 编辑订单
-        function editOrder(orderId) {
-            alert(`编辑订单: ${orderId}`);
-            // 这里应该显示订单编辑表单
+        async function editOrder(orderId) {
+            // 获取订单详情
+            const { data: order, error } = await window.supabaseClient
+                .from('orders')
+                .select('*')
+                .eq('id', orderId)
+                .single();
+            
+            if (error) {
+                console.error('获取订单详情失败:', error);
+                alert('获取订单详情失败');
+                return;
+            }
+            
+            // 显示编辑表单
+            showEditOrderModal(order);
         }
 
-        // 分页功能
-        function changePage(direction) {
-            alert(`翻页功能开发中，方向：${direction}`);
-            // 这里应该实现分页逻辑
+        // 显示编辑订单弹窗
+        function showEditOrderModal(order) {
+            const modalHTML = `
+                <div id="editOrderModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin: 0;">编辑订单</h3>
+                            <button onclick="closeEditOrderModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+                        </div>
+                        
+                        <form id="editOrderForm">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: bold;">订单状态</label>
+                                <select id="editOrderStatus" class="filter-control" style="width: 100%;">
+                                    <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>待审核</option>
+                                    <option value="approved" ${order.status === 'approved' ? 'selected' : ''}>已审核</option>
+                                    <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>处理中</option>
+                                    <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>已完成</option>
+                                    <option value="rejected" ${order.status === 'rejected' ? 'selected' : ''}>已拒绝</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: bold;">数量</label>
+                                <input type="number" id="editOrderQuantity" class="filter-control" value="${order.quantity || 1}" min="1" style="width: 100%;">
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: bold;">总价</label>
+                                <input type="number" id="editOrderTotalPrice" class="filter-control" value="${order.total_price || 0}" min="0" step="0.01" style="width: 100%;">
+                            </div>
+                            
+                            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                                <button type="button" class="btn-secondary" onclick="closeEditOrderModal()">取消</button>
+                                <button type="submit" class="btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // 添加表单提交事件
+            document.getElementById('editOrderForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await saveOrderEdit(order.id);
+            });
+        }
+
+        // 保存订单编辑
+        async function saveOrderEdit(orderId) {
+            try {
+                const status = document.getElementById('editOrderStatus').value;
+                const quantity = parseInt(document.getElementById('editOrderQuantity').value);
+                const totalPrice = parseFloat(document.getElementById('editOrderTotalPrice').value);
+                
+                const { error } = await window.supabaseClient
+                    .from('orders')
+                    .update({ 
+                        status: status,
+                        quantity: quantity,
+                        total_price: totalPrice,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', orderId);
+                
+                if (error) {
+                    console.error('保存订单编辑失败:', error);
+                    alert('保存订单编辑失败');
+                    return;
+                }
+                
+                alert('订单编辑保存成功');
+                closeEditOrderModal();
+                await loadOrdersData();
+                
+            } catch (error) {
+                console.error('保存订单编辑失败:', error);
+                alert('保存订单编辑失败');
+            }
+        }
+
+        // 关闭编辑订单弹窗
+        function closeEditOrderModal() {
+            const modal = document.getElementById('editOrderModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // 完善订单状态更新功能
+        async function updateOrderStatus(orderId, newStatus, reason = null) {
+            try {
+                const updateData = { 
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                };
+                
+                if (reason) {
+                    updateData.reject_reason = reason;
+                }
+                
+                if (newStatus === 'completed') {
+                    updateData.completed_at = new Date().toISOString();
+                }
+                
+                const { error } = await window.supabaseClient
+                    .from('orders')
+                    .update(updateData)
+                    .eq('id', orderId);
+                
+                if (error) {
+                    console.error('更新订单状态失败:', error);
+                    throw new Error('更新订单状态失败');
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('更新订单状态失败:', error);
+                throw error;
+            }
+        }
+
+        // 显示操作结果
+        function showOperationResult(message, isSuccess = true) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                background: ${isSuccess ? '#28a745' : '#dc3545'};
+                color: white;
+                border-radius: 5px;
+                z-index: 3000;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                animation: slideIn 0.3s ease;
+                max-width: 300px;
+            `;
+            notification.innerHTML = `
+                <i class="fas ${isSuccess ? 'fa-check-circle' : 'fa-exclamation-triangle'}" style="margin-right: 8px;"></i>
+                ${message}
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+        
+        // 添加CSS动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 分页功能实现
+        function changePage(page) {
+            const totalPages = Math.ceil(currentOrders.length / ordersPerPage);
+            
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            renderOrdersTable(currentOrders);
+            updatePagination();
+            
+            // 滚动到表格顶部
+            document.querySelector('.data-table').scrollIntoView({ behavior: 'smooth' });
         }
 
         // 页面导航
@@ -889,6 +1438,152 @@
         // 切换侧边栏（移动端）
         function toggleSidebar() {
             document.querySelector('.admin-sidebar').classList.toggle('open');
+        }
+
+        // 增强订单详情显示，处理用户表关联问题
+        async function showOrderDetailModal(order) {
+            let customerName = '未知用户';
+            let customerPhone = '无联系方式';
+            let customerEmail = '未提供';
+            
+            // 从customer_info JSON字段中提取客户信息
+            if (order.customer_info) {
+                try {
+                    const customerInfo = typeof order.customer_info === 'string' 
+                        ? JSON.parse(order.customer_info) 
+                        : order.customer_info;
+                    
+                    customerName = customerInfo.name || '未知用户';
+                    customerPhone = customerInfo.phone || '无联系方式';
+                    customerEmail = customerInfo.email || '未提供';
+                } catch (e) {
+                    console.warn('解析customer_info失败:', e);
+                }
+            }
+            
+            const modalHTML = `
+                <div id="orderDetailModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin: 0;">订单详情</h3>
+                            <button onclick="closeOrderDetailModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h4>基本信息</h4>
+                                <p><strong>订单号:</strong> ${order.id}</p>
+                                <p><strong>创建时间:</strong> ${formatDateTime(order.created_at)}</p>
+                                <p><strong>状态:</strong> <span class="status-badge status-${order.status}">${getStatusText(order.status)}</span></p>
+                                <p><strong>产品类型:</strong> ${order.product_type || '定制巧克力'}</p>
+                                <p><strong>数量:</strong> ${order.quantity || 1}</p>
+                                <p><strong>总价:</strong> ¥${(order.total_price || 0).toFixed(2)}</p>
+                            </div>
+                            
+                            <div>
+                                <h4>客户信息</h4>
+                                <p><strong>姓名:</strong> ${customerName}</p>
+                                <p><strong>电话:</strong> ${customerPhone}</p>
+                                <p><strong>邮箱:</strong> ${customerEmail}</p>
+                            </div>
+                        </div>
+                        
+                        ${order.custom_text ? `<div style="margin-top: 20px;"><h4>定制文字</h4><p>${order.custom_text}</p></div>` : ''}
+                        
+                        ${order.selected_style ? `<div style="margin-top: 20px;"><h4>样式选择</h4><p>${order.selected_style}</p></div>` : ''}
+                        
+                        ${order.selected_packaging ? `<div style="margin-top: 20px;"><h4>包装选择</h4><p>${order.selected_packaging}</p></div>` : ''}
+                        
+                        ${order.design_image ? `
+                            <div style="margin-top: 20px;">
+                                <h4>设计图</h4>
+                                <img src="${order.design_image}" alt="设计图" style="max-width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                        ` : ''}
+                        
+                        ${order.reject_reason ? `<div style="margin-top: 20px;"><h4>拒绝原因</h4><p style="color: #dc3545;">${order.reject_reason}</p></div>` : ''}
+                        
+                        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="btn-secondary" onclick="closeOrderDetailModal()">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // 增强订单详情显示，处理用户表关联问题
+        async function showOrderDetailModal(order) {
+            let customerName = '未知用户';
+            let customerPhone = '无联系方式';
+            let customerEmail = '未提供';
+            
+            // 从customer_info JSON字段中提取客户信息
+            if (order.customer_info) {
+                try {
+                    const customerInfo = typeof order.customer_info === 'string' 
+                        ? JSON.parse(order.customer_info) 
+                        : order.customer_info;
+                    
+                    customerName = customerInfo.name || '未知用户';
+                    customerPhone = customerInfo.phone || '无联系方式';
+                    customerEmail = customerInfo.email || '未提供';
+                } catch (e) {
+                    console.warn('解析customer_info失败:', e);
+                }
+            }
+            
+            const modalHTML = `
+                <div id="orderDetailModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin: 0;">订单详情</h3>
+                            <button onclick="closeOrderDetailModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h4>基本信息</h4>
+                                <p><strong>订单号:</strong> ${order.id}</p>
+                                <p><strong>创建时间:</strong> ${formatDateTime(order.created_at)}</p>
+                                <p><strong>状态:</strong> <span class="status-badge status-${order.status}">${getStatusText(order.status)}</span></p>
+                                <p><strong>产品类型:</strong> ${order.product_type || '定制巧克力'}</p>
+                                <p><strong>数量:</strong> ${order.quantity || 1}</p>
+                                <p><strong>总价:</strong> ¥${(order.total_price || 0).toFixed(2)}</p>
+                            </div>
+                            
+                            <div>
+                                <h4>客户信息</h4>
+                                <p><strong>姓名:</strong> ${customerName}</p>
+                                <p><strong>电话:</strong> ${customerPhone}</p>
+                                <p><strong>邮箱:</strong> ${customerEmail}</p>
+                            </div>
+                        </div>
+                        
+                        ${order.custom_text ? `<div style="margin-top: 20px;"><h4>定制文字</h4><p>${order.custom_text}</p></div>` : ''}
+                        
+                        ${order.selected_style ? `<div style="margin-top: 20px;"><h4>样式选择</h4><p>${order.selected_style}</p></div>` : ''}
+                        
+                        ${order.selected_packaging ? `<div style="margin-top: 20px;"><h4>包装选择</h4><p>${order.selected_packaging}</p></div>` : ''}
+                        
+                        ${order.design_image ? `
+                            <div style="margin-top: 20px;">
+                                <h4>设计图</h4>
+                                <img src="${order.design_image}" alt="设计图" style="max-width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                        ` : ''}
+                        
+                        ${order.reject_reason ? `<div style="margin-top: 20px;"><h4>拒绝原因</h4><p style="color: #dc3545;">${order.reject_reason}</p></div>` : ''}
+                        
+                        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="btn-secondary" onclick="closeOrderDetailModal()">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
     </script>
 </body>

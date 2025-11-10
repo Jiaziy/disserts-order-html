@@ -654,133 +654,203 @@
     <script src="js/supabase.js"></script>
     <script>
         // 用户管理逻辑
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // 检查登录状态
-            checkAdminAuth();
+            await checkAdminAuth();
             
             // 加载用户数据
-            loadUsersData();
+            await loadUsersData();
             
             // 设置过滤器事件
             setupFilterEvents();
         });
 
-        // 检查管理员认证状态
-        function checkAdminAuth() {
+        // 检查管理员认证状态（集成Supabase）
+        async function checkAdminAuth() {
             const adminToken = localStorage.getItem('admin_token');
-            const adminEmail = localStorage.getItem('admin_email');
+            const adminId = localStorage.getItem('admin_id');
             
-            if (!adminToken || !adminEmail) {
+            if (!adminToken || !adminId) {
                 window.location.href = 'admin-login.html';
                 return;
             }
             
-            // 更新管理员信息显示
-            document.getElementById('adminName').textContent = '管理员';
-            document.getElementById('adminEmail').textContent = adminEmail;
+            try {
+                // 验证管理员权限
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('name, email, role')
+                    .eq('id', adminId)
+                    .single();
+
+                if (error || !userData) {
+                    throw new Error('管理员信息不存在');
+                }
+
+                if (userData.role !== 'admin' && userData.role !== 'manager') {
+                    throw new Error('无权限访问管理员系统');
+                }
+
+                // 更新管理员信息显示
+                document.getElementById('adminName').textContent = userData.name || '管理员';
+                document.getElementById('adminEmail').textContent = userData.email;
+
+            } catch (error) {
+                console.error('管理员认证失败:', error);
+                alert('管理员认证失败，请重新登录');
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_id');
+                localStorage.removeItem('admin_email');
+                window.location.href = 'admin-login.html';
+            }
         }
 
-        // 加载用户数据
-        function loadUsersData() {
-            // 模拟用户数据
-            const users = [
-                {
-                    id: 'USR-001',
-                    name: '张三',
-                    email: 'zhangsan@email.com',
-                    registerTime: '2024-01-10 14:30',
-                    lastLogin: '2024-01-15 09:15',
-                    orderCount: 12,
-                    status: 'active',
-                    statusText: '活跃',
-                    role: 'user',
-                    roleText: '普通用户'
-                },
-                {
-                    id: 'USR-002',
-                    name: '李四',
-                    email: 'lisi@email.com',
-                    registerTime: '2024-01-08 10:20',
-                    lastLogin: '2024-01-14 16:45',
-                    orderCount: 25,
-                    status: 'active',
-                    statusText: '活跃',
-                    role: 'vip',
-                    roleText: 'VIP用户'
-                },
-                {
-                    id: 'USR-003',
-                    name: '王五',
-                    email: 'wangwu@email.com',
-                    registerTime: '2024-01-05 09:00',
-                    lastLogin: '2024-01-12 11:30',
-                    orderCount: 3,
-                    status: 'inactive',
-                    statusText: '非活跃',
-                    role: 'user',
-                    roleText: '普通用户'
-                },
-                {
-                    id: 'USR-004',
-                    name: '赵六',
-                    email: 'zhaoliu@email.com',
-                    registerTime: '2024-01-03 15:45',
-                    lastLogin: '2024-01-10 14:20',
-                    orderCount: 18,
-                    status: 'active',
-                    statusText: '活跃',
-                    role: 'user',
-                    roleText: '普通用户'
-                },
-                {
-                    id: 'USR-005',
-                    name: '钱七',
-                    email: 'qianqi@email.com',
-                    registerTime: '2024-01-01 08:30',
-                    lastLogin: '2024-01-08 10:15',
-                    orderCount: 0,
-                    status: 'inactive',
-                    statusText: '非活跃',
-                    role: 'user',
-                    roleText: '普通用户'
+        // 加载用户数据（集成Supabase）
+        async function loadUsersData() {
+            try {
+                // 显示加载状态
+                showLoading(true);
+                
+                // 从Supabase获取用户数据，包括关联的订单数量
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select(`
+                        id,
+                        name,
+                        email,
+                        role,
+                        avatar_url,
+                        created_at,
+                        last_login_at,
+                        orders:orders(count)
+                    `)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                const tableBody = document.getElementById('usersTable');
+                const totalUsersCount = document.getElementById('totalUsersCount');
+                
+                if (users && users.length > 0) {
+                    totalUsersCount.textContent = users.length;
+                    
+                    tableBody.innerHTML = users.map(user => {
+                        const firstName = user.name ? user.name.charAt(0) : user.email.charAt(0).toUpperCase();
+                        const displayName = user.name || user.email.split('@')[0];
+                        const registerTime = new Date(user.created_at).toLocaleString('zh-CN');
+                        const lastLogin = user.last_login_at ? 
+                            new Date(user.last_login_at).toLocaleString('zh-CN') : '从未登录';
+                        const orderCount = user.orders?.[0]?.count || 0;
+                        
+                        // 用户状态判断（基于最后登录时间）
+                        const isActive = user.last_login_at && 
+                            (new Date() - new Date(user.last_login_at)) < (30 * 24 * 60 * 60 * 1000); // 30天内活跃
+                        const status = isActive ? 'active' : 'inactive';
+                        const statusText = isActive ? '活跃' : '非活跃';
+                        
+                        // 角色映射
+                        const roleMap = {
+                            'admin': { text: '管理员', class: 'role-admin' },
+                            'manager': { text: '经理', class: 'role-admin' },
+                            'vip': { text: 'VIP用户', class: 'role-vip' },
+                            'user': { text: '普通用户', class: '' }
+                        };
+                        
+                        const roleInfo = roleMap[user.role] || roleMap.user;
+                        
+                        return `
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="user-avatar-small">${firstName}</div>
+                                        <div>
+                                            <div style="font-weight: bold;">${displayName}</div>
+                                            <div style="color: #666; font-size: 12px;">ID: ${user.id}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${user.email}</td>
+                                <td style="color: #666; font-size: 12px;">${registerTime}</td>
+                                <td style="color: #666; font-size: 12px;">${lastLogin}</td>
+                                <td style="font-weight: bold;">${orderCount}</td>
+                                <td><span class="status-badge status-${status}">${statusText}</span></td>
+                                <td><span class="role-badge ${roleInfo.class}">${roleInfo.text}</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-info" onclick="viewUserDetail('${user.id}')">详情</button>
+                                        <button class="btn-small btn-warning" onclick="editUser('${user.id}')">编辑</button>
+                                        ${status === 'active' ? 
+                                            `<button class="btn-small btn-danger" onclick="disableUser('${user.id}')">禁用</button>` : 
+                                            `<button class="btn-small btn-success" onclick="enableUser('${user.id}')">启用</button>`
+                                        }
+                                        ${user.role !== 'admin' && user.role !== 'manager' ? 
+                                            `<button class="btn-small btn-secondary" onclick="setVip('${user.id}')">${user.role === 'vip' ? '取消VIP' : '设为VIP'}</button>` : 
+                                            ''
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    totalUsersCount.textContent = '0';
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #999;">暂无用户数据</td>
+                        </tr>
+                    `;
                 }
-            ];
+                
+                // 隐藏加载状态
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('加载用户数据失败:', error);
+                document.getElementById('totalUsersCount').textContent = '0';
+                document.getElementById('usersTable').innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #ff4757;">加载用户数据失败</td>
+                    </tr>
+                `;
+                showLoading(false);
+            }
+        }
 
-            const tableBody = document.getElementById('usersTable');
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            const table = document.querySelector('.data-table');
+            const loadingDiv = document.getElementById('loading-indicator');
             
-            tableBody.innerHTML = users.map(user => `
-                <tr>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="user-avatar-small">${user.name.charAt(0)}</div>
-                            <div>
-                                <div style="font-weight: bold;">${user.name}</div>
-                                <div style="color: #666; font-size: 12px;">ID: ${user.id}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>${user.email}</td>
-                    <td style="color: #666; font-size: 12px;">${user.registerTime}</td>
-                    <td style="color: #666; font-size: 12px;">${user.lastLogin}</td>
-                    <td style="font-weight: bold;">${user.orderCount}</td>
-                    <td><span class="status-badge status-${user.status}">${user.statusText}</span></td>
-                    <td><span class="role-badge ${user.role === 'vip' ? 'role-vip' : user.role === 'admin' ? 'role-admin' : ''}">${user.roleText}</span></td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-small btn-info" onclick="viewUserDetail('${user.id}')">详情</button>
-                            <button class="btn-small btn-warning" onclick="editUser('${user.id}')">编辑</button>
-                            ${user.status === 'active' ? 
-                                `<button class="btn-small btn-danger" onclick="disableUser('${user.id}')">禁用</button>` : 
-                                `<button class="btn-small btn-success" onclick="enableUser('${user.id}')">启用</button>`
-                            }
-                            ${user.role !== 'admin' ? 
-                                `<button class="btn-small btn-secondary" onclick="setVip('${user.id}')">${user.role === 'vip' ? '取消VIP' : '设为VIP'}</button>` : 
-                                ''
-                            }
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            if (show) {
+                if (!loadingDiv) {
+                    const newLoadingDiv = document.createElement('div');
+                    newLoadingDiv.id = 'loading-indicator';
+                    newLoadingDiv.className = 'loading';
+                    newLoadingDiv.innerHTML = `
+                        <div class="loading-spinner"></div>
+                        正在加载用户数据...
+                    `;
+                    newLoadingDiv.style.cssText = `
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 200px;
+                        font-size: 16px;
+                        color: #666;
+                    `;
+                    
+                    const parent = table.parentNode;
+                    parent.appendChild(newLoadingDiv);
+                } else {
+                    loadingDiv.style.display = 'flex';
+                }
+                table.style.display = 'none';
+            } else {
+                if (loadingDiv) {
+                    loadingDiv.style.display = 'none';
+                }
+                table.style.display = 'table';
+            }
         }
 
         // 设置过滤器事件
