@@ -323,24 +323,25 @@
                     throw new Error(result.error || '认证失败');
                 }
 
-                // 检查用户是否为管理员 - 从数据库验证角色
+                // 检查用户是否为管理员 - 使用auth.users表的元数据
                 let userRole = 'user';
                 
                 try {
-                    // 尝试从Supabase数据库获取用户角色
-                    if (window.supabase) {
-                        const { data, error } = await window.supabase
-                            .from('users')
-                            .select('role')
-                            .eq('email', email.toLowerCase())
-                            .single();
-                        
-                        if (!error && data) {
-                            userRole = data.role;
+                    // 检查认证用户的元数据来判断是否为管理员
+                    if (result.user && result.user.user_metadata) {
+                        // 从user_metadata中获取角色
+                        if (result.user.user_metadata.role) {
+                            userRole = result.user.user_metadata.role;
+                        } else {
+                            // 根据邮箱判断管理员角色
+                            const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
+                            if (adminEmails.includes(email.toLowerCase())) {
+                                userRole = email.includes('manager') ? 'manager' : 'admin';
+                            }
                         }
                     }
                 } catch (dbError) {
-                    console.warn('数据库查询失败，使用降级验证:', dbError);
+                    console.warn('元数据查询失败，使用邮箱验证:', dbError);
                     // 降级验证
                     const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
                     userRole = adminEmails.includes(email.toLowerCase()) ? 
