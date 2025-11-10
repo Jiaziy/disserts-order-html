@@ -630,14 +630,23 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- 引入Supabase客户端库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 引入Supabase管理员专用配置 -->
     <script src="js/supabase-admin-only.js"></script>
     <script>
         // 管理员系统主逻辑
         document.addEventListener('DOMContentLoaded', async function() {
             // 检查登录状态
             await checkAdminAuth();
+            
+            // 首先初始化Supabase客户端
+            try {
+                await initializeSupabaseAdmin();
+                console.log('Supabase客户端初始化完成');
+            } catch (error) {
+                console.error('Supabase初始化失败:', error);
+                showError('数据库连接失败，请刷新页面重试');
+                return;
+            }
             
             // 初始化页面
             initDashboard();
@@ -972,7 +981,7 @@
             
             try {
                 // 从Supabase获取最近10个订单
-                const { data: orders, error } = await supabase
+                const { data: orders, error } = await window.supabaseAdmin
                     .from('orders')
                     .select(`
                         id,
@@ -1047,7 +1056,7 @@
             
             try {
                 // 从Supabase获取待审核订单
-                const { data: orders, error } = await supabase
+                const { data: orders, error } = await window.supabaseAdmin
                     .from('orders')
                     .select(`
                         id,

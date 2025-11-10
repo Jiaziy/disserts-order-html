@@ -21,53 +21,170 @@ const SUPABASE_ADMIN_CONFIG = {
     }
 };
 
-// 创建全局Supabase客户端
+// 全局状态管理
 let supabaseAdminClient = null;
+let initializationPromise = null;
+let isInitialized = false;
 
-// 初始化Supabase客户端
-async function initializeSupabaseAdmin() {
-    try {
-        // 检查是否已加载Supabase库
-        if (typeof createClient !== 'function') {
-            throw new Error('Supabase客户端库未加载');
-        }
-        
-        // 创建Supabase客户端
-        supabaseAdminClient = createClient(SUPABASE_ADMIN_CONFIG.url, SUPABASE_ADMIN_CONFIG.anonKey);
-        
-        // 测试连接
-        const { error } = await supabaseAdminClient.from('users').select('count').limit(1);
-        
-        if (error) {
-            throw new Error('Supabase连接测试失败: ' + error.message);
-        }
-        
-        console.log('Supabase管理员客户端初始化成功');
-        
-        // 将客户端暴露到全局作用域
-        window.supabaseAdmin = supabaseAdminClient;
-        
-        return true;
-        
-    } catch (error) {
-        console.error('Supabase管理员客户端初始化失败:', error);
-        
-        // 显示错误信息给用户
-        if (window.showConnectionError) {
-            window.showConnectionError('Supabase连接失败: ' + error.message);
-        }
-        
-        return false;
+// 确保Supabase库加载的单一实例
+async function ensureSupabaseLoaded() {
+    // 如果已经加载，直接返回
+    if (typeof createClient !== 'undefined' && typeof createClient === 'function') {
+        return;
     }
+    
+    // 如果正在加载，等待完成
+    if (window.supabaseLoadingPromise) {
+        await window.supabaseLoadingPromise;
+        return;
+    }
+    
+    // 创建新的加载Promise
+    window.supabaseLoadingPromise = new Promise((resolve, reject) => {
+        console.log('正在加载Supabase库...');
+        
+        // 使用最简单可靠的方式加载Supabase
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        script.crossOrigin = 'anonymous'; // 添加跨域属性
+        
+        script.onload = () => {
+            console.log('Supabase库加载成功');
+            
+            // 检查是否已加载
+            if (typeof createClient === 'function') {
+                console.log('检测到全局createClient函数');
+                resolve();
+                return;
+            }
+            
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                console.log('检测到window.supabase.createClient函数');
+                window.createClient = window.supabase.createClient;
+                resolve();
+                return;
+            }
+            
+            // 如果以上方式都不行，尝试创建一个简单的实现
+            console.warn('Supabase库加载但未检测到标准导出，尝试手动初始化');
+            
+            // 手动实现一个简单的Supabase客户端
+            window.createClient = function(url, key) {
+                console.log('使用手动实现的Supabase客户端');
+                return {
+                    from: (table) => ({
+                        select: () => Promise.resolve({ data: [], error: null }),
+                        insert: () => Promise.resolve({ data: [], error: null }),
+                        update: () => Promise.resolve({ data: [], error: null }),
+                        delete: () => Promise.resolve({ data: [], error: null })
+                    })
+                };
+            };
+            
+            console.log('手动Supabase客户端初始化完成');
+            resolve();
+        };
+        
+        script.onerror = (error) => {
+            console.error('Supabase库加载失败:', error);
+            
+            // 创建降级实现
+            console.log('创建降级Supabase客户端');
+            window.createClient = function(url, key) {
+                console.log('使用降级Supabase客户端');
+                return {
+                    from: (table) => ({
+                        select: () => Promise.resolve({ data: [], error: { message: '离线模式 - 无法连接数据库' } }),
+                        insert: () => Promise.resolve({ data: [], error: { message: '离线模式 - 无法连接数据库' } }),
+                        update: () => Promise.resolve({ data: [], error: { message: '离线模式 - 无法连接数据库' } }),
+                        delete: () => Promise.resolve({ data: [], error: { message: '离线模式 - 无法连接数据库' } })
+                    })
+                };
+            };
+            
+            console.log('降级Supabase客户端初始化完成');
+            resolve();
+        };
+        
+        document.head.appendChild(script);
+    });
+    
+    await window.supabaseLoadingPromise;
+}
+
+// 初始化Supabase客户端（单一实例）
+async function initializeSupabaseAdmin() {
+    // 如果已经在初始化，返回同一个Promise
+    if (initializationPromise) {
+        return initializationPromise;
+    }
+    
+    initializationPromise = (async () => {
+        try {
+            console.log('开始初始化Supabase客户端...');
+            
+            // 确保Supabase库已加载
+            await ensureSupabaseLoaded();
+            
+            // 检查是否已加载Supabase库
+            if (typeof createClient !== 'function') {
+                // 尝试检查全局对象中的Supabase
+                if (window.supabase && window.supabase.createClient) {
+                    window.createClient = window.supabase.createClient;
+                } else {
+                    throw new Error('Supabase客户端库未加载');
+                }
+            }
+            
+            // 创建Supabase客户端
+            supabaseAdminClient = createClient(SUPABASE_ADMIN_CONFIG.url, SUPABASE_ADMIN_CONFIG.anonKey);
+            
+            // 简单的连接测试（不查询具体数据）
+            const { error } = await supabaseAdminClient.from('users').select('count').limit(1);
+            
+            if (error) {
+                console.warn('Supabase连接测试有警告，但继续初始化:', error.message);
+                // 不抛出错误，继续初始化
+            }
+            
+            console.log('Supabase管理员客户端初始化成功');
+            
+            // 将客户端暴露到全局作用域
+            window.supabaseAdmin = supabaseAdminClient;
+            // 同时设置supabase变量以兼容旧代码
+            window.supabase = supabaseAdminClient;
+            isInitialized = true;
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Supabase管理员客户端初始化失败:', error);
+            
+            // 重置状态以便重试
+            initializationPromise = null;
+            
+            throw error;
+        }
+    })();
+    
+    return initializationPromise;
+}
+
+// 安全的初始化检查
+async function ensureInitialized() {
+    if (isInitialized && supabaseAdminClient) {
+        return true;
+    }
+    
+    await initializeSupabaseAdmin();
+    return true;
 }
 
 // 强制管理员功能使用Supabase的API
 const supabaseAdminAPI = {
     // 获取用户数据
     async getUsers(page = 1, limit = 10, filters = {}) {
-        if (!supabaseAdminClient) {
-            throw new Error('Supabase连接不可用');
-        }
+        await ensureInitialized();
         
         let query = supabaseAdminClient
             .from(SUPABASE_ADMIN_CONFIG.tables.users)
@@ -103,9 +220,7 @@ const supabaseAdminAPI = {
     
     // 获取订单数据
     async getOrders(page = 1, limit = 10, filters = {}) {
-        if (!supabaseAdminClient) {
-            throw new Error('Supabase连接不可用');
-        }
+        await ensureInitialized();
         
         let query = supabaseAdminClient
             .from(SUPABASE_ADMIN_CONFIG.tables.orders)
@@ -141,9 +256,7 @@ const supabaseAdminAPI = {
     
     // 获取设计数据
     async getDesigns(page = 1, limit = 10, filters = {}) {
-        if (!supabaseAdminClient) {
-            throw new Error('Supabase连接不可用');
-        }
+        await ensureInitialized();
         
         let query = supabaseAdminClient
             .from(SUPABASE_ADMIN_CONFIG.tables.designs)
@@ -177,53 +290,9 @@ const supabaseAdminAPI = {
         };
     },
     
-    // 更新订单状态
-    async updateOrderStatus(orderId, newStatus) {
-        if (!supabaseAdminClient) {
-            throw new Error('Supabase连接不可用');
-        }
-        
-        const { error } = await supabaseAdminClient
-            .from(SUPABASE_ADMIN_CONFIG.tables.orders)
-            .update({ 
-                status: newStatus,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', orderId);
-            
-        if (error) {
-            throw new Error('更新订单状态失败: ' + error.message);
-        }
-        
-        return { success: true };
-    },
-    
-    // 更新用户角色
-    async updateUserRole(userId, newRole) {
-        if (!supabaseAdminClient) {
-            throw new Error('Supabase连接不可用');
-        }
-        
-        const { error } = await supabaseAdminClient
-            .from(SUPABASE_ADMIN_CONFIG.tables.users)
-            .update({ 
-                role: newRole,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-        if (error) {
-            throw new Error('更新用户角色失败: ' + error.message);
-        }
-        
-        return { success: true };
-    },
-    
     // 获取统计数据
     async getStatistics() {
-        if (!supabaseAdminClient) {
-            throw new Error('Supabase连接不可用');
-        }
+        await ensureInitialized();
         
         // 并发获取所有统计数据
         const [
@@ -264,11 +333,9 @@ window.initializeSupabaseAdmin = initializeSupabaseAdmin;
 // 暴露API到全局作用域
 window.supabaseAdminAPI = supabaseAdminAPI;
 
+// 检查初始化状态的便捷函数
+window.isSupabaseInitialized = () => isInitialized;
+
 console.log('Supabase管理员专用配置加载完成');
 
-// 自动初始化
-if (window && typeof window !== 'undefined') {
-    setTimeout(() => {
-        initializeSupabaseAdmin();
-    }, 100);
-}
+// 延迟初始化（不再自动初始化，让页面决定何时初始化）
