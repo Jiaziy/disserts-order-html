@@ -245,9 +245,31 @@
             const errorMessage = document.getElementById('errorMessage');
             const successMessage = document.getElementById('successMessage');
 
-            // 检查是否已登录
-            if (localStorage.getItem('admin_token')) {
-                window.location.href = 'admin-dashboard.html';
+            // 检查是否已登录（更加严格的检查）
+            const adminToken = localStorage.getItem('admin_token');
+            const adminId = localStorage.getItem('admin_id');
+            const adminEmail = localStorage.getItem('admin_email');
+            const adminLoginTime = localStorage.getItem('admin_login_time');
+            
+            // 检查是否有完整的认证信息
+            if (adminToken && adminId && adminEmail && adminLoginTime) {
+                // 检查登录时间是否过期（24小时内）
+                const loginTime = new Date(adminLoginTime);
+                const now = new Date();
+                const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff <= 24) {
+                    console.log('检测到有效的登录状态，跳转到仪表板');
+                    window.location.href = 'admin-dashboard.html';
+                } else {
+                    console.log('登录已过期，清除认证信息');
+                    // 清除过期认证
+                    localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_id');
+                    localStorage.removeItem('admin_email');
+                    localStorage.removeItem('admin_role');
+                    localStorage.removeItem('admin_login_time');
+                }
             }
 
             loginForm.addEventListener('submit', async function(e) {

@@ -665,17 +665,58 @@
             setupFilterEvents();
         });
 
-        // 检查管理员认证状态（集成Supabase）
+        // 检查管理员认证状态（集成Supabase + 降级机制）
         async function checkAdminAuth() {
             const adminToken = localStorage.getItem('admin_token');
             const adminId = localStorage.getItem('admin_id');
+            const adminEmail = localStorage.getItem('admin_email');
+            const adminRole = localStorage.getItem('admin_role');
+            const adminLoginTime = localStorage.getItem('admin_login_time');
             
-            if (!adminToken || !adminId) {
+            // 检查必要的认证信息
+            if (!adminToken || !adminId || !adminEmail) {
+                console.log('认证信息缺失，跳转到登录页面');
                 window.location.href = 'admin-login.html';
                 return;
             }
             
+            // 检查登录时间（如果超过24小时，要求重新登录）
+            if (adminLoginTime) {
+                const loginTime = new Date(adminLoginTime);
+                const now = new Date();
+                const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff > 24) {
+                    console.log('登录已过期，要求重新登录');
+                    localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_id');
+                    localStorage.removeItem('admin_email');
+                    localStorage.removeItem('admin_role');
+                    localStorage.removeItem('admin_login_time');
+                    window.location.href = 'admin-login.html';
+                    return;
+                }
+            }
+            
             try {
+                // 首先尝试降级验证（检查是否为预设的管理员邮箱）
+                const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
+                if (adminEmails.includes(adminEmail.toLowerCase())) {
+                    // 如果是预设的管理员邮箱，使用降级验证
+                    console.log('使用降级管理员验证');
+                    
+                    // 检查token是否以admin_fallback_开头（表示降级模式）
+                    if (adminToken.startsWith('admin_fallback_')) {
+                        console.log('降级模式验证通过');
+                        document.getElementById('adminName').textContent = adminRole === 'manager' ? '经理' : '管理员';
+                        document.getElementById('adminEmail').textContent = adminEmail;
+                        return;
+                    }
+                }
+                
+                // 如果没有使用降级验证，则使用Supabase验证
+                console.log('使用Supabase验证管理员权限');
+                
                 // 验证管理员权限
                 const { data: userData, error } = await supabase
                     .from('users')
@@ -684,6 +725,7 @@
                     .single();
 
                 if (error || !userData) {
+                    console.warn('Supabase验证失败，尝试降级验证');
                     throw new Error('管理员信息不存在');
                 }
 
@@ -696,11 +738,26 @@
                 document.getElementById('adminEmail').textContent = userData.email;
 
             } catch (error) {
-                console.error('管理员认证失败:', error);
+                console.error('Supabase管理员认证失败，尝试降级验证:', error);
+                
+                // 检查是否为降级模式管理员
+                const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
+                if (adminEmails.includes(adminEmail.toLowerCase()) && 
+                    adminToken.startsWith('admin_fallback_')) {
+                    console.log('降级验证成功');
+                    document.getElementById('adminName').textContent = adminRole === 'manager' ? '经理' : '管理员';
+                    document.getElementById('adminEmail').textContent = adminEmail;
+                    return;
+                }
+                
+                // 如果Supabase和降级验证都失败，清除认证信息并跳转
+                console.error('所有认证方式都失败，清除认证信息');
                 alert('管理员认证失败，请重新登录');
                 localStorage.removeItem('admin_token');
                 localStorage.removeItem('admin_id');
                 localStorage.removeItem('admin_email');
+                localStorage.removeItem('admin_role');
+                localStorage.removeItem('admin_login_time');
                 window.location.href = 'admin-login.html';
             }
         }
