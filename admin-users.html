@@ -650,10 +650,9 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <script src="js/supabase-config.js"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/supabase-admin.js"></script>
-    <script src="js/supabase-admin.js"></script>
+    <!-- 引入Supabase客户端库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-admin-only.js"></script>
     <script>
         // 用户管理逻辑
         document.addEventListener('DOMContentLoaded', async function() {
@@ -737,8 +736,11 @@
                 // 显示加载状态
                 showLoading(true);
                 
+                // 检查Supabase连接
+                await initializeSupabaseAdmin();
+                
                 // 从Supabase获取用户数据，包括关联的订单数量
-                const { data: users, error } = await supabase
+                const { data: users, error } = await supabaseAdminClient
                     .from('users')
                     .select(`
                         id,

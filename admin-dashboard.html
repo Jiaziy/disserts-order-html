@@ -630,10 +630,9 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <script src="js/supabase-config.js"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/supabase-admin.js"></script>
-    <script src="js/supabase-admin.js"></script>
+    <!-- 引入Supabase客户端库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-admin-only.js"></script>
     <script>
         // 管理员系统主逻辑
         document.addEventListener('DOMContentLoaded', async function() {
@@ -803,22 +802,23 @@
         // 获取订单统计数据
         async function getOrdersStatistics() {
             try {
+                // 检查Supabase连接
+                await initializeSupabaseAdmin();
+                
+                // 使用强制Supabase API
+                const today = new Date().toISOString().split('T')[0];
+                
                 // 总订单数
-                const { count: totalOrders, error: ordersError } = await supabase
+                const { count: totalOrders } = await supabaseAdminClient
                     .from('orders')
                     .select('*', { count: 'exact', head: true });
                 
-                if (ordersError) throw ordersError;
-                
                 // 今日订单数
-                const today = new Date().toISOString().split('T')[0];
-                const { count: todayOrders, error: todayError } = await supabase
+                const { count: todayOrders } = await supabaseAdminClient
                     .from('orders')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', today + 'T00:00:00.000Z')
                     .lte('created_at', today + 'T23:59:59.999Z');
-                
-                if (todayError) throw todayError;
                 
                 return { 
                     total: totalOrders || 0, 
@@ -827,29 +827,30 @@
                 };
             } catch (error) {
                 console.error('获取订单统计数据失败:', error);
-                return { total: 0, today: 0, trend: 'down' };
+                throw new Error('Supabase连接失败：' + error.message);
             }
         }
 
         // 获取用户统计数据
         async function getUsersStatistics() {
             try {
+                // 检查Supabase连接
+                await initializeSupabaseAdmin();
+                
+                // 使用强制Supabase API
+                const today = new Date().toISOString().split('T')[0];
+                
                 // 总用户数
-                const { count: totalUsers, error: usersError } = await supabase
+                const { count: totalUsers } = await supabaseAdminClient
                     .from('users')
                     .select('*', { count: 'exact', head: true });
                 
-                if (usersError) throw usersError;
-                
                 // 今日新增用户
-                const today = new Date().toISOString().split('T')[0];
-                const { count: todayUsers, error: todayError } = await supabase
+                const { count: todayUsers } = await supabaseAdminClient
                     .from('users')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', today + 'T00:00:00.000Z')
                     .lte('created_at', today + 'T23:59:59.999Z');
-                
-                if (todayError) throw todayError;
                 
                 return { 
                     total: totalUsers || 0, 
@@ -858,29 +859,30 @@
                 };
             } catch (error) {
                 console.error('获取用户统计数据失败:', error);
-                return { total: 0, today: 0, trend: 'down' };
+                throw new Error('Supabase连接失败：' + error.message);
             }
         }
 
         // 获取设计统计数据
         async function getDesignsStatistics() {
             try {
+                // 检查Supabase连接
+                await initializeSupabaseAdmin();
+                
+                // 使用强制Supabase API
+                const today = new Date().toISOString().split('T')[0];
+                
                 // 总设计数
-                const { count: totalDesigns, error: designsError } = await supabase
+                const { count: totalDesigns } = await supabaseAdminClient
                     .from('designs')
                     .select('*', { count: 'exact', head: true });
                 
-                if (designsError) throw designsError;
-                
                 // 今日新增设计
-                const today = new Date().toISOString().split('T')[0];
-                const { count: todayDesigns, error: todayError } = await supabase
+                const { count: todayDesigns } = await supabaseAdminClient
                     .from('designs')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', today + 'T00:00:00.000Z')
                     .lte('created_at', today + 'T23:59:59.999Z');
-                
-                if (todayError) throw todayError;
                 
                 return { 
                     total: totalDesigns || 0, 
@@ -889,15 +891,18 @@
                 };
             } catch (error) {
                 console.error('获取设计统计数据失败:', error);
-                return { total: 0, today: 0, trend: 'down' };
+                throw new Error('Supabase连接失败：' + error.message);
             }
         }
 
         // 获取收入统计数据
         async function getRevenueStatistics() {
             try {
+                // 检查Supabase连接
+                await initializeSupabaseAdmin();
+                
                 // 总收入
-                const { data: revenueData, error: revenueError } = await supabase
+                const { data: revenueData, error: revenueError } = await supabaseAdminClient
                     .from('orders')
                     .select('total_price')
                     .eq('status', 'completed');
@@ -908,7 +913,7 @@
                 
                 // 今日收入
                 const today = new Date().toISOString().split('T')[0];
-                const { data: todayRevenueData, error: todayError } = await supabase
+                const { data: todayRevenueData, error: todayError } = await supabaseAdminClient
                     .from('orders')
                     .select('total_price')
                     .eq('status', 'completed')
@@ -926,7 +931,7 @@
                 };
             } catch (error) {
                 console.error('获取收入统计数据失败:', error);
-                return { total: 0, today: 0, trend: 'down' };
+                throw new Error('Supabase连接失败：' + error.message);
             }
         }
 
