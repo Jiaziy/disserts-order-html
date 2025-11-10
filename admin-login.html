@@ -234,10 +234,23 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js"></script>
-    <script src="js/supabase.js"></script>
     <script>
+        // 本地管理员账号配置
+        const LOCAL_ADMIN_ACCOUNTS = {
+            // 管理员账号
+            'admin@chocolate.com': {
+                password: 'admin123',
+                role: 'admin',
+                name: '系统管理员'
+            },
+            // 经理账号
+            'manager@chocolate.com': {
+                password: 'admin123', 
+                role: 'manager',
+                name: '业务经理'
+            }
+        };
+
         // 管理员登录逻辑
         document.addEventListener('DOMContentLoaded', function() {
             const loginForm = document.getElementById('adminLoginForm');
@@ -248,12 +261,11 @@
 
             // 检查是否已登录（更加严格的检查）
             const adminToken = localStorage.getItem('admin_token');
-            const adminId = localStorage.getItem('admin_id');
             const adminEmail = localStorage.getItem('admin_email');
             const adminLoginTime = localStorage.getItem('admin_login_time');
             
             // 检查是否有完整的认证信息
-            if (adminToken && adminId && adminEmail && adminLoginTime) {
+            if (adminToken && adminEmail && adminLoginTime) {
                 // 检查登录时间是否过期（24小时内）
                 const loginTime = new Date(adminLoginTime);
                 const now = new Date();
@@ -266,7 +278,6 @@
                     console.log('登录已过期，清除认证信息');
                     // 清除过期认证
                     localStorage.removeItem('admin_token');
-                    localStorage.removeItem('admin_id');
                     localStorage.removeItem('admin_email');
                     localStorage.removeItem('admin_role');
                     localStorage.removeItem('admin_login_time');
@@ -276,7 +287,7 @@
             loginForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
-                const email = document.getElementById('adminEmail').value;
+                const email = document.getElementById('adminEmail').value.trim();
                 const password = document.getElementById('adminPassword').value;
 
                 // 显示加载状态
@@ -288,9 +299,7 @@
                 errorMessage.style.display = 'none';
 
                 try {
-                    // 这里应该连接到实际的认证系统
-                    // 目前使用模拟的认证逻辑
-                    await adminLogin(email, password);
+                    await localAdminLogin(email, password);
                     
                     // 显示成功信息
                     successMessage.textContent = '登录成功，正在跳转...';
@@ -313,100 +322,49 @@
                 }
             });
 
-        // 管理员登录函数 - 集成Supabase认证
-        async function adminLogin(email, password) {
-            try {
-                // 首先使用Supabase进行用户认证
-                const result = await document.supabase.auth.signIn(email, password);
-
-                if (!result.success) {
-                    throw new Error(result.error || '认证失败');
+            // 本地管理员登录函数
+            async function localAdminLogin(email, password) {
+                // 验证邮箱格式
+                if (!email || !isValidEmail(email)) {
+                    throw new Error('请输入有效的邮箱地址');
                 }
-
-                // 检查用户是否为管理员 - 使用auth.users表的元数据
-                let userRole = 'user';
                 
-                try {
-                    // 检查认证用户的元数据来判断是否为管理员
-                    if (result.user && result.user.user_metadata) {
-                        // 从user_metadata中获取角色
-                        if (result.user.user_metadata.role) {
-                            userRole = result.user.user_metadata.role;
-                        } else {
-                            // 根据邮箱判断管理员角色
-                            const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
-                            if (adminEmails.includes(email.toLowerCase())) {
-                                userRole = email.includes('manager') ? 'manager' : 'admin';
-                            }
-                        }
-                    }
-                } catch (dbError) {
-                    console.warn('元数据查询失败，使用邮箱验证:', dbError);
-                    // 降级验证
-                    const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
-                    userRole = adminEmails.includes(email.toLowerCase()) ? 
-                        (email.includes('manager') ? 'manager' : 'admin') : 'user';
-                }
-
-                // 验证用户角色
-                if (userRole !== 'admin' && userRole !== 'manager') {
+                // 检查是否是管理员邮箱
+                const account = LOCAL_ADMIN_ACCOUNTS[email.toLowerCase()];
+                if (!account) {
                     throw new Error('无权限访问管理员系统');
                 }
-
-                // 使用Supabase认证成功后的真实用户信息
-                const adminToken = result.user.id + '_admin_token';
+                
+                // 验证密码
+                if (password !== account.password) {
+                    throw new Error('密码错误');
+                }
+                
+                // 生成认证token
+                const adminToken = 'admin_local_' + Date.now() + '_token';
                 localStorage.setItem('admin_token', adminToken);
                 localStorage.setItem('admin_email', email);
-                localStorage.setItem('admin_id', result.user.id);
-                localStorage.setItem('admin_role', userRole);
+                localStorage.setItem('admin_role', account.role);
+                localStorage.setItem('admin_name', account.name);
                 localStorage.setItem('admin_login_time', new Date().toISOString());
-
+                
+                console.log('本地管理员登录成功:', email);
                 return { 
                     success: true, 
                     token: adminToken,
                     user: {
-                        id: result.user.id,
                         email: email,
-                        role: userRole
+                        role: account.role,
+                        name: account.name
                     }
                 };
+            }
 
-            } catch (error) {
-                console.error('管理员登录失败:', error);
-                
-                // 降级方案：如果Supabase不可用，使用本地管理员验证
-                if (error.message.includes('Failed to fetch') || error.message.includes('Network')) {
-                    return await fallbackAdminLogin(email, password);
-                }
-                
-                throw error;
+            // 邮箱验证函数
+            function isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
             }
-        }
-
-        // 降级管理员登录函数
-        async function fallbackAdminLogin(email, password) {
-            // 检查是否是管理员邮箱
-            const adminEmails = ['admin@chocolate.com', 'manager@chocolate.com'];
-            
-            if (!adminEmails.includes(email.toLowerCase())) {
-                throw new Error('无权限访问管理员系统');
-            }
-            
-            // 验证密码
-            if (password !== 'admin123') {
-                throw new Error('密码错误');
-            }
-            
-            // 生成模拟token
-            const adminToken = 'admin_fallback_' + Date.now() + '_token';
-            localStorage.setItem('admin_token', adminToken);
-            localStorage.setItem('admin_email', email);
-            localStorage.setItem('admin_role', email === 'manager@chocolate.com' ? 'manager' : 'admin');
-            localStorage.setItem('admin_login_time', new Date().toISOString());
-            
-            console.warn('使用降级管理员登录模式');
-            return { success: true, token: adminToken };
-        }
 
             // 添加输入框实时验证
             const inputs = loginForm.querySelectorAll('input');
