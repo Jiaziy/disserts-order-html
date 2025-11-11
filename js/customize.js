@@ -385,14 +385,8 @@ async function submitOrder() {
             }
         };
         
-        // 使用 document.supabase 创建订单
-        let newOrder = null;
-        if (document.supabase && document.supabase.orders) {
-            newOrder = await document.supabase.orders.createOrder(orderData);
-        }
-        
         // 确保订单数据正确保存到本地存储
-        const fallbackOrder = {
+        const newOrder = {
             id: 'order_' + Date.now(),
             userId: currentUser?.id || 'anonymous',
             productType: customizeState.productType,

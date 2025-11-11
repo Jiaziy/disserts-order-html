@@ -24,22 +24,9 @@ class SweetsGallery {
      */
     async loadDesigns() {
         try {
-            // 优先使用Supabase获取设计数据
-            if (window.Supabase && window.Supabase.auth) {
-                const currentUser = await window.Supabase.auth.getCurrentUser();
-                if (currentUser && currentUser.id) {
-                    this.designs = await window.Supabase.designs.getUserDesigns(currentUser.id);
-                    console.log('从Supabase加载设计数据:', this.designs.length, '个设计');
-                } else {
-                    // 用户未登录，使用本地存储
-                    this.designs = this.loadDesignsFromLocalStorage();
-                    console.log('用户未登录，从本地存储加载设计数据:', this.designs.length, '个设计');
-                }
-            } else {
-                // Supabase不可用，使用本地存储
-                this.designs = this.loadDesignsFromLocalStorage();
-                console.log('Supabase不可用，从本地存储加载设计数据:', this.designs.length, '个设计');
-            }
+            // 使用本地存储获取设计数据
+            this.designs = this.loadDesignsFromLocalStorage();
+            console.log('从本地存储加载设计数据:', this.designs.length, '个设计');
             
             this.filteredDesigns = [...this.designs];
         } catch (error) {
@@ -87,22 +74,9 @@ class SweetsGallery {
      */
     async loadOrders() {
         try {
-            // 优先使用Supabase获取订单数据
-            if (window.Supabase && window.Supabase.auth) {
-                const currentUser = await window.Supabase.auth.getCurrentUser();
-                if (currentUser && currentUser.id) {
-                    this.orders = await window.Supabase.orders.getUserOrders(currentUser.id);
-                    console.log('从Supabase加载订单数据:', this.orders.length, '个订单');
-                } else {
-                    // 用户未登录，使用本地存储
-                    this.orders = this.loadOrdersFromLocalStorage();
-                    console.log('用户未登录，从本地存储加载订单数据:', this.orders.length, '个订单');
-                }
-            } else {
-                // Supabase不可用，使用本地存储
-                this.orders = this.loadOrdersFromLocalStorage();
-                console.log('Supabase不可用，从本地存储加载订单数据:', this.orders.length, '个订单');
-            }
+            // 使用本地存储获取订单数据
+            this.orders = this.loadOrdersFromLocalStorage();
+            console.log('从本地存储加载订单数据:', this.orders.length, '个订单');
             
             this.filteredOrders = [...this.orders];
         } catch (error) {

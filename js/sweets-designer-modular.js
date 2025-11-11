@@ -1,0 +1,443 @@
+/**
+ * 甜点设计器 - 主控制器模块
+ * 负责协调各个模块的工作，提供统一的接口
+ */
+
+// 为NavigationManager提供的全局getState函数
+window.getState = function() {
+    return {};
+};
+
+class SweetsDesigner {
+    constructor() {
+        // DOM引用
+        this.canvas = null;
+        this.ctx = null;
+        this.previewCanvas = null;
+        this.previewCtx = null;
+        
+        // 立即创建window.designer对象并添加getState方法
+        window.designer = window.designer || {};
+        window.designer.getState = function() {
+            return {};
+        };
+        
+        // 核心状态
+        this.isDrawing = false;
+        this.currentColor = '#3D2314'; // 默认巧克力棕色
+        this.brushSize = 5;
+        this.dessertType = 'chocolate'; // 固定为巧克力类型
+        this.canvasSize = { width: 1024, height: 768 };
+        this.currentTool = 'brush';
+        this.templateSelected = false; // 跟踪是否已选择模板
+        this.previewZoomLevel = 1; // 预览画布的缩放级别
+        
+        // 图片相关状态
+        this.uploadedImage = null; // 上传的图片对象
+        this.imageConfirmed = false; // 图片是否已确认固定
+        
+        // 历史记录
+        this.history = [];
+        this.currentStep = -1;
+        
+        // 模块实例
+        this.tools = null;
+        this.templates = null;
+        this.text = null;
+        this.images = null;
+        this.renderer = null;
+        this.events = null;
+        this.storage = null;
+        
+        // 初始化模块
+        this.initModules();
+    }
+
+    /**
+     * 初始化所有模块
+     */
+    initModules() {
+        // 检查模块是否已加载
+        if (typeof DesignerTools === 'undefined' ||
+            typeof DesignerTemplates === 'undefined' ||
+            typeof DesignerText === 'undefined' ||
+            typeof DesignerImages === 'undefined' ||
+            typeof DesignerRenderer === 'undefined' ||
+            typeof DesignerEvents === 'undefined' ||
+            typeof DesignerStorage === 'undefined') {
+            console.error('模块未正确加载，请检查脚本引用顺序');
+            return;
+        }
+        
+        // 创建模块实例
+        this.tools = new DesignerTools(this);
+        this.templates = new DesignerTemplates(this);
+        this.text = new DesignerText(this);
+        this.images = new DesignerImages(this);
+        this.renderer = new DesignerRenderer(this);
+        this.storage = new DesignerStorage(this);
+        this.events = new DesignerEvents(this);
+        
+        console.log('甜点设计器模块已初始化');
+    }
+
+    /**
+     * 初始化设计器
+     */
+    init() {
+        // 获取DOM元素
+        this.canvas = document.getElementById('design-canvas');
+        this.previewCanvas = document.getElementById('preview-canvas');
+        
+        if (!this.canvas || !this.previewCanvas) {
+            console.error('画布元素未找到');
+            return;
+        }
+        
+        // 设置画布上下文
+        this.ctx = this.canvas.getContext('2d');
+        this.previewCtx = this.previewCanvas.getContext('2d');
+        
+        // 设置画布尺寸
+        this.canvas.width = this.canvas.offsetWidth;
+        this.canvas.height = this.canvas.offsetHeight;
+        this.previewCanvas.width = this.previewCanvas.offsetWidth;
+        this.previewCanvas.height = this.previewCanvas.offsetHeight;
+        
+        // 初始化画布
+        this.clearCanvas();
+        this.clearPreview();
+        
+        // 设置初始样式
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // 初始化事件监听器
+        this.initEventListeners();
+        
+        // 初始化UI
+        this.updateUI();
+        
+        console.log('甜点设计器已初始化');
+        this.showToast('甜点设计器已准备就绪');
+    }
+
+    /**
+     * 初始化事件监听器
+     */
+    initEventListeners() {
+        // 文件上传事件
+        const uploadInput = document.getElementById('image-upload-input');
+        if (uploadInput) {
+            uploadInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    this.handleImageUpload(e.target.files[0]);
+                }
+            });
+        }
+        
+        // 上传区域事件
+        const uploadArea = document.getElementById('upload-area');
+        if (uploadArea) {
+            // 阻止默认拖拽行为
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    this.handleImageUpload(e.dataTransfer.files[0]);
+                }
+            });
+        }
+        
+        // 文本添加事件
+        const addTextBtn = document.getElementById('add-text-btn');
+        if (addTextBtn) {
+            addTextBtn.addEventListener('click', () => {
+                this.text.addText();
+            });
+        }
+        
+        // 重置画布事件
+        const resetBtn = document.getElementById('reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.renderer.resetCanvas();
+            });
+        }
+        
+        // 保存设计事件
+        const saveBtn = document.getElementById('save-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.storage.saveDesignToLocal();
+            });
+        }
+        
+        // 撤销重做事件
+        const undoBtn = document.getElementById('undo-btn');
+        if (undoBtn) {
+            undoBtn.addEventListener('click', () => {
+                this.storage.undo();
+            });
+        }
+        
+        const redoBtn = document.getElementById('redo-btn');
+        if (redoBtn) {
+            redoBtn.addEventListener('click', () => {
+                this.storage.redo();
+            });
+        }
+        
+        // 工具切换事件
+        const toolButtons = document.querySelectorAll('.tool-btn');
+        toolButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tool = e.target.dataset.tool;
+                if (tool) {
+                    this.setCurrentTool(tool);
+                }
+            });
+        });
+        
+        console.log('事件监听器已初始化');
+    }
+
+    /**
+     * 设置当前工具
+     */
+    setCurrentTool(tool) {
+        this.currentTool = tool;
+        
+        // 更新UI
+        this.updateUI();
+        
+        // 设置光标样式
+        switch (tool) {
+            case 'brush':
+                this.canvas.style.cursor = 'crosshair';
+                break;
+            case 'text':
+                this.canvas.style.cursor = 'text';
+                break;
+            case 'image':
+                this.canvas.style.cursor = 'move';
+                break;
+            case 'shape':
+                this.canvas.style.cursor = 'crosshair';
+                break;
+            default:
+                this.canvas.style.cursor = 'default';
+        }
+        
+        console.log('当前工具:', tool);
+    }
+
+    /**
+     * 处理图片上传
+     */
+    async handleImageUpload(file) {
+        return this.images.handleImageUpload(file);
+    }
+
+    /**
+     * 渲染所有元素
+     */
+    renderAllElements() {
+        this.renderer.renderAllElements();
+    }
+
+    /**
+     * 仅渲染元素（不清空背景）
+     */
+    renderElementsOnly() {
+        this.renderer.renderElementsOnly();
+    }
+
+    /**
+     * 清空画布
+     */
+    clearCanvas(fullClear = true) {
+        this.renderer.clearCanvas(fullClear);
+    }
+
+    /**
+     * 清空预览画布
+     */
+    clearPreview() {
+        if (this.previewCtx) {
+            this.previewCtx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
+            this.previewCtx.fillStyle = '#ffffff';
+            this.previewCtx.fillRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
+        }
+    }
+
+    /**
+     * 更新预览画布
+     */
+    updatePreview() {
+        if (!this.previewCanvas || !this.previewCtx) return;
+        
+        // 清空预览画布
+        this.clearPreview();
+        
+        // 如果选择了模板，绘制模板预览
+        if (this.templates.isTemplateSelected()) {
+            this.previewCtx.fillStyle = '#f8f9fa';
+            this.previewCtx.fillRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
+            
+            // 这里可以添加预览逻辑
+            // 目前简化为绘制边框
+            this.previewCtx.strokeStyle = '#dee2e6';
+            this.previewCtx.lineWidth = 2;
+            this.previewCtx.strokeRect(10, 10, this.previewCanvas.width - 20, this.previewCanvas.height - 20);
+        }
+    }
+
+    /**
+     * 更新UI界面
+     */
+    updateUI() {
+        // 更新工具按钮状态
+        const toolButtons = document.querySelectorAll('.tool-btn');
+        toolButtons.forEach(btn => {
+            if (btn.dataset.tool === this.currentTool) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // 更新其他UI状态
+        // 这里可以根据需要添加更多的UI更新逻辑
+    }
+
+    /**
+     * 显示提示消息
+     */
+    showToast(message, duration = 3000) {
+        // 创建或获取toast容器
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            document.body.appendChild(toastContainer);
+        }
+        
+        // 创建toast元素
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            animation: slideIn 0.3s ease-out;
+        `;
+        toast.textContent = message;
+        
+        // 添加动画样式
+        if (!document.querySelector('#toast-animations')) {
+            const style = document.createElement('style');
+            style.id = 'toast-animations';
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes fadeOut {
+                    from { opacity: 1; }
+                    to { opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // 自动移除toast
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, duration);
+    }
+
+    /**
+     * 保存当前状态
+     */
+    saveState(state = 'user-action') {
+        this.storage.saveState(state);
+    }
+
+    /**
+     * 撤销操作
+     */
+    undo() {
+        this.storage.undo();
+    }
+
+    /**
+     * 重做操作
+     */
+    redo() {
+        this.storage.redo();
+    }
+
+    /**
+     * 重置设计器
+     */
+    reset() {
+        this.renderer.resetCanvas();
+    }
+
+    /**
+     * 获取设计器状态
+     */
+    getState() {
+        return {
+            currentTool: this.currentTool,
+            templateSelected: this.templates ? this.templates.isTemplateSelected() : false,
+            currentTemplateId: this.templates ? this.templates.getCurrentTemplateId() : null,
+            uploadedImage: this.uploadedImage ? true : false,
+            imageConfirmed: this.imageConfirmed,
+            textElementsCount: this.text ? this.text.textElements.length : 0
+        };
+    }
+
+    /**
+     * 清理资源
+     */
+    destroy() {
+        if (this.events) {
+            this.events.cleanup();
+        }
+        
+        // 清理其他资源
+        console.log('甜点设计器已销毁');
+    }
+}
+
+// 全局访问
+window.SweetsDesigner = SweetsDesigner;

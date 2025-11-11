@@ -630,23 +630,13 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- 引入Supabase管理员专用配置 -->
-    <script src="js/supabase-admin-only.js"></script>
+    <!-- 引入本地存储管理器 -->
+    <script src="js/local-storage-manager.js"></script>
     <script>
         // 管理员系统主逻辑
         document.addEventListener('DOMContentLoaded', async function() {
             // 检查登录状态
             await checkAdminAuth();
-            
-            // 首先初始化Supabase客户端
-            try {
-                await initializeSupabaseAdmin();
-                console.log('Supabase客户端初始化完成');
-            } catch (error) {
-                console.error('Supabase初始化失败:', error);
-                showError('数据库连接失败，请刷新页面重试');
-                return;
-            }
             
             // 初始化页面
             initDashboard();
@@ -811,127 +801,106 @@
         // 获取订单统计数据
         async function getOrdersStatistics() {
             try {
-                // 检查Supabase连接
-                await initializeSupabaseAdmin();
-                
-                // 使用强制Supabase API
+                // 从本地存储获取订单数据
+                const orders = localStorageManager.getOrders() || [];
                 const today = new Date().toISOString().split('T')[0];
                 
                 // 总订单数
-                const { count: totalOrders } = await supabaseAdminClient
-                    .from('orders')
-                    .select('*', { count: 'exact', head: true });
+                const totalOrders = orders.length;
                 
                 // 今日订单数
-                const { count: todayOrders } = await supabaseAdminClient
-                    .from('orders')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', today + 'T00:00:00.000Z')
-                    .lte('created_at', today + 'T23:59:59.999Z');
+                const todayOrders = orders.filter(order => {
+                    const orderDate = new Date(order.createdAt || order.timestamp).toISOString().split('T')[0];
+                    return orderDate === today;
+                }).length;
                 
                 return { 
-                    total: totalOrders || 0, 
-                    today: todayOrders || 0,
+                    total: totalOrders, 
+                    today: todayOrders,
                     trend: todayOrders > 0 ? 'up' : 'down'
                 };
             } catch (error) {
                 console.error('获取订单统计数据失败:', error);
-                throw new Error('Supabase连接失败：' + error.message);
+                throw new Error('本地数据获取失败：' + error.message);
             }
         }
 
         // 获取用户统计数据
         async function getUsersStatistics() {
             try {
-                // 检查Supabase连接
-                await initializeSupabaseAdmin();
-                
-                // 使用强制Supabase API
+                // 从本地存储获取用户数据
+                const users = localStorageManager.getUsers() || [];
                 const today = new Date().toISOString().split('T')[0];
                 
                 // 总用户数
-                const { count: totalUsers } = await supabaseAdminClient
-                    .from('users')
-                    .select('*', { count: 'exact', head: true });
+                const totalUsers = users.length;
                 
                 // 今日新增用户
-                const { count: todayUsers } = await supabaseAdminClient
-                    .from('users')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', today + 'T00:00:00.000Z')
-                    .lte('created_at', today + 'T23:59:59.999Z');
+                const todayUsers = users.filter(user => {
+                    const userDate = new Date(user.createdAt || user.timestamp).toISOString().split('T')[0];
+                    return userDate === today;
+                }).length;
                 
                 return { 
-                    total: totalUsers || 0, 
-                    today: todayUsers || 0,
+                    total: totalUsers, 
+                    today: todayUsers,
                     trend: todayUsers > 0 ? 'up' : 'down'
                 };
             } catch (error) {
                 console.error('获取用户统计数据失败:', error);
-                throw new Error('Supabase连接失败：' + error.message);
+                throw new Error('本地数据获取失败：' + error.message);
             }
         }
 
         // 获取设计统计数据
         async function getDesignsStatistics() {
             try {
-                // 检查Supabase连接
-                await initializeSupabaseAdmin();
-                
-                // 使用强制Supabase API
+                // 从本地存储获取设计数据
+                const designs = localStorageManager.getDesigns() || [];
                 const today = new Date().toISOString().split('T')[0];
                 
                 // 总设计数
-                const { count: totalDesigns } = await supabaseAdminClient
-                    .from('designs')
-                    .select('*', { count: 'exact', head: true });
+                const totalDesigns = designs.length;
                 
                 // 今日新增设计
-                const { count: todayDesigns } = await supabaseAdminClient
-                    .from('designs')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', today + 'T00:00:00.000Z')
-                    .lte('created_at', today + 'T23:59:59.999Z');
+                const todayDesigns = designs.filter(design => {
+                    const designDate = new Date(design.createdAt || design.timestamp).toISOString().split('T')[0];
+                    return designDate === today;
+                }).length;
                 
                 return { 
-                    total: totalDesigns || 0, 
-                    today: todayDesigns || 0,
+                    total: totalDesigns, 
+                    today: todayDesigns,
                     trend: todayDesigns > 0 ? 'up' : 'down'
                 };
             } catch (error) {
                 console.error('获取设计统计数据失败:', error);
-                throw new Error('Supabase连接失败：' + error.message);
+                throw new Error('本地数据获取失败：' + error.message);
             }
         }
 
         // 获取收入统计数据
         async function getRevenueStatistics() {
             try {
-                // 检查Supabase连接
-                await initializeSupabaseAdmin();
-                
-                // 总收入
-                const { data: revenueData, error: revenueError } = await supabaseAdminClient
-                    .from('orders')
-                    .select('total_price')
-                    .eq('status', 'completed');
-                
-                if (revenueError) throw revenueError;
-                
-                const totalRevenue = revenueData.reduce((sum, order) => sum + (parseFloat(order.total_price) || 0), 0);
-                
-                // 今日收入
+                // 从本地存储获取订单数据
+                const orders = localStorageManager.getOrders() || [];
                 const today = new Date().toISOString().split('T')[0];
-                const { data: todayRevenueData, error: todayError } = await supabaseAdminClient
-                    .from('orders')
-                    .select('total_price')
-                    .eq('status', 'completed')
-                    .gte('created_at', today + 'T00:00:00.000Z')
-                    .lte('created_at', today + 'T23:59:59.999Z');
                 
-                if (todayError) throw todayError;
+                // 计算总收入（已完成订单）
+                const completedOrders = orders.filter(order => order.status === 'completed' || order.status === '已审核');
+                const totalRevenue = completedOrders.reduce((sum, order) => {
+                    return sum + (parseFloat(order.totalPrice) || parseFloat(order.price) || 0);
+                }, 0);
                 
-                const todayRevenue = todayRevenueData.reduce((sum, order) => sum + (parseFloat(order.total_price) || 0), 0);
+                // 计算今日收入
+                const todayCompletedOrders = completedOrders.filter(order => {
+                    const orderDate = new Date(order.createdAt || order.timestamp).toISOString().split('T')[0];
+                    return orderDate === today;
+                });
+                
+                const todayRevenue = todayCompletedOrders.reduce((sum, order) => {
+                    return sum + (parseFloat(order.totalPrice) || parseFloat(order.price) || 0);
+                }, 0);
                 
                 return { 
                     total: totalRevenue, 
@@ -940,7 +909,7 @@
                 };
             } catch (error) {
                 console.error('获取收入统计数据失败:', error);
-                throw new Error('Supabase连接失败：' + error.message);
+                throw new Error('本地数据获取失败：' + error.message);
             }
         }
 
@@ -975,35 +944,25 @@
             }
         }
 
-        // 加载最近订单（集成Supabase）
+        // 加载最近订单（集成本地存储）
         async function loadRecentOrders() {
             const tableBody = document.getElementById('recentOrdersTable');
             
             try {
-                // 从Supabase获取最近10个订单
-                const { data: orders, error } = await window.supabaseAdmin
-                    .from('orders')
-                    .select(`
-                        id,
-                        created_at,
-                        customer_info,
-                        product_type,
-                        selected_style,
-                        quantity,
-                        total_price,
-                        status
-                    `)
-                    .order('created_at', { ascending: false })
-                    .limit(10);
-                
-                if (error) throw error;
+                // 从本地存储获取最近10个订单
+                const allOrders = localStorageManager.getOrders() || [];
+                const orders = allOrders
+                    .sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp))
+                    .slice(0, 10);
                 
                 if (orders && orders.length > 0) {
                     tableBody.innerHTML = orders.map(order => {
-                        const customerName = order.customer_info?.name || '匿名用户';
-                        const productName = `${order.product_type} - ${order.selected_style}`;
-                        const formattedTime = new Date(order.created_at).toLocaleString('zh-CN');
-                        const formattedAmount = '¥' + parseFloat(order.total_price || 0).toFixed(2);
+                        // 兼容不同字段名
+                        const customerInfo = order.customerInfo || order.customer_info;
+                        const customerName = (customerInfo && typeof customerInfo === 'object' ? customerInfo.name : null) || order.customerName || '匿名用户';
+                        const productName = `${order.productType || order.product_type} - ${order.selectedStyle || order.selected_style}`;
+                        const formattedTime = new Date(order.createdAt || order.timestamp).toLocaleString('zh-CN');
+                        const formattedAmount = '¥' + parseFloat(order.totalPrice || order.total_price || 0).toFixed(2);
                         
                         // 状态映射
                         const statusMap = {
@@ -1050,35 +1009,27 @@
             }
         }
 
-        // 加载待审核订单（集成Supabase）
+        // 加载待审核订单（集成本地存储）
         async function loadPendingOrders() {
             const tableBody = document.getElementById('pendingOrdersTable');
             
             try {
-                // 从Supabase获取待审核订单
-                const { data: orders, error } = await window.supabaseAdmin
-                    .from('orders')
-                    .select(`
-                        id,
-                        created_at,
-                        customer_info,
-                        product_type,
-                        selected_style,
-                        custom_text
-                    `)
-                    .eq('status', 'pending')
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-                
-                if (error) throw error;
+                // 从本地存储获取待审核订单
+                const allOrders = localStorageManager.getOrders() || [];
+                const orders = allOrders
+                    .filter(order => order.status === 'pending')
+                    .sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp))
+                    .slice(0, 5);
                 
                 if (orders && orders.length > 0) {
                     tableBody.innerHTML = orders.map(order => {
-                        const customerName = order.customer_info?.name || '匿名用户';
-                        const productDesc = order.custom_text ? 
-                            `${order.product_type} - ${order.custom_text}` : 
-                            `${order.product_type} - ${order.selected_style}`;
-                        const formattedTime = new Date(order.created_at).toLocaleString('zh-CN');
+                        // 兼容不同字段名
+                        const customerInfo = order.customerInfo || order.customer_info;
+                        const customerName = (customerInfo && typeof customerInfo === 'object' ? customerInfo.name : null) || order.customerName || '匿名用户';
+                        const productDesc = order.customText || order.custom_text ? 
+                            `${order.productType || order.product_type} - ${order.customText || order.custom_text}` : 
+                            `${order.productType || order.product_type} - ${order.selectedStyle || order.selected_style}`;
+                        const formattedTime = new Date(order.createdAt || order.timestamp).toLocaleString('zh-CN');
                         
                         return `
                             <tr>
@@ -1159,17 +1110,11 @@
         // 审核订单
         async function reviewOrder(orderId) {
             try {
-                // 更新订单状态为已审核
-                const { error } = await supabase
-                    .from('orders')
-                    .update({ 
-                        status: 'approved',
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', orderId);
-
-                if (error) {
-                    throw error;
+                // 使用本地存储管理器更新订单状态
+                const success = localStorageManager.updateOrderStatus(orderId, 'approved');
+                
+                if (!success) {
+                    throw new Error('订单状态更新失败');
                 }
 
                 alert(`订单 ${orderId} 审核通过！`);

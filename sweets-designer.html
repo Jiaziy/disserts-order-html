@@ -77,437 +77,174 @@
             }, 5000);
         }
     </script>
-    
-    <script>
-        // 全局错误处理，捕获Vercel部署环境的脚本加载问题
-        window.addEventListener('error', function(e) {
-            console.error('全局错误捕获:', e.error);
-            console.error('错误源:', e.filename || '未知文件');
-            console.error('错误行号:', e.lineno);
-            console.error('错误列号:', e.colno);
-            
-            // 可以在这里添加错误上报逻辑
-        });
-        
-        // 确保DOM完全加载后初始化
-        window.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM内容已加载完成');
-        });
-        
-        // 确保所有资源加载完成后再初始化
-        window.addEventListener('load', function() {
-            console.log('页面所有资源已加载完成，开始初始化设计器');
-            
-            // 检查必要的脚本是否已加载
-            if (typeof SweetsDesigner !== 'undefined') {
-                console.log('SweetsDesigner类已定义，开始初始化');
-                try {
-                    const designer = new SweetsDesigner();
-                    window.sweetsDesigner = designer;
-                    console.log('设计器初始化成功');
-                } catch (error) {
-                    console.error('设计器初始化失败:', error);
-                    // 如果初始化失败，显示错误提示
-                    showErrorNotification('设计器初始化失败，请刷新页面重试');
-                }
-            } else {
-                console.error('SweetsDesigner类未定义，脚本可能未正确加载');
-                showErrorNotification('脚本加载失败，请检查网络连接后刷新页面');
-            }
-        });
-        
-        // 显示错误通知的函数
-        function showErrorNotification(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #ff6b6b;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                z-index: 10000;
-                max-width: 300px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                font-family: Arial, sans-serif;
-                font-size: 14px;
-            `;
-            notification.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            document.body.appendChild(notification);
-            
-            // 5秒后自动消失
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
-        }
-    </script>
-    
-    <style>
-        /* 设计器样式 */
-        .designer-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-shrink: 0;
-        }
-        
-        .action-btn {
-            padding: 8px 16px;
-            border: 1px solid #ddd;
-            background-color: #fff;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-        
-        .action-btn:hover {
-            background-color: #f0f0f0;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .action-btn.primary {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-        }
-        
-        .action-btn.primary:hover {
-            background-color: #45a049;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-        
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        
-        .design-info {
-                background-color: #f8f9fa;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #e9ecef;
-                max-width: 300px;
-                flex-shrink: 0;
-            }
-            
-            .fixed-info {
-                position: sticky;
-                top: 0;
-                z-index: 10;
-                margin-bottom: 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            
-            .preview-section {
-                margin-top: 0;
-            }
-        
-        .design-name-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: border-color 0.3s ease;
-        }
-        
-        .design-name-input:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-        }
-        
-        .design-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #e9ecef;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .preview-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            flex: 1;
-            min-width: 80px;
-            text-align: center;
-        }
-        
-        .btn-primary {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background-color: #45a049;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-        
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .designer-actions {
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-            
-            .action-btn {
-                flex: 1;
-                min-width: 100px;
-            }
-            
-            .preview-actions {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="designer-container">
         <!-- 顶部导航栏 -->
         <header class="designer-header">
             <div class="header-left">
-                <h1><i class="fas fa-cookie"></i> 甜点设计师</h1>
-                <p>创造您的专属美味艺术</p>
+                <h1><i class="fas fa-palette"></i> 甜点设计师</h1>
+                <span class="subtitle">创造您的专属美味艺术</span>
             </div>
-            <div class="header-right">
-                <div class="designer-actions">
-                    <button id="reset-view-btn" class="action-btn">重置视图</button>
-                    <button id="save-design-btn" class="action-btn">保存设计</button>
-                    <button id="export-image-btn" class="action-btn">导出图片</button>
-                    <button id="export-with-template-btn" class="action-btn">导出带模板</button>
-                    <button id="design-complete-btn" class="action-btn primary">设计完成</button>
-                </div>
+            <div class="header-actions">
+                <button id="save-design-btn" class="btn btn-primary">
+                    <i class="fas fa-save"></i> 保存设计
+                </button>
+                <button id="export-image-btn" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> 导出图片
+                </button>
+                <button id="design-complete-btn" class="btn btn-success">
+                    <i class="fas fa-check"></i> 设计完成
+                </button>
             </div>
         </header>
 
         <!-- 主要设计区域 -->
         <main class="designer-main">
             <!-- 左侧工具栏 -->
-            <aside class="tool-panel">
-                <!-- 历史操作按钮 -->
-                <div class="tool-section history-actions">
-                    <h3>操作历史</h3>
-                    <div class="history-buttons-group">
-                        <button id="undo-action-btn" class="history-tool-btn">
-                            <i class="fas fa-undo"></i>
-                            <span>撤销</span>
+            <aside class="sidebar sidebar-left">
+                <!-- 历史操作 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-history"></i> 操作历史</h3>
+                    <div class="button-group">
+                        <button id="undo-action-btn" class="btn btn-outline">
+                            <i class="fas fa-undo"></i> 撤销
                         </button>
-                        <button id="redo-action-btn" class="history-tool-btn">
-                            <i class="fas fa-redo"></i>
-                            <span>重做</span>
+                        <button id="redo-action-btn" class="btn btn-outline">
+                            <i class="fas fa-redo"></i> 重做
                         </button>
-                        <button id="clear-canvas-action-btn" class="history-tool-btn clear-btn">
-                            <i class="fas fa-trash"></i>
-                            <span>清空</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="panel-section">
-                    <h3><i class="fas fa-tools"></i> 工具</h3>
-                    <div class="tool-buttons">
-                        <button class="tool-btn active" data-tool="brush"><i class="fas fa-paint-brush"></i> 画笔</button>
-                        <button class="tool-btn" data-tool="eraser"><i class="fas fa-eraser"></i> 橡皮擦</button>
-                        <button class="tool-btn" data-tool="shape"><i class="fas fa-shapes"></i> 形状</button>
-                        <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> 文字</button>
-                        <button class="tool-btn" data-tool="image"><i class="fas fa-image"></i> 图片</button>
                     </div>
                 </div>
 
-                <div class="panel-section">
+                <!-- 绘画工具 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-paint-brush"></i> 绘画工具</h3>
+                    <div class="button-group">
+                        <button class="tool-btn active" data-tool="brush">
+                            <i class="fas fa-brush"></i> 画笔
+                        </button>
+                        <button class="tool-btn" data-tool="eraser">
+                            <i class="fas fa-eraser"></i> 橡皮擦
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 画笔设置 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-sliders-h"></i> 画笔设置</h3>
+                    <div class="control-group">
+                        <label>画笔大小</label>
+                        <input type="range" id="brush-size" min="1" max="50" value="5">
+                        <span id="size-value">5px</span>
+                    </div>
+                    <div class="control-group">
+                        <label>画笔颜色</label>
+                        <input type="color" id="custom-color" value="#FF6B6B">
+                    </div>
+                </div>
+
+                <!-- 模板选择 -->
+                <div class="tool-section">
                     <h3><i class="fas fa-shapes"></i> 模板选择</h3>
-                    <p class="panel-tip" style="color: #666; font-size: 14px; margin-bottom: 10px;">选择下方模板开始设计，切换模板不会清空您的作品</p>
-                    <div class="template-options">
-                        <button class="template-btn" data-template="circle" title="圆形巧克力">
+                    <div class="template-grid">
+                        <button class="template-btn" data-template="circle">
                             <i class="fas fa-circle"></i>
                             <span>圆形</span>
                         </button>
-                        <button class="template-btn" data-template="square" title="方形巧克力">
+                        <button class="template-btn" data-template="square">
                             <i class="fas fa-square"></i>
                             <span>方形</span>
                         </button>
-                        <button class="template-btn" data-template="heart" title="心形巧克力">
+                        <button class="template-btn" data-template="heart">
                             <i class="fas fa-heart"></i>
                             <span>心形</span>
                         </button>
                     </div>
                 </div>
-                
-                <div class="panel-section">
-                    <h3><i class="fas fa-shapes"></i> 形状选择</h3>
-                    <div class="shape-options">
-                        <button class="shape-btn" data-shape="heart"><i class="fas fa-heart"></i> 心形</button>
-                        <button class="shape-btn" data-shape="star"><i class="fas fa-star"></i> 星形</button>
-                        <button class="shape-btn" data-shape="circle"><i class="fas fa-circle"></i> 圆形</button>
-                        <button class="shape-btn" data-shape="square"><i class="fas fa-square"></i> 方形</button>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3><i class="fas fa-palette"></i> 颜色选择</h3>
-                    <div class="color-picker">
-                        <div class="color-options">
-                            <div class="color-swatch active" data-color="#FF6B6B"></div>
-                            <div class="color-swatch" data-color="#4ECDC4"></div>
-                            <div class="color-swatch" data-color="#45B7D1"></div>
-                            <div class="color-swatch" data-color="#96CEB4"></div>
-                            <div class="color-swatch" data-color="#FECA57"></div>
-                            <div class="color-swatch" data-color="#FF9FF3"></div>
-                            <div class="color-swatch" data-color="#A29BFE"></div>
-                            <div class="color-swatch" data-color="#FF7675"></div>
-                            <div class="color-swatch" data-color="#FD79A8"></div>
-                            <div class="color-swatch" data-color="#FDDA79"></div>
-                            <div class="color-swatch" data-color="#FDCB6E"></div>
-                            <div class="color-swatch" data-color="#6C5CE7"></div>
-                        </div>
-                        <input type="color" id="custom-color" value="#FF6B6B">
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3><i class="fas fa-sliders-h"></i> 画笔大小</h3>
-                    <div class="brush-size-control">
-                        <input type="range" id="brush-size" min="1" max="50" value="5">
-                        <span id="size-value">5px</span>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3><i class="fas fa-chocolate-bar"></i> 巧克力设计</h3>
-                    <div class="dessert-types">
-                        <button class="dessert-type-btn active" data-type="chocolate" disabled><i class="fas fa-chocolate-bar"></i> 巧克力</button>
-                    </div>
-                    <p class="panel-note">选择下方模板开始设计您的巧克力</p>
-                </div>
             </aside>
 
             <!-- 中央画布区域 -->
-            <div class="canvas-container">
-                <div class="canvas-wrapper">
+            <section class="canvas-area">
+                <div class="canvas-container">
                     <canvas id="design-canvas"></canvas>
                 </div>
                 <div class="canvas-controls">
-                    <button id="reset-view-btn" class="canvas-control-btn"><i class="fas fa-sync"></i> 重置视图</button>
+                    <button id="reset-view-btn" class="btn btn-outline">
+                        <i class="fas fa-sync"></i> 重置视图
+                    </button>
+                    <button id="clear-canvas-action-btn" class="btn btn-outline">
+                        <i class="fas fa-trash"></i> 清空画布
+                    </button>
                 </div>
-                <div class="canvas-info">
-                    <span id="canvas-dimensions">画布尺寸: 自适应</span>
-                    <span id="zoom-level">缩放: 100%</span>
-                </div>
-            </div>
+            </section>
 
-            <!-- 右侧预览和属性面板 -->
-            <aside class="preview-panel">
-                <!-- 设计信息栏 - 固定在预览上方 -->
-                <div class="design-info fixed-info">
-                    <h3>设计信息</h3>
-                    <div class="design-name-container">
-    <input type="text" id="design-name" class="design-name-input" value="未命名设计" placeholder="输入设计名称">
-    <button id="save-design-name-btn" class="btn-small btn-primary">保存</button>
-</div>
-                    <p>保存设计后可在定制页面查看和下单</p>
-                    <div class="design-stats">
-                        <span>画布尺寸: <span id="canvas-size">1024 x 768</span></span>
-                        <span>元素数量: <span id="elements-count">0</span></span>
+            <!-- 右侧属性面板 -->
+            <aside class="sidebar sidebar-right">
+                <!-- 设计信息 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-info-circle"></i> 设计信息</h3>
+                    <div class="info-panel">
+                        <div class="input-group">
+                            <label>设计名称</label>
+                            <input type="text" id="design-name" value="未命名设计" placeholder="输入设计名称">
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">画布尺寸</span>
+                                <span class="stat-value">1024 × 768</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">元素数量</span>
+                                <span class="stat-value">0</span>
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn-secondary" id="rename-design"><i class="fas fa-edit"></i> 重命名</button>
-                </div>
-                <div class="panel-section preview-section">
-                    <h3><i class="fas fa-eye"></i> 预览</h3>
-                    <div class="preview-container">
-                        <canvas id="preview-canvas" width="300" height="300"></canvas>
-                    </div>
-                    <div class="preview-controls">
-                    <button id="switch-3d-preview" class="btn-secondary"><i class="fas fa-cube"></i> 3D 预览</button>
-                    <button id="rotate-model" class="btn-secondary"><i class="fas fa-sync"></i> 旋转模型</button>
-                </div>
-                <div class="preview-actions">
-                    <button id="save-design-btn-mobile" class="btn btn-secondary">保存设计</button>
-                    <button id="export-image-btn-mobile" class="btn btn-secondary" onclick="exportDesign()">导出图片</button>
-                    <button id="export-with-template-btn-mobile" class="btn btn-secondary" onclick="exportWithTemplate()">导出带模板</button>
-                    <button id="design-complete-btn-mobile" class="btn btn-primary">设计完成</button>
-                </div>
                 </div>
 
-
-
-                <div class="panel-section">
-                    <h3><i class="fas fa-file-upload"></i> 上传图片</h3>
-                    <div class="image-upload">
+                <!-- 图片上传 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-image"></i> 图片上传</h3>
+                    <div class="upload-area">
                         <label for="image-upload-input" class="upload-label">
                             <i class="fas fa-cloud-upload-alt"></i>
                             <span>拖放图片或点击上传</span>
-                            <input type="file" id="image-upload-input" accept="image/*" style="display: none;">
+                            <input type="file" id="image-upload-input" accept="image/*">
                         </label>
-                        <p class="upload-note">支持 JPG, PNG, GIF 格式</p>
+                        <small>支持 JPG, PNG, GIF 格式</small>
                     </div>
                 </div>
 
-                <div class="panel-section">
-                    <h3><i class="fas fa-align-left"></i> 文字输入</h3>
-                    <div class="text-input-container">
+                <!-- 文字工具 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-font"></i> 文字工具</h3>
+                    <div class="text-tools">
                         <input type="text" id="text-input" placeholder="输入文字...">
-                        <select id="font-family">
-                            <option value="Arial">Arial</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Courier New">Courier New</option>
-                            <option value="Comic Sans MS">Comic Sans MS</option>
-                        </select>
-                        <select id="font-size">
-                            <option value="12">12px</option>
-                            <option value="16">16px</option>
-                            <option value="20">20px</option>
-                            <option value="24">24px</option>
-                            <option value="30">30px</option>
-                            <option value="36">36px</option>
-                        </select>
-                        <button id="add-text-btn" class="btn-primary"><i class="fas fa-plus"></i> 添加文字</button>
+                        <div class="text-controls">
+                            <select id="font-family">
+                                <option value="Arial">Arial</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Microsoft YaHei">微软雅黑</option>
+                            </select>
+                            <select id="font-size">
+                                <option value="16">16px</option>
+                                <option value="20">20px</option>
+                                <option value="24">24px</option>
+                            </select>
+                        </div>
+                        <button id="add-text-btn" class="btn btn-primary">添加文字</button>
                     </div>
                 </div>
 
-                <div class="panel-section">
-                    <h3><i class="fas fa-save"></i> 保存与导出</h3>
-                    <div class="action-buttons">
-                        <button id="save-design-btn" class="btn-primary"><i class="fas fa-save"></i> 保存设计</button>
-                        <button id="export-image-btn" class="btn-secondary"><i class="fas fa-download"></i> 导出图片</button>
-                        <button id="create-order-btn" class="btn-primary">
-                            <i class="fas fa-shopping-cart"></i>
-                            <span>提交订单</span>
+                <!-- 实时预览 -->
+                <div class="tool-section">
+                    <h3><i class="fas fa-eye"></i> 预览</h3>
+                    <div class="preview-container">
+                        <canvas id="preview-canvas" width="200" height="200"></canvas>
+                    </div>
+                    <div class="preview-controls">
+                        <button id="switch-3d-preview" class="btn btn-outline">
+                            <i class="fas fa-cube"></i> 3D预览
                         </button>
-                        <p class="action-note">保存后可进入订单页面进行后续操作</p>
                     </div>
                 </div>
             </aside>
@@ -517,18 +254,14 @@
         <footer class="designer-footer">
             <div class="status-info">
                 <span id="current-tool">当前工具: 画笔</span>
+                <span id="zoom-level">缩放: 100%</span>
                 <span id="canvas-size">画布: 1024×768</span>
             </div>
         </footer>
     </div>
 
     <!-- JavaScript -->
-    <!-- 引入Supabase客户端库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- 引入Supabase配置和工具 -->
-    <script src="js/supabase-config.js"></script>
-    <script src="js/supabase.js"></script>
-    <!-- 引入存储工具 -->
+    <script src="js/local-storage-manager.js"></script>
     <script src="js/storage-utils.js"></script>
     <script src="js/navigation-manager.js"></script>
     <script src="js/sweets-designer.js"></script>

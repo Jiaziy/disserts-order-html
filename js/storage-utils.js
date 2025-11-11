@@ -1,6 +1,6 @@
 /**
- * 本地存储工具类
- * 统一管理应用中的所有本地存储操作
+ * 本地存储工具类 - 纯本地存储版本
+ * 统一管理应用中的所有本地存储操作，不依赖Supabase
  */
 class StorageUtils {
     // 存储键名常量
@@ -115,10 +115,11 @@ class StorageUtils {
     }
 
     /**
-     * 添加一个设计
+     * 添加一个设计 - 纯本地存储版本
      */
-    static addDesign(designData) {
+    static async addDesign(designData) {
         try {
+            // 直接保存到本地存储
             const designs = this.getDesigns();
             
             // 确保设计数据包含所有必要字段
@@ -335,10 +336,11 @@ class StorageUtils {
     }
 
     /**
-     * 添加订单
+     * 添加订单 - 纯本地存储版本
      */
-    static addOrder(orderData) {
+    static async addOrder(orderData) {
         try {
+            // 直接保存到本地存储
             const orders = this.getOrders();
             
             const newOrder = {

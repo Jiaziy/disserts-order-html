@@ -645,8 +645,8 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- 引入Supabase管理员专用配置 -->
-    <script src="js/supabase-admin-only.js"></script>
+    <!-- 引入本地存储管理器 -->
+    <script src="js/local-storage-manager.js"></script>
     <script>
         // 全局变量
         let currentOrders = [];
@@ -763,8 +763,8 @@
             showLoading();
             
             try {
-                // 从Supabase获取所有订单数据
-                const allOrders = await getOrdersFromSupabase();
+                // 从本地存储获取所有订单数据
+                const allOrders = await getOrdersFromLocalStorage();
                 
                 // 应用客户端筛选
                 const filteredOrders = filterOrders(allOrders, currentFilters);
@@ -788,41 +788,14 @@
             }
         }
 
-        // 从Supabase获取订单数据
-        async function getOrdersFromSupabase(filters = {}) {
+        // 从本地存储获取订单数据
+        async function getOrdersFromLocalStorage(filters = {}) {
             try {
-                // 构建查询条件 - 由于用户表在auth模式，先只获取订单数据
-                let query = window.supabaseClient.from('orders').select('*');
-                
-                // 应用状态筛选
-                if (filters.status && filters.status !== '') {
-                    query = query.eq('status', filters.status);
-                }
-                
-                // 应用日期筛选
-                if (filters.date && filters.date !== '') {
-                    query = query.gte('created_at', filters.date + 'T00:00:00')
-                                .lte('created_at', filters.date + 'T23:59:59');
-                }
-                
-                // 应用订单号筛选
-                if (filters.orderId && filters.orderId !== '') {
-                    query = query.ilike('id', `%${filters.orderId}%`);
-                }
-                
-                const { data, error } = await query.order('created_at', { ascending: false });
-                
-                if (error) {
-                    console.error('Supabase查询失败:', error);
-                    throw new Error('获取订单数据失败');
-                }
-                
-                if (!data) {
-                    return [];
-                }
+                // 从本地存储管理器获取订单数据
+                const orders = localStorageManager.getOrders() || [];
                 
                 // 转换数据格式以兼容前端显示
-                return data.map(order => {
+                return orders.map(order => {
                     let customerName = '未知用户';
                     let customerPhone = '无联系方式';
                     
@@ -841,30 +814,30 @@
                     }
                     
                     return {
-                        id: order.id,
+                        id: order.id || order.orderId,
                         customer: {
-                            name: customerName,
-                            phone: customerPhone,
-                            email: order.user_id // 使用user_id作为临时标识
+                            name: customerName || order.customerName || '匿名用户',
+                            phone: customerPhone || order.customerPhone || '无联系方式',
+                            email: order.customerEmail || '未提供'
                         },
-                        product: order.product_type || '定制巧克力',
+                        product: order.productType || order.product_type || '定制巧克力',
                         quantity: order.quantity || 1,
-                        amount: '¥' + (parseFloat(order.total_price) || 0).toFixed(2),
+                        amount: '¥' + (parseFloat(order.totalPrice) || parseFloat(order.price) || 0).toFixed(2),
                         status: order.status || 'pending',
                         statusText: getStatusText(order.status),
-                        submitTime: formatDateTime(order.created_at),
-                        designImage: order.design_image,
+                        submitTime: formatDateTime(order.createdAt || order.timestamp),
+                        designImage: order.designImage || order.design_image,
                         customer_info: order.customer_info,
-                        custom_text: order.custom_text,
-                        selected_style: order.selected_style,
-                        selected_packaging: order.selected_packaging,
-                        created_at: order.created_at
+                        custom_text: order.customText || order.custom_text,
+                        selected_style: order.selectedStyle || order.selected_style,
+                        selected_packaging: order.selectedPackaging || order.selected_packaging,
+                        created_at: order.createdAt || order.timestamp
                     };
                 });
                 
             } catch (error) {
                 console.error('获取订单数据失败:', error);
-                throw error;
+                throw new Error('本地数据获取失败：' + error.message);
             }
         }
 
@@ -1128,15 +1101,10 @@
         // 查看订单详情
         async function viewOrderDetail(orderId) {
             try {
-                // 从Supabase获取订单详情
-                const { data: order, error } = await window.supabaseClient
-                    .from('orders')
-                    .select('*')
-                    .eq('id', orderId)
-                    .single();
+                // 从本地存储获取订单详情
+                const order = await getOrderFromLocalStorage(orderId);
                 
-                if (error) {
-                    console.error('获取订单详情失败:', error);
+                if (!order) {
                     showOperationResult('获取订单详情失败', false);
                     return;
                 }
@@ -1147,6 +1115,24 @@
             } catch (error) {
                 console.error('查看订单详情失败:', error);
                 showOperationResult('查看订单详情失败', false);
+            }
+        }
+
+        // 从本地存储获取单个订单
+        async function getOrderFromLocalStorage(orderId) {
+            try {
+                const orders = localStorageManager.getOrders() || [];
+                const order = orders.find(order => (order.id || order.orderId) === orderId);
+                
+                if (!order) {
+                    throw new Error('订单不存在');
+                }
+                
+                return order;
+                
+            } catch (error) {
+                console.error('获取订单详情失败:', error);
+                throw error;
             }
         }
 
@@ -1261,21 +1247,21 @@
 
         // 编辑订单
         async function editOrder(orderId) {
-            // 获取订单详情
-            const { data: order, error } = await window.supabaseClient
-                .from('orders')
-                .select('*')
-                .eq('id', orderId)
-                .single();
-            
-            if (error) {
+            try {
+                // 从本地存储获取订单详情
+                const order = await getOrderFromLocalStorage(orderId);
+                
+                if (!order) {
+                    alert('获取订单详情失败');
+                    return;
+                }
+                
+                // 显示编辑表单
+                showEditOrderModal(order);
+            } catch (error) {
                 console.error('获取订单详情失败:', error);
                 alert('获取订单详情失败');
-                return;
             }
-            
-            // 显示编辑表单
-            showEditOrderModal(order);
         }
 
         // 显示编辑订单弹窗
@@ -1335,18 +1321,15 @@
                 const quantity = parseInt(document.getElementById('editOrderQuantity').value);
                 const totalPrice = parseFloat(document.getElementById('editOrderTotalPrice').value);
                 
-                const { error } = await window.supabaseClient
-                    .from('orders')
-                    .update({ 
-                        status: status,
-                        quantity: quantity,
-                        total_price: totalPrice,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', orderId);
+                // 更新本地存储中的订单数据
+                const success = await updateOrderInLocalStorage(orderId, {
+                    status: status,
+                    quantity: quantity,
+                    totalPrice: totalPrice,
+                    updatedAt: new Date().toISOString()
+                });
                 
-                if (error) {
-                    console.error('保存订单编辑失败:', error);
+                if (!success) {
                     alert('保存订单编辑失败');
                     return;
                 }
@@ -1358,6 +1341,30 @@
             } catch (error) {
                 console.error('保存订单编辑失败:', error);
                 alert('保存订单编辑失败');
+            }
+        }
+
+        // 更新本地存储中的订单
+        async function updateOrderInLocalStorage(orderId, updateData) {
+            try {
+                const orders = localStorageManager.getOrders() || [];
+                const orderIndex = orders.findIndex(order => (order.id || order.orderId) === orderId);
+                
+                if (orderIndex === -1) {
+                    throw new Error('订单不存在');
+                }
+                
+                // 更新订单数据
+                orders[orderIndex] = { ...orders[orderIndex], ...updateData };
+                
+                // 保存到本地存储
+                localStorageManager.saveOrders(orders);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('更新订单失败:', error);
+                throw error;
             }
         }
 
@@ -1374,24 +1381,21 @@
             try {
                 const updateData = { 
                     status: newStatus,
-                    updated_at: new Date().toISOString()
+                    updatedAt: new Date().toISOString()
                 };
                 
                 if (reason) {
-                    updateData.reject_reason = reason;
+                    updateData.rejectReason = reason;
                 }
                 
                 if (newStatus === 'completed') {
-                    updateData.completed_at = new Date().toISOString();
+                    updateData.completedAt = new Date().toISOString();
                 }
                 
-                const { error } = await window.supabaseClient
-                    .from('orders')
-                    .update(updateData)
-                    .eq('id', orderId);
+                // 更新本地存储中的订单状态
+                const success = await updateOrderInLocalStorage(orderId, updateData);
                 
-                if (error) {
-                    console.error('更新订单状态失败:', error);
+                if (!success) {
                     throw new Error('更新订单状态失败');
                 }
                 

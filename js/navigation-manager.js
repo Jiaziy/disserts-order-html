@@ -149,17 +149,7 @@ class NavigationManager {
         try {
             // 检查本地存储
             const currentUser = localStorage.getItem('currentUser');
-            if (currentUser) {
-                return true;
-            }
-            
-            // 检查Supabase（如果可用）
-            if (typeof document.supabase !== 'undefined') {
-                const user = await document.supabase.auth.getCurrentUser();
-                return !!user;
-            }
-            
-            return false;
+            return !!currentUser;
         } catch (error) {
             console.error('检查登录状态失败:', error);
             return false;

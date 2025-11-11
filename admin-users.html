@@ -650,8 +650,8 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- 引入Supabase管理员专用配置 -->
-    <script src="js/supabase-admin-only.js"></script>
+    <!-- 引入本地存储管理器 -->
+    <script src="js/local-storage-manager.js"></script>
     <script>
         // 用户管理逻辑
         document.addEventListener('DOMContentLoaded', async function() {
@@ -729,31 +729,14 @@
             document.getElementById('adminEmail').textContent = adminEmail;
         }
 
-        // 加载用户数据（集成Supabase）
+        // 加载用户数据（集成本地存储）
         async function loadUsersData() {
             try {
                 // 显示加载状态
                 showLoading(true);
                 
-                // 检查Supabase连接
-                await initializeSupabaseAdmin();
-                
-                // 从Supabase获取用户数据，包括关联的订单数量
-                const { data: users, error } = await supabaseAdminClient
-                    .from('users')
-                    .select(`
-                        id,
-                        name,
-                        email,
-                        role,
-                        avatar_url,
-                        created_at,
-                        last_login_at,
-                        orders:orders(count)
-                    `)
-                    .order('created_at', { ascending: false });
-                
-                if (error) throw error;
+                // 从本地存储获取用户数据
+                const users = await getUsersFromLocalStorage();
                 
                 const tableBody = document.getElementById('usersTable');
                 const totalUsersCount = document.getElementById('totalUsersCount');
@@ -840,6 +823,90 @@
                     </tr>
                 `;
                 showLoading(false);
+            }
+        }
+
+        // 从本地存储获取用户数据
+        async function getUsersFromLocalStorage() {
+            try {
+                // 从本地存储管理器获取用户数据
+                const users = localStorageManager.getUsers() || [];
+                
+                // 处理用户数据格式，确保兼容性
+                return users.map(user => {
+                    // 转换数据格式，确保字段一致性
+                    return {
+                        id: user.id || user.userId,
+                        name: user.name || user.username || (user.email ? user.email.split('@')[0] : '匿名用户'),
+                        email: user.email || user.userEmail || '未提供邮箱',
+                        role: user.role || 'user',
+                        avatar_url: user.avatarUrl || user.avatar,
+                        created_at: user.createdAt || user.registrationDate || new Date().toISOString(),
+                        last_login_at: user.lastLoginAt || user.lastLogin,
+                        // 从订单数据中计算订单数量
+                        orders: [{ count: calculateUserOrderCount(user.id || user.userId) }]
+                    };
+                });
+                
+            } catch (error) {
+                console.error('获取用户数据失败:', error);
+                throw new Error('本地用户数据获取失败：' + error.message);
+            }
+        }
+
+        // 计算用户的订单数量
+        function calculateUserOrderCount(userId) {
+            try {
+                const orders = localStorageManager.getOrders() || [];
+                return orders.filter(order => {
+                    const orderUserId = order.userId || order.user_id;
+                    return orderUserId === userId;
+                }).length;
+            } catch (error) {
+                console.error('计算用户订单数量失败:', error);
+                return 0;
+            }
+        }
+
+        // 从本地存储获取用户数据
+        async function getUsersFromLocalStorage() {
+            try {
+                // 从本地存储管理器获取用户数据
+                const users = localStorageManager.getUsers() || [];
+                
+                // 处理用户数据格式，确保兼容性
+                return users.map(user => {
+                    // 转换数据格式，确保字段一致性
+                    return {
+                        id: user.id || user.userId,
+                        name: user.name || user.username || (user.email ? user.email.split('@')[0] : '匿名用户'),
+                        email: user.email || user.userEmail || '未提供邮箱',
+                        role: user.role || 'user',
+                        avatar_url: user.avatarUrl || user.avatar,
+                        created_at: user.createdAt || user.registrationDate || new Date().toISOString(),
+                        last_login_at: user.lastLoginAt || user.lastLogin,
+                        // 从订单数据中计算订单数量
+                        orders: [{ count: calculateUserOrderCount(user.id || user.userId) }]
+                    };
+                });
+                
+            } catch (error) {
+                console.error('获取用户数据失败:', error);
+                throw new Error('本地用户数据获取失败：' + error.message);
+            }
+        }
+
+        // 计算用户的订单数量
+        function calculateUserOrderCount(userId) {
+            try {
+                const orders = localStorageManager.getOrders() || [];
+                return orders.filter(order => {
+                    const orderUserId = order.userId || order.user_id;
+                    return orderUserId === userId;
+                }).length;
+            } catch (error) {
+                console.error('计算用户订单数量失败:', error);
+                return 0;
             }
         }
 

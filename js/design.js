@@ -398,8 +398,8 @@ function handleKeyDown(e) {
     }
 }
 
-// 保存设计到用户设计库
-function saveDesign() {
+// 保存设计到用户设计库 - 使用新的本地存储管理器
+async function saveDesign() {
     try {
         const canvas = document.getElementById('design-canvas');
         const designImage = canvas.toDataURL('image/png');
@@ -426,34 +426,31 @@ function saveDesign() {
             status: 'saved'
         };
         
-        // 优先使用StorageUtils保存设计
-        if (window.StorageUtils) {
-            StorageUtils.addDesign(designData);
-            StorageUtils.saveLastDesignImage(designImage);
-            StorageUtils.saveLastDesignType(designState.designType);
+        // 使用新的本地存储管理器保存设计
+        if (window.StorageManager) {
+            const saved = window.StorageManager.addDesign(designData);
+            if (saved) {
+                // 保存为最近设计
+                window.StorageManager.saveLastDesign({
+                    image: designImage,
+                    type: designState.designType
+                });
+                console.log('设计已保存到本地存储管理器');
+            }
         } else {
-            // 降级保存到本地存储 - 'sweetsDesigns'键
-            let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            // 降级保存到本地存储
+            const designs = window.StorageUtils ? window.StorageUtils.getDesigns() : [];
             designs.push(designData);
-            localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
             
-            // 同时保存到'designs'键，确保兼容性
-            let altDesigns = JSON.parse(localStorage.getItem('designs')) || [];
-            // 转换为altDesigns期望的格式
-            const altDesign = {
-                ...designData,
-                user_id: designData.userId,
-                canvas_data: designData.canvasData,
-                dessert_type: designData.dessertType,
-                image_position: JSON.stringify(designData.imagePosition),
-                created_at: designData.createTime
-            };
-            altDesigns.push(altDesign);
-            localStorage.setItem('designs', JSON.stringify(altDesigns));
-            
-            // 保存当前设计为最近设计
-            localStorage.setItem('lastDesignImage', designImage);
-            localStorage.setItem('lastDesignType', designState.designType);
+            if (window.StorageUtils) {
+                window.StorageUtils.saveDesigns(designs);
+                window.StorageUtils.saveLastDesignImage(designImage);
+                window.StorageUtils.saveLastDesignType(designState.designType);
+            } else {
+                localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                localStorage.setItem('lastDesignImage', designImage);
+                localStorage.setItem('lastDesignType', designState.designType);
+            }
         }
         
         // 显示成功消息

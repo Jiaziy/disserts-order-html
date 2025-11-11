@@ -55,6 +55,10 @@ class SweetsDesigner {
         this.history = [];
         this.historyIndex = 0;
         
+        // 渲染优化状态变量
+        this.lastBackgroundRendered = false; // 背景是否已渲染
+        this.lastTemplateSelected = false;   // 上次模板选择状态
+        
         // 初始化
         this.init();
     }
@@ -89,114 +93,111 @@ class SweetsDesigner {
         this.updateUI();
     }
     
-    /**
-     * 从localStorage加载设计数据
-     */
-    loadDesignFromStorage() {
-        try {
-            // 检查URL参数，看是否是编辑模式
-            const urlParams = new URLSearchParams(window.location.search);
-            const editIndex = urlParams.get('edit');
+/**
+ * 从localStorage加载设计数据
+ */
+loadDesignFromStorage() {
+    try {
+        // 检查URL参数，看是否是编辑模式
+        const urlParams = new URLSearchParams(window.location.search);
+        const editIndex = urlParams.get('edit');
+        
+        if (editIndex !== null) {
+            console.log('编辑模式，加载指定设计，索引:', editIndex);
             
-            if (editIndex !== null) {
-                console.log('编辑模式，加载指定设计，索引:', editIndex);
-                
-                // 从本地存储加载设计数据
-                const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
-                const designs = JSON.parse(localStorage.getItem('designs')) || [];
-                const allDesigns = [...sweetsDesigns, ...designs];
-                
-                if (editIndex >= 0 && editIndex < allDesigns.length) {
-                    const design = allDesigns[editIndex];
-                    console.log('找到要编辑的设计:', design.name || design.designName || '未命名设计');
-                    
-                    // 设置编辑模式标识
-                    this.isEditMode = true;
-                    this.editIndex = parseInt(editIndex);
-                    
-                    // 加载设计数据
-                    this.loadDesign(design);
-                    console.log('编辑设计数据加载完成');
-                    return;
-                } else {
-                    console.error('指定的设计索引不存在:', editIndex);
-                }
-            }
+            // 从本地存储加载设计数据
+            const designs = window.StorageManager.getDesigns();
             
-            // 检查是否有待编辑的设计（从我的设计页面）
-            const savedDesign = localStorage.getItem('currentEditDesign');
-            if (savedDesign) {
-                console.log('发现待编辑的设计数据:', savedDesign.substring(0, 100) + '...');
-                const design = JSON.parse(savedDesign);
+            if (editIndex >= 0 && editIndex < designs.length) {
+                const design = designs[editIndex];
+                console.log('找到要编辑的设计:', design.name || '未命名设计');
+                
+                // 设置编辑模式标识
+                this.isEditMode = true;
+                this.editIndex = parseInt(editIndex);
+                
+                // 加载设计数据
                 this.loadDesign(design);
-                
-                // 加载后清除临时存储，避免重复加载
-                localStorage.removeItem('currentEditDesign');
-                console.log('设计数据加载完成并已清除临时存储');
+                console.log('编辑设计数据加载完成');
                 return;
+            } else {
+                console.error('指定的设计索引不存在:', editIndex);
             }
-            
-            // 检查是否有重新下单的设计（从我的订单页面）
-            const reorderDesign = localStorage.getItem('currentReorder');
-            if (reorderDesign) {
-                console.log('发现重新下单的设计数据:', reorderDesign.substring(0, 100) + '...');
-                const order = JSON.parse(reorderDesign);
-                
-                // 从订单数据中提取设计信息
-                const design = {
-                    id: order.id,
-                    name: `${order.productType} - ${order.selectedStyle}`,
-                    type: 'chocolate',
-                    shape: this.extractShapeFromOrder(order),
-                    data: order.designImage || '',
-                    createdAt: order.createTime || new Date().toISOString(),
-                    // 其他设计相关字段
-                    canvasData: order.designImage || '',
-                    dessertType: 'chocolate'
-                };
-                
-                this.loadDesign(design);
-                
-                // 加载后清除临时存储，避免重复加载
-                localStorage.removeItem('currentReorder');
-                console.log('重新下单设计数据加载完成并已清除临时存储');
-                return;
-            }
-            
-            // 检查是否有上次保存的设计数据
-            const lastDesignImage = localStorage.getItem('lastDesignImage');
-            const lastDesignType = localStorage.getItem('lastDesignType');
-            
-            // 检查是否是全新的设计会话（通过URL参数或sessionStorage标记）
-            const isNewDesign = urlParams.has('new') || sessionStorage.getItem('isNewDesignSession') === 'true';
-            
-            if (lastDesignImage && !isNewDesign) {
-                console.log('发现上次保存的设计数据，自动加载');
-                const design = {
-                    id: 'last_design_' + Date.now(),
-                    name: '上次的设计',
-                    type: lastDesignType || 'chocolate',
-                    shape: 'circle',
-                    data: lastDesignImage,
-                    createdAt: new Date().toISOString(),
-                    canvasData: lastDesignImage,
-                    dessertType: lastDesignType || 'chocolate'
-                };
-                
-                this.loadDesign(design);
-                console.log('上次设计数据加载完成');
-                return;
-            } else if (lastDesignImage && isNewDesign) {
-                console.log('发现上次保存的设计数据，但当前是全新设计会话，不自动加载');
-                // 清除sessionStorage标记，避免影响后续会话
-                sessionStorage.removeItem('isNewDesignSession');
-            }
-            
-            console.log('没有发现待加载的设计数据');
-        } catch (error) {
-            console.error('加载设计失败:', error);
         }
+        
+        // 检查是否有待编辑的设计（从我的设计页面）
+        const savedDesign = localStorage.getItem('currentEditDesign');
+        if (savedDesign) {
+            console.log('发现待编辑的设计数据:', savedDesign.substring(0, 100) + '...');
+            const design = JSON.parse(savedDesign);
+            this.loadDesign(design);
+            
+            // 加载后清除临时存储，避免重复加载
+            localStorage.removeItem('currentEditDesign');
+            console.log('设计数据加载完成并已清除临时存储');
+            return;
+        }
+        
+        // 检查是否有重新下单的设计（从我的订单页面）
+        const reorderDesign = localStorage.getItem('currentReorder');
+        if (reorderDesign) {
+            console.log('发现重新下单的设计数据:', reorderDesign.substring(0, 100) + '...');
+            const order = JSON.parse(reorderDesign);
+            
+            // 从订单数据中提取设计信息
+            const design = {
+                id: order.id,
+                name: `${order.productType} - ${order.selectedStyle}`,
+                type: 'chocolate',
+                shape: this.extractShapeFromOrder(order),
+                data: order.designImage || '',
+                createdAt: order.createTime || new Date().toISOString(),
+                // 其他设计相关字段
+                canvasData: order.designImage || '',
+                dessertType: 'chocolate'
+            };
+            
+            this.loadDesign(design);
+            
+            // 加载后清除临时存储，避免重复加载
+            localStorage.removeItem('currentReorder');
+            console.log('重新下单设计数据加载完成并已清除临时存储');
+            return;
+        }
+        
+        // 检查是否有上次保存的设计数据
+        const lastDesign = window.StorageManager.getLastDesign();
+        
+        // 检查是否是全新的设计会话（通过URL参数或sessionStorage标记）
+        const isNewDesign = urlParams.has('new') || sessionStorage.getItem('isNewDesignSession') === 'true';
+        
+        if (lastDesign && !isNewDesign) {
+            console.log('发现上次保存的设计数据，自动加载');
+            const design = {
+                id: 'last_design_' + Date.now(),
+                name: '上次的设计',
+                type: lastDesign.type || 'chocolate',
+                shape: 'circle',
+                data: lastDesign.image || '',
+                createdAt: new Date().toISOString(),
+                canvasData: lastDesign.image || '',
+                dessertType: lastDesign.type || 'chocolate'
+            };
+            
+            this.loadDesign(design);
+            console.log('上次设计数据加载完成');
+            return;
+        } else if (lastDesign && isNewDesign) {
+            console.log('发现上次保存的设计数据，但当前是全新设计会话，不自动加载');
+            // 清除sessionStorage标记，避免影响后续会话
+            sessionStorage.removeItem('isNewDesignSession');
+        }
+        
+        console.log('没有发现待加载的设计数据');
+    } catch (error) {
+        console.error('加载设计失败:', error);
     }
+}
     
     /**
      * 从订单数据中提取形状信息
@@ -516,9 +517,10 @@ class SweetsDesigner {
         // 清空画布并重新绘制背景
         this.clearCanvas(false);
         
-        // 如果有模板，重新绘制模板
-        if (this.templateSelected) {
-            this.displayChocolateTemplates();
+        // 如果有模板，仅重新绘制背景画布内容（不重新调用模板渲染）
+        if (this.templateSelected && this.backgroundCanvas) {
+            // 确保背景画布内容正确显示到主画布
+            this.ctx.drawImage(this.backgroundCanvas, 0, 0);
         }
         
         // 更新状态栏
@@ -905,8 +907,8 @@ class SweetsDesigner {
             this.selectedTextElement.x = pos.x - this.dragOffset.x;
             this.selectedTextElement.y = pos.y - this.dragOffset.y;
             
-            // 直接重新绘制整个画布
-            this.renderAllElements();
+            // 仅重新渲染元素层，避免重绘背景
+            this.renderElementsOnly();
             
             return;
         }
@@ -924,8 +926,8 @@ class SweetsDesigner {
             this.imagePosition.x = pos.x - this.dragOffset.x;
             this.imagePosition.y = pos.y - this.dragOffset.y;
             
-            // 直接重新绘制整个画布，避免使用临时画布
-            this.renderAllElements();
+            // 仅重新渲染元素层，避免重绘背景
+            this.renderElementsOnly();
             
             return;
         }
@@ -1261,7 +1263,7 @@ class SweetsDesigner {
                     this.canvas.style.cursor = 'move';
                     // 如果有上传的图片，使用正确的渲染顺序重新绘制
                     if (this.uploadedImage) {
-                        this.renderAllElements();
+                        this.renderElementsOnly();
                     }
                     break;
                 default:
@@ -1369,36 +1371,17 @@ class SweetsDesigner {
                     // 清空主画布
                     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                     
-                    // 重新绘制背景
-                    this.renderBackgroundOnly();
-                    
                     // 重新绘制图片（在背景之上，用户内容之下）
                     if (this.uploadedImage) {
                         this.drawProcessedImage();
                     }
                     
-                    // 恢复用户绘制的内容
+                    // 恢复用户绘制的内容（包括文本、绘图等所有内容）
                     this.ctx.drawImage(tempCanvas, 0, 0);
                     
                     // 更新预览
                     this.updatePreview();
                 });
-                
-                // 重新绘制所有文本元素
-                this.textElements.forEach(element => {
-                    this.ctx.save();
-                    this.ctx.font = `${element.fontSize * element.scale}px ${element.fontFamily}`;
-                    this.ctx.fillStyle = element.color;
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.translate(element.x, element.y);
-                    this.ctx.rotate(element.rotation * Math.PI / 180);
-                    this.ctx.fillText(element.text, 0, 0);
-                    this.ctx.restore();
-                });
-                
-                // 更新预览
-                this.updatePreview();
             }
         }
     }
@@ -2027,18 +2010,193 @@ class SweetsDesigner {
     
     /**
      * 渲染所有元素（文本、图片等）
+     * 优化版本：避免清空画布和重新绘制背景，只更新动态内容
      */
     renderAllElements() {
-        // 清空画布
-        this.clearCanvas();
-        this.renderBackground();
+        // 如果正在绘图，不进行全量渲染，避免干扰用户操作
+        if (this.isDrawing) {
+            return;
+        }
         
-        // 绘制图片（在背景之上，用户内容之下）
-        if (this.uploadedImage) {
+        // 检测是否需要重绘背景模板
+        let needRedrawBackground = false;
+        if (!this.lastBackgroundRendered || this.templateSelected !== this.lastTemplateSelected) {
+            needRedrawBackground = true;
+            this.lastTemplateSelected = this.templateSelected;
+        }
+        
+        // 如果不需要重绘背景，只更新元素层
+        if (!needRedrawBackground) {
+            this.renderElementsLayer();
+            return;
+        }
+        
+        // 需要重绘背景时，执行完整渲染
+        // 注意：这里不再清空画布，而是使用分层渲染
+        
+        // 1. 绘制背景（包含模板）
+        // 只在有背景画布时绘制，避免重复渲染模板
+        if (this.backgroundCanvas && this.backgroundCtx) {
+            // 使用临时画布来绘制背景，不影响已有内容
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.canvas.width;
+            tempCanvas.height = this.canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // 在临时画布上绘制背景
+            tempCtx.drawImage(this.backgroundCanvas, 0, 0);
+            
+            // 将背景绘制到主画布，使用source-over模式，避免覆盖已有内容
+            this.ctx.globalCompositeOperation = 'source-over';
+            this.ctx.drawImage(tempCanvas, 0, 0);
+            
+            this.lastBackgroundRendered = true;
+        }
+        
+        // 2. 绘制图片上传前的旧笔画（在图片之下）
+        // 仅在第一次上传图片时显示旧笔画，避免重复渲染
+        if (this.history.length > 0 && this.uploadedImage && !this.imageConfirmed) {
+            // 获取图片上传前的历史状态
+            const preImageState = this.getPreImageState();
+            if (preImageState && preImageState.canvasData) {
+                const oldCanvas = this.createCanvasFromData(preImageState.canvasData);
+                if (oldCanvas) {
+                    this.ctx.drawImage(oldCanvas, 0, 0);
+                }
+            }
+        }
+        
+        // 3. 绘制未确认的图片（在旧笔画之上，新笔画之下）
+        if (this.uploadedImage && !this.imageConfirmed) {
             this.drawProcessedImage();
         }
         
-        // 绘制所有文本元素
+        // 4. 绘制当前所有用户绘制内容（不包括历史状态）
+        if (this.offscreenCanvas && this.offscreenCtx) {
+            this.ctx.drawImage(this.offscreenCanvas, 0, 0);
+        }
+        
+        // 5. 文本元素（在最上层）
+        this.renderTextElements();
+    }
+    
+    /**
+     * 渲染元素层（仅更新动态内容）
+     * 优化版本：保留已有笔画和背景，只添加新元素
+     */
+    renderElementsLayer() {
+        // 创建临时画布来组合新内容
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // 1. 在临时画布上绘制主画布的当前内容（保留已有笔画）
+        tempCtx.drawImage(this.canvas, 0, 0);
+        
+        // 2. 在临时画布上绘制背景（如果已缓存且需要更新）
+        if (this.backgroundCanvas && this.backgroundCtx) {
+            // 使用globalCompositeOperation确保背景只在透明区域显示
+            tempCtx.globalCompositeOperation = 'destination-over';
+            tempCtx.drawImage(this.backgroundCanvas, 0, 0);
+            tempCtx.globalCompositeOperation = 'source-over';
+        }
+        
+        // 3. 绘制动态内容到临时画布（在背景之上，已有内容之下）
+        this.renderDynamicContentToCanvas(tempCtx);
+        
+        // 4. 将组合后的内容绘制回主画布，覆盖已有内容但保留笔画
+        // 使用destination-over模式，确保新内容不会覆盖已有笔画
+        this.ctx.globalCompositeOperation = 'destination-over';
+        this.ctx.drawImage(tempCanvas, 0, 0);
+        this.ctx.globalCompositeOperation = 'source-over';
+    }
+    
+    /**
+     * 渲染动态内容到指定画布
+     */
+    renderDynamicContentToCanvas(targetCtx) {
+        // 1. 绘制图片上传前的旧笔画（在图片之下）
+        if (this.history.length > 0 && this.uploadedImage && !this.imageConfirmed) {
+            const preImageState = this.getPreImageState();
+            if (preImageState && preImageState.canvasData) {
+                const oldCanvas = this.createCanvasFromData(preImageState.canvasData);
+                if (oldCanvas) {
+                    targetCtx.drawImage(oldCanvas, 0, 0);
+                }
+            }
+        }
+        
+        // 2. 绘制未确认的图片（在旧笔画之上，新笔画之下）
+        if (this.uploadedImage && !this.imageConfirmed) {
+            // 直接绘制图片到目标画布
+            if (this.uploadedImage.img && this.uploadedImage.img.complete) {
+                // 计算缩放后的图片尺寸
+                const scaledWidth = this.uploadedImage.width * this.imageScale;
+                const scaledHeight = this.uploadedImage.height * this.imageScale;
+                
+                // 保存当前合成模式
+                const originalCompositeOperation = targetCtx.globalCompositeOperation;
+                
+                // 设置图片合成模式为 source-over（叠加模式）
+                targetCtx.globalCompositeOperation = 'source-over';
+                
+                // 绘制图片
+                targetCtx.drawImage(
+                    this.uploadedImage.img,
+                    this.imagePosition.x,
+                    this.imagePosition.y,
+                    scaledWidth,
+                    scaledHeight
+                );
+                
+                // 恢复原始合成模式
+                targetCtx.globalCompositeOperation = originalCompositeOperation;
+            }
+        }
+        
+        // 3. 绘制当前用户绘制内容
+        if (this.offscreenCanvas && this.offscreenCtx) {
+            targetCtx.drawImage(this.offscreenCanvas, 0, 0);
+        }
+        
+        // 4. 渲染文本元素
+        this.renderTextElements();
+    }
+    
+    /**
+     * 渲染动态内容（图片、绘图、文本）
+     */
+    renderDynamicContent() {
+        // 1. 绘制图片上传前的旧笔画（在图片之下）
+        if (this.history.length > 0 && this.uploadedImage && !this.imageConfirmed) {
+            const preImageState = this.getPreImageState();
+            if (preImageState && preImageState.canvasData) {
+                const oldCanvas = this.createCanvasFromData(preImageState.canvasData);
+                if (oldCanvas) {
+                    this.ctx.drawImage(oldCanvas, 0, 0);
+                }
+            }
+        }
+        
+        // 2. 绘制未确认的图片（在旧笔画之上，新笔画之下）
+        if (this.uploadedImage && !this.imageConfirmed) {
+            this.drawProcessedImage();
+        }
+        
+        // 3. 绘制当前用户绘制内容
+        if (this.offscreenCanvas && this.offscreenCtx) {
+            this.ctx.drawImage(this.offscreenCanvas, 0, 0);
+        }
+        
+        // 4. 渲染文本元素
+        this.renderTextElements();
+    }
+    
+    /**
+     * 渲染文本元素
+     */
+    renderTextElements() {
         this.textElements.forEach(element => {
             this.ctx.save();
             
@@ -2065,11 +2223,51 @@ class SweetsDesigner {
     }
     
     /**
+     * 获取图片上传前的历史状态
+     */
+    getPreImageState() {
+        // 查找图片上传前的最后一个状态
+        for (let i = this.history.length - 1; i >= 0; i--) {
+            if (this.history[i] && !this.history[i].hasImageUpload) {
+                return this.history[i];
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 从画布数据创建canvas元素
+     */
+    createCanvasFromData(canvasData) {
+        if (!canvasData) return null;
+        
+        const img = new Image();
+        img.src = canvasData;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width;
+        canvas.height = this.canvas.height;
+        const ctx = canvas.getContext('2d');
+        
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+        };
+        
+        return canvas;
+    }
+    
+    /**
      * 渲染所有元素但不清空画布（保留用户绘制内容）
+     * 优化版本：仅更新元素层，避免全画布重绘
      */
     renderElementsOnly() {
-        // 直接重新绘制整个画布，避免使用临时画布
-        this.renderAllElements();
+        // 如果正在绘图，不进行渲染
+        if (this.isDrawing) {
+            return;
+        }
+        
+        // 仅渲染元素层，不重新绘制背景
+        this.renderElementsLayer();
     }
     
     /**
@@ -2151,21 +2349,12 @@ class SweetsDesigner {
     }
     
     /**
-     * 处理图片上传并显示
+     * 处理图片上传并自动进行线条提取
      */
     handleImageUpload(file) {
-        // 重置图片确认状态
-        this.imageConfirmed = false;
-        
         // 检查是否已选择模板
         if (!this.templateSelected) {
             alert('请先选择一个模板再上传图片');
-            return;
-        }
-        
-        // 检查画布和上下文是否存在
-        if (!this.canvas || !this.ctx) {
-            console.error('Canvas or context not found!');
             return;
         }
         
@@ -2174,6 +2363,16 @@ class SweetsDesigner {
             alert('请上传图片文件');
             return;
         }
+        
+        this.showToast('正在处理图片...');
+        
+        // 重置图片相关状态，允许重新上传
+        this.uploadedImage = null;
+        this.imageConfirmed = false;
+        this.isDragging = false;
+        
+        // 保存图片上传前的状态到历史记录
+        this.saveState();
         
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -2200,31 +2399,50 @@ class SweetsDesigner {
                         }
                     }
                     
-                    // 保存上传的图片信息
-                    this.uploadedImage = {
+                    // 保存原始图片信息
+                    this.originalImage = {
                         img: img,
                         width: width,
                         height: height,
                         originalDataUrl: event.target.result
                     };
                     
-                    // 初始化缩放比例和位置
-                    this.imageScale = 1.0;
-                    this.imagePosition = {
-                        x: (this.canvas.width - width) / 2,
-                        y: (this.canvas.height - height) / 2
-                    };
-                    
-                    // 自动切换到图片工具
-                    this.selectTool('image');
-                    
-                    // 重新绘制所有元素
-                    this.renderAllElements();
-                    
-                    // 更新预览
-                    this.updatePreview();
-                    
-                    resolve();
+                    // 自动进行线条提取
+                    this.extractImageEdges(img, width, height).then(processedImage => {
+                        // 保存处理后的线条图片
+                        this.uploadedImage = {
+                            img: processedImage,
+                            width: width,
+                            height: height,
+                            isProcessed: true
+                        };
+                        
+                        // 初始化缩放比例和位置
+                        this.imageScale = 1.0;
+                        this.imagePosition = {
+                            x: (this.canvas.width - width) / 2,
+                            y: (this.canvas.height - height) / 2
+                        };
+                        
+                        // 自动切换到图片工具
+                        this.selectTool('image');
+                        
+                        // 重新绘制所有元素
+                        this.renderElementsOnly();
+                        
+                        // 显示线条编辑控制面板
+                        this.showEdgeEditingPanel();
+                        
+                        // 更新预览
+                        this.updatePreview();
+                        
+                        this.showToast('线条提取完成！');
+                        resolve();
+                    }).catch(error => {
+                        console.error('线条提取失败:', error);
+                        this.showToast('图片处理失败，请重试');
+                        reject(error);
+                    });
                 };
                 
                 img.onerror = () => {
@@ -2245,61 +2463,619 @@ class SweetsDesigner {
     }
     
     /**
-     * 边缘检测算法
+     * 显示线条编辑控制面板
      */
-    detectEdges(imageData) {
+    showEdgeEditingPanel() {
+        // 检查是否已有编辑面板
+        let editingPanel = document.getElementById('edge-editing-panel');
+        if (editingPanel) {
+            editingPanel.remove();
+        }
+        
+        // 创建编辑面板
+        editingPanel = document.createElement('div');
+        editingPanel.id = 'edge-editing-panel';
+        editingPanel.className = 'edge-editing-panel';
+        editingPanel.innerHTML = `
+            <div class="editing-header">
+                <h4><i class="fas fa-paint-brush"></i> 线条编辑</h4>
+                <button class="close-btn" onclick="document.getElementById('edge-editing-panel').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="editing-options">
+                <div class="option-group">
+                    <label>线条颜色：</label>
+                    <input type="color" id="line-color" value="#000000">
+                </div>
+                <div class="option-group">
+                    <label>线条粗细：</label>
+                    <input type="range" id="line-thickness" min="1" max="10" value="2">
+                    <span id="thickness-value">2px</span>
+                </div>
+                <div class="option-group">
+                    <label>线条透明度：</label>
+                    <input type="range" id="line-opacity" min="10" max="100" value="100">
+                    <span id="opacity-value">100%</span>
+                </div>
+                <div class="processing-buttons">
+                    <button id="reprocess-btn" class="btn-secondary">
+                        <i class="fas fa-sync"></i> 重新处理
+                    </button>
+                    <button id="save-edges-btn" class="btn-success">
+                        <i class="fas fa-save"></i> 确认使用
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // 添加到页面
+        document.body.appendChild(editingPanel);
+        
+        // 添加事件监听器
+        this.setupEdgeEditingEvents();
+    }
+    
+    /**
+     * 设置线条编辑事件监听器
+     */
+    setupEdgeEditingEvents() {
+        // 线条粗细滑块
+        const thicknessSlider = document.getElementById('line-thickness');
+        const thicknessValue = document.getElementById('thickness-value');
+        if (thicknessSlider) {
+            thicknessSlider.addEventListener('input', () => {
+                thicknessValue.textContent = thicknessSlider.value + 'px';
+                this.updateLineStyle();
+            });
+        }
+        
+        // 透明度滑块
+        const opacitySlider = document.getElementById('line-opacity');
+        const opacityValue = document.getElementById('opacity-value');
+        if (opacitySlider) {
+            opacitySlider.addEventListener('input', () => {
+                opacityValue.textContent = opacitySlider.value + '%';
+                this.updateLineStyle();
+            });
+        }
+        
+        // 颜色选择器
+        const colorPicker = document.getElementById('line-color');
+        if (colorPicker) {
+            colorPicker.addEventListener('input', () => {
+                this.updateLineStyle();
+            });
+        }
+        
+        // 重新处理按钮
+        const reprocessBtn = document.getElementById('reprocess-btn');
+        if (reprocessBtn) {
+            reprocessBtn.addEventListener('click', () => {
+                this.reprocessImage();
+            });
+        }
+        
+        // 保存按钮
+        const saveBtn = document.getElementById('save-edges-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.confirmImage();
+            });
+        }
+    }
+    
+    /**
+     * 专业的灰度化处理
+     */
+    grayscale(imageData) {
+        const width = imageData.width;
+        const height = imageData.height;
+        const data = imageData.data;
+        const grayData = new Uint8ClampedArray(width * height);
+        
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // 使用标准灰度化公式：Gray = 0.299*R + 0.587*G + 0.114*B
+            const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+            grayData[i / 4] = gray;
+        }
+        
+        return grayData;
+    }
+    
+    /**
+     * 改进的高斯模糊算法
+     */
+    improvedGaussianBlur(grayData, width, height, sigma = 1.4) {
+        const kernelSize = 5;
+        const kernelRadius = Math.floor(kernelSize / 2);
+        const kernel = this.createGaussianKernel(kernelSize, sigma);
+        
+        const blurredData = new Uint8ClampedArray(width * height);
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let sum = 0;
+                let weightSum = 0;
+                
+                for (let ky = -kernelRadius; ky <= kernelRadius; ky++) {
+                    for (let kx = -kernelRadius; kx <= kernelRadius; kx++) {
+                        const pixelX = Math.max(0, Math.min(width - 1, x + kx));
+                        const pixelY = Math.max(0, Math.min(height - 1, y + ky));
+                        const pixelValue = grayData[pixelY * width + pixelX];
+                        const weight = kernel[ky + kernelRadius][kx + kernelRadius];
+                        
+                        sum += pixelValue * weight;
+                        weightSum += weight;
+                    }
+                }
+                
+                blurredData[y * width + x] = Math.round(sum / weightSum);
+            }
+        }
+        
+        return blurredData;
+    }
+    
+    /**
+     * 创建高斯核
+     */
+    createGaussianKernel(size, sigma) {
+        const kernel = [];
+        const radius = Math.floor(size / 2);
+        let sum = 0;
+        
+        for (let y = -radius; y <= radius; y++) {
+            const row = [];
+            for (let x = -radius; x <= radius; x++) {
+                const value = (1 / (2 * Math.PI * sigma * sigma)) * 
+                              Math.exp(-(x * x + y * y) / (2 * sigma * sigma));
+                row.push(value);
+                sum += value;
+            }
+            kernel.push(row);
+        }
+        
+        // 标准化核
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                kernel[y][x] /= sum;
+            }
+        }
+        
+        return kernel;
+    }
+    
+    /**
+     * 改进的Canny边缘检测
+     */
+    improvedCannyEdgeDetection(grayData, width, height, lowThreshold = 20, highThreshold = 60) {
+        // 1. 高斯模糊
+        const blurredData = this.improvedGaussianBlur(grayData, width, height);
+        
+        // 2. 计算梯度强度和方向
+        const { magnitude, direction } = this.calculateGradient(blurredData, width, height);
+        
+        // 3. 非极大值抑制
+        const suppressed = this.nonMaximumSuppression(magnitude, direction, width, height);
+        
+        // 4. 双阈值检测和边缘连接
+        const edges = this.doubleThreshold(suppressed, width, height, lowThreshold, highThreshold);
+        
+        return edges;
+    }
+    
+    /**
+     * 计算梯度强度和方向
+     */
+    calculateGradient(grayData, width, height) {
+        const magnitude = new Float32Array(width * height);
+        const direction = new Float32Array(width * height);
+        
+        // Sobel算子
+        const sobelX = [
+            [-1, 0, 1],
+            [-2, 0, 2],
+            [-1, 0, 1]
+        ];
+        
+        const sobelY = [
+            [-1, -2, -1],
+            [0, 0, 0],
+            [1, 2, 1]
+        ];
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                let gx = 0, gy = 0;
+                
+                for (let ky = -1; ky <= 1; ky++) {
+                    for (let kx = -1; kx <= 1; kx++) {
+                        const pixelValue = grayData[(y + ky) * width + (x + kx)];
+                        gx += pixelValue * sobelX[ky + 1][kx + 1];
+                        gy += pixelValue * sobelY[ky + 1][kx + 1];
+                    }
+                }
+                
+                magnitude[y * width + x] = Math.sqrt(gx * gx + gy * gy);
+                direction[y * width + x] = Math.atan2(gy, gx) * 180 / Math.PI;
+            }
+        }
+        
+        return { magnitude, direction };
+    }
+    
+    /**
+     * 非极大值抑制
+     */
+    nonMaximumSuppression(magnitude, direction, width, height) {
+        const suppressed = new Float32Array(width * height);
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const angle = direction[y * width + x];
+                const mag = magnitude[y * width + x];
+                
+                let q = 255, r = 255;
+                
+                // 将角度量化到4个方向
+                if ((angle >= -22.5 && angle < 22.5) || (angle >= 157.5 || angle < -157.5)) {
+                    q = magnitude[y * width + (x + 1)];
+                    r = magnitude[y * width + (x - 1)];
+                } else if ((angle >= 22.5 && angle < 67.5) || (angle >= -157.5 && angle < -112.5)) {
+                    q = magnitude[(y + 1) * width + (x + 1)];
+                    r = magnitude[(y - 1) * width + (x - 1)];
+                } else if ((angle >= 67.5 && angle < 112.5) || (angle >= -112.5 && angle < -67.5)) {
+                    q = magnitude[(y + 1) * width + x];
+                    r = magnitude[(y - 1) * width + x];
+                } else {
+                    q = magnitude[(y + 1) * width + (x - 1)];
+                    r = magnitude[(y - 1) * width + (x + 1)];
+                }
+                
+                suppressed[y * width + x] = (mag >= q && mag >= r) ? mag : 0;
+            }
+        }
+        
+        return suppressed;
+    }
+    
+    /**
+     * 双阈值检测和边缘连接
+     */
+    doubleThreshold(suppressed, width, height, lowThreshold, highThreshold) {
+        const edges = new Uint8ClampedArray(width * height);
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const mag = suppressed[y * width + x];
+                
+                if (mag >= highThreshold) {
+                    edges[y * width + x] = 255; // 强边缘
+                } else if (mag >= lowThreshold) {
+                    edges[y * width + x] = 128; // 弱边缘
+                } else {
+                    edges[y * width + x] = 0;   // 非边缘
+                }
+            }
+        }
+        
+        // 连接弱边缘
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                if (edges[y * width + x] === 128) {
+                    // 检查周围是否有强边缘
+                    let hasStrongNeighbor = false;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (edges[(y + dy) * width + (x + dx)] === 255) {
+                                hasStrongNeighbor = true;
+                                break;
+                            }
+                        }
+                        if (hasStrongNeighbor) break;
+                    }
+                    
+                    edges[y * width + x] = hasStrongNeighbor ? 255 : 0;
+                }
+            }
+        }
+        
+        return edges;
+    }
+    
+    /**
+     * 高斯模糊（降噪）
+     */
+    gaussianBlur(imageData, radius = 1) {
+        const width = imageData.width;
+        const height = imageData.height;
+        const data = imageData.data;
+        const blurredData = new Uint8ClampedArray(width * height * 4);
+        
+        // 简化版高斯核（3x3）
+        const kernel = [
+            [1/16, 2/16, 1/16],
+            [2/16, 4/16, 2/16],
+            [1/16, 2/16, 1/16]
+        ];
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                let r = 0, g = 0, b = 0, a = 0;
+                
+                // 3x3卷积
+                for (let ky = -1; ky <= 1; ky++) {
+                    for (let kx = -1; kx <= 1; kx++) {
+                        const pixelIndex = ((y + ky) * width + (x + kx)) * 4;
+                        const weight = kernel[ky + 1][kx + 1];
+                        
+                        r += data[pixelIndex] * weight;
+                        g += data[pixelIndex + 1] * weight;
+                        b += data[pixelIndex + 2] * weight;
+                        a += data[pixelIndex + 3] * weight;
+                    }
+                }
+                
+                const resultIndex = (y * width + x) * 4;
+                blurredData[resultIndex] = Math.round(r);
+                blurredData[resultIndex + 1] = Math.round(g);
+                blurredData[resultIndex + 2] = Math.round(b);
+                blurredData[resultIndex + 3] = Math.round(a);
+            }
+        }
+        
+        return new ImageData(blurredData, width, height);
+    }
+    
+    /**
+     * Canny边缘检测算法
+     */
+    cannyEdgeDetection(imageData, lowThreshold = 50, highThreshold = 100) {
         const width = imageData.width;
         const height = imageData.height;
         const data = imageData.data;
         
-        // 创建新的图像数据用于存储边缘检测结果
-        const edgeData = new Uint8ClampedArray(width * height * 4);
+        // 步骤1：灰度化
+        const grayImageData = this.grayscale(imageData);
         
-        // 简单的Sobel边缘检测算法
+        // 步骤2：高斯模糊降噪
+        const blurredImageData = this.gaussianBlur(grayImageData);
+        
+        // 步骤3：计算梯度强度和方向
+        const gradientData = new Uint8ClampedArray(width * height * 4);
+        const gradientMagnitude = new Float32Array(width * height);
+        const gradientDirection = new Float32Array(width * height);
+        
+        // Sobel算子核
+        const sobelX = [
+            [-1, 0, 1],
+            [-2, 0, 2],
+            [-1, 0, 1]
+        ];
+        
+        const sobelY = [
+            [-1, -2, -1],
+            [0, 0, 0],
+            [1, 2, 1]
+        ];
+        
         for (let y = 1; y < height - 1; y++) {
             for (let x = 1; x < width - 1; x++) {
-                // 计算Sobel算子
-                let gx = 0;
-                let gy = 0;
+                let gx = 0, gy = 0;
                 
-                // 3x3卷积核
+                // 应用Sobel算子
                 for (let ky = -1; ky <= 1; ky++) {
                     for (let kx = -1; kx <= 1; kx++) {
                         const pixelIndex = ((y + ky) * width + (x + kx)) * 4;
-                        const gray = (data[pixelIndex] + data[pixelIndex + 1] + data[pixelIndex + 2]) / 3;
+                        const gray = blurredImageData.data[pixelIndex];
                         
-                        // Sobel X方向核
-                        if (kx === -1 && ky === -1) gx += gray * -1;
-                        if (kx === 0 && ky === -1) gx += gray * -2;
-                        if (kx === 1 && ky === -1) gx += gray * -1;
-                        if (kx === -1 && ky === 1) gx += gray * 1;
-                        if (kx === 0 && ky === 1) gx += gray * 2;
-                        if (kx === 1 && ky === 1) gx += gray * 1;
-                        
-                        // Sobel Y方向核
-                        if (kx === -1 && ky === -1) gy += gray * -1;
-                        if (kx === -1 && ky === 0) gy += gray * -2;
-                        if (kx === -1 && ky === 1) gy += gray * -1;
-                        if (kx === 1 && ky === -1) gy += gray * 1;
-                        if (kx === 1 && ky === 0) gy += gray * 2;
-                        if (kx === 1 && ky === 1) gy += gray * 1;
+                        gx += gray * sobelX[ky + 1][kx + 1];
+                        gy += gray * sobelY[ky + 1][kx + 1];
                     }
                 }
                 
-                // 计算梯度幅度
+                // 计算梯度幅度和方向
                 const magnitude = Math.sqrt(gx * gx + gy * gy);
-                const edgeIndex = (y * width + x) * 4;
+                const direction = Math.atan2(gy, gx) * 180 / Math.PI;
                 
-                // 设置边缘像素为白色，非边缘为黑色
-                const edgeValue = magnitude > 50 ? 255 : 0;
-                edgeData[edgeIndex] = edgeValue;     // R
-                edgeData[edgeIndex + 1] = edgeValue; // G
-                edgeData[edgeIndex + 2] = edgeValue; // B
-                edgeData[edgeIndex + 3] = 255;        // A
+                gradientMagnitude[y * width + x] = magnitude;
+                gradientDirection[y * width + x] = direction;
             }
         }
         
-        return new ImageData(edgeData, width, height);
+        // 步骤4：非极大值抑制
+        const suppressedData = new Uint8ClampedArray(width * height * 4);
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const angle = gradientDirection[y * width + x];
+                const magnitude = gradientMagnitude[y * width + x];
+                
+                // 将角度量化到4个方向
+                let qx = 0, qy = 0;
+                if ((angle >= -22.5 && angle < 22.5) || (angle >= 157.5 || angle < -157.5)) {
+                    qx = 1; qy = 0; // 水平方向
+                } else if ((angle >= 22.5 && angle < 67.5) || (angle >= -157.5 && angle < -112.5)) {
+                    qx = 1; qy = 1; // 45度方向
+                } else if ((angle >= 67.5 && angle < 112.5) || (angle >= -112.5 && angle < -67.5)) {
+                    qx = 0; qy = 1; // 垂直方向
+                } else {
+                    qx = -1; qy = 1; // 135度方向
+                }
+                
+                // 比较相邻像素
+                const mag1 = gradientMagnitude[(y + qy) * width + (x + qx)];
+                const mag2 = gradientMagnitude[(y - qy) * width + (x - qx)];
+                
+                let edgeValue = 0;
+                if (magnitude >= mag1 && magnitude >= mag2 && magnitude > lowThreshold) {
+                    edgeValue = magnitude > highThreshold ? 255 : 128; // 强边缘和弱边缘
+                }
+                
+                const pixelIndex = (y * width + x) * 4;
+                suppressedData[pixelIndex] = edgeValue;
+                suppressedData[pixelIndex + 1] = edgeValue;
+                suppressedData[pixelIndex + 2] = edgeValue;
+                suppressedData[pixelIndex + 3] = 255;
+            }
+        }
+        
+        return new ImageData(suppressedData, width, height);
+    }
+    
+    /**
+     * 提取图片边缘（新版本）
+     */
+    extractImageEdges(img, width, height) {
+        return new Promise((resolve, reject) => {
+            try {
+                // 创建临时画布
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                
+                // 绘制原始图片
+                tempCtx.drawImage(img, 0, 0, width, height);
+                
+                // 获取图像数据
+                const imageData = tempCtx.getImageData(0, 0, width, height);
+                
+                // 1. 灰度化
+                const grayData = this.grayscale(imageData);
+                
+                // 2. 改进的Canny边缘检测
+                const edgeData = this.improvedCannyEdgeDetection(grayData, width, height);
+                
+                // 3. 创建边缘图像
+                const edgeImageData = this.createEdgeImage(edgeData, width, height);
+                
+                // 4. 转换为图片
+                tempCtx.putImageData(edgeImageData, 0, 0);
+                
+                const processedImg = new Image();
+                processedImg.onload = () => {
+                    resolve(processedImg);
+                };
+                processedImg.onerror = () => {
+                    reject(new Error('处理后的图片加载失败'));
+                };
+                processedImg.src = tempCanvas.toDataURL();
+                
+            } catch (error) {
+                console.error('边缘检测失败:', error);
+                reject(error);
+            }
+        });
+    }
+    
+    /**
+     * 创建边缘图像
+     */
+    createEdgeImage(edgeData, width, height) {
+        const imageData = new ImageData(width, height);
+        
+        for (let i = 0; i < edgeData.length; i++) {
+            const value = edgeData[i];
+            const pixelIndex = i * 4;
+            
+            if (value === 255) {
+                // 边缘像素 - 黑色
+                imageData.data[pixelIndex] = 0;     // R
+                imageData.data[pixelIndex + 1] = 0; // G
+                imageData.data[pixelIndex + 2] = 0; // B
+                imageData.data[pixelIndex + 3] = 255; // Alpha
+            } else {
+                // 非边缘像素 - 白色透明
+                imageData.data[pixelIndex] = 255;     // R
+                imageData.data[pixelIndex + 1] = 255; // G
+                imageData.data[pixelIndex + 2] = 255; // B
+                imageData.data[pixelIndex + 3] = 0;   // Alpha
+            }
+        }
+        
+        return imageData;
+    }
+    
+    /**
+     * 更新线条样式
+     */
+    updateLineStyle() {
+        if (!this.uploadedImage || !this.uploadedImage.isProcessed) return;
+        
+        const colorPicker = document.getElementById('line-color');
+        const thicknessSlider = document.getElementById('line-thickness');
+        const opacitySlider = document.getElementById('line-opacity');
+        
+        if (!colorPicker || !thicknessSlider || !opacitySlider) return;
+        
+        // 在这里可以实现线条样式的实时更新
+        // 由于性能考虑，可以优化为只在保存时应用样式
+        this.showToast('线条样式已更新');
+    }
+    
+    /**
+     * 重新处理图片
+     */
+    reprocessImage() {
+        if (!this.originalImage) {
+            this.showToast('没有原始图片数据');
+            return;
+        }
+        
+        this.showToast('正在重新处理图片...');
+        
+        this.extractImageEdges(
+            this.originalImage.img, 
+            this.originalImage.width, 
+            this.originalImage.height
+        ).then(processedImage => {
+            this.uploadedImage.img = processedImage;
+            this.renderElementsOnly();
+            this.updatePreview();
+            this.showToast('重新处理完成！');
+        }).catch(error => {
+            console.error('重新处理失败:', error);
+            this.showToast('重新处理失败，请重试');
+        });
+    }
+    
+    /**
+     * 重置图片到原始状态
+     */
+    resetImageToOriginal() {
+        if (!this.uploadedImage || !this.uploadedImage.originalDataUrl) {
+            alert('没有原始图片数据');
+            return;
+        }
+        
+        const img = new Image();
+        img.onload = () => {
+            this.uploadedImage.img = img;
+            this.renderElementsOnly();
+            this.updatePreview();
+            this.showToast('图片已重置到原始状态');
+        };
+        img.src = this.uploadedImage.originalDataUrl;
+    }
+    
+    /**
+     * 保存提取的线条
+     */
+    saveExtractedEdges() {
+        if (!this.uploadedImage) {
+            alert('请先上传图片并提取线条');
+            return;
+        }
+        
+        // 将线条图片绘制到背景画布上，使其成为设计的一部分
+        this.confirmImage();
+        this.showToast('线条已保存为设计元素');
     }
     
     /**
@@ -2332,6 +3108,12 @@ class SweetsDesigner {
         const scaledWidth = this.uploadedImage.width * this.imageScale;
         const scaledHeight = this.uploadedImage.height * this.imageScale;
         
+        // 保存当前合成模式
+        const originalCompositeOperation = this.ctx.globalCompositeOperation;
+        
+        // 设置图片合成模式为 source-over（叠加模式，不覆盖背景）
+        this.ctx.globalCompositeOperation = 'source-over';
+        
         // 绘制图片
         this.ctx.drawImage(
             this.uploadedImage.img,
@@ -2340,6 +3122,9 @@ class SweetsDesigner {
             scaledWidth,
             scaledHeight
         );
+        
+        // 恢复原始合成模式
+        this.ctx.globalCompositeOperation = originalCompositeOperation;
         
         // 如果图片未确认，绘制确认和取消按钮
         if (!this.imageConfirmed) {
@@ -2433,20 +3218,20 @@ class SweetsDesigner {
                  scaledHeight
              );
              this.backgroundCtx.restore();
-             
-             // 更新主画布
-             this.renderBackground();
          }
          
-         // 清除上传的图片信息，防止再次绘制
+         // 清除上传的图片信息，准备下一次上传
          this.uploadedImage = null;
          this.isDragging = false;
+         
+         // 重新渲染所有元素，显示正确的图层顺序
+         this.renderAllElements();
          
          // 切换回画笔工具
          this.selectTool('brush');
          
          // 更新历史记录
-         this.saveCurrentState();
+         this.saveState();
          
          // 清空上传input的值，允许再次上传新图片
          const uploadInput = document.getElementById('image-upload-input');
@@ -2762,7 +3547,7 @@ class SweetsDesigner {
     /**
      * 保存画布内容到本地存储
      */
-    saveCanvas() {
+    async saveCanvas() {
         try {
             // 获取画布数据
             const canvasData = this.canvas.toDataURL('image/png');
@@ -2811,20 +3596,20 @@ class SweetsDesigner {
                 console.log('编辑模式，更新原有设计，索引:', this.editIndex);
                 
                 // 从本地存储加载设计数据
-                const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
-                const designs = JSON.parse(localStorage.getItem('designs')) || [];
-                const allDesigns = [...sweetsDesigns, ...designs];
+                const designs = window.StorageManager.getDesigns();
                 
-                if (this.editIndex >= 0 && this.editIndex < allDesigns.length) {
+                if (this.editIndex >= 0 && this.editIndex < designs.length) {
                     // 更新原有设计数据
-                    allDesigns[this.editIndex] = designData;
+                    designs[this.editIndex] = designData;
                     
                     // 保存回本地存储
-                    localStorage.setItem('sweetsDesigns', JSON.stringify(allDesigns));
+                    window.StorageManager.saveDesigns(designs);
                     
                     // 保存当前设计为最近设计
-                    localStorage.setItem('lastDesignImage', canvasData);
-                    localStorage.setItem('lastDesignType', this.dessertType);
+                    window.StorageManager.saveLastDesign({
+                        image: canvasData,
+                        type: this.dessertType
+                    });
                     
                     // 显示成功消息
                     this.showNotification('设计已更新！', 'success');
@@ -2837,33 +3622,21 @@ class SweetsDesigner {
                 // 正常模式，创建新设计
                 console.log('正常模式，创建新设计');
                 
-                // 确保StorageUtils已加载
-                if (window.StorageUtils) {
-                    // 使用StorageUtils保存设计
-                    const savedDesign = StorageUtils.addDesign(designData);
-                    
-                    if (savedDesign) {
-                        // 保存当前设计为最近设计
-                        StorageUtils.saveLastDesignImage(canvasData);
-                        StorageUtils.saveLastDesignType(this.dessertType);
-                        
-                        // 显示成功消息
-                        this.showNotification('设计已保存！', 'success');
-                    } else {
-                        this.showNotification('设计保存失败，请重试', 'error');
-                    }
-                } else {
-                    // 降级保存到localStorage
-                    let designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
-                    designs.push(designData);
-                    localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
-                    
+                // 使用本地存储管理器保存设计
+                const savedDesign = window.StorageManager.addDesign(designData);
+                
+                if (savedDesign) {
                     // 保存当前设计为最近设计
-                    localStorage.setItem('lastDesignImage', canvasData);
-                    localStorage.setItem('lastDesignType', this.dessertType);
+                    window.StorageManager.saveLastDesign({
+                        image: canvasData,
+                        type: this.dessertType
+                    });
                     
                     // 显示成功消息
                     this.showNotification('设计已保存！', 'success');
+                    console.log('设计保存成功:', savedDesign);
+                } else {
+                    this.showNotification('设计保存失败，请重试', 'error');
                 }
             }
             
@@ -2951,7 +3724,7 @@ class SweetsDesigner {
     /**
      * 提交设计到存储
      */
-    submitDesign() {
+    async submitDesign() {
         try {
             // 转换为Base64编码
             const canvasData = this.canvas.toDataURL('image/png');
@@ -2997,7 +3770,7 @@ class SweetsDesigner {
             
             // 优先使用StorageUtils保存设计
             if (window.StorageUtils) {
-                StorageUtils.addDesign(designData);
+                await StorageUtils.addDesign(designData);
                 StorageUtils.saveLastDesignImage(canvasData);
                 StorageUtils.saveLastDesignType(this.dessertType);
             } else {
@@ -3123,12 +3896,20 @@ class SweetsDesigner {
     }
     
     /**
+     * 显示Toast消息（兼容方法）
+     * @param {string} message 消息内容
+     */
+    showToast(message) {
+        this.showNotification(message, 'info', 3000);
+    }
+    
+    /**
      * 设计完成 - 保存设计并返回步骤二
      */
-    designComplete() {
+    async designComplete() {
         try {
             // 先保存设计到用户设计库（我的设计页面）
-            this.saveCanvas();
+            await this.saveCanvas();
             
             // 获取画布数据
             const canvasData = this.canvas.toDataURL('image/png');
@@ -3157,7 +3938,7 @@ class SweetsDesigner {
             // 保存订单到订单页面
             if (window.StorageUtils) {
                 // 使用StorageUtils保存订单
-                const savedOrder = StorageUtils.addOrder(orderData);
+                const savedOrder = await StorageUtils.addOrder(orderData);
                 if (!savedOrder) {
                     // 降级保存到localStorage
                     let orders = JSON.parse(localStorage.getItem('orders')) || [];
@@ -3478,13 +4259,53 @@ function initializeTools() {
     });
     
     // 初始化保存设计按钮
-    document.getElementById('save-design-btn')?.addEventListener('click', () => {
-        if (designer && designer.saveCanvas) designer.saveCanvas();
+    document.getElementById('save-design-btn')?.addEventListener('click', async () => {
+        if (!designer || !designer.saveCanvas) return;
+        
+        console.log('开始保存设计...');
+        console.log('检查StorageUtils是否可用:', !!window.StorageUtils);
+        
+        try {
+            await designer.saveCanvas();
+            console.log('设计保存完成，等待5秒后跳转...');
+            
+            // 延迟5秒再跳转，让您有时间查看控制台日志
+            setTimeout(() => {
+                console.log('5秒后自动跳转...');
+                window.location.href = 'customize.html';
+            }, 5000);
+            
+        } catch (error) {
+            console.error('保存设计失败:', error);
+            if (designer.showNotification) {
+                designer.showNotification('保存失败，请查看控制台', 'error');
+            }
+        }
     });
     
     // 初始化保存设计按钮（移动端）
-    document.getElementById('save-design-btn-mobile')?.addEventListener('click', () => {
-        if (designer && designer.saveCanvas) designer.saveCanvas();
+    document.getElementById('save-design-btn-mobile')?.addEventListener('click', async () => {
+        if (!designer || !designer.saveCanvas) return;
+        
+        console.log('开始保存设计（移动端）...');
+        console.log('检查StorageUtils是否可用:', !!window.StorageUtils);
+        
+        try {
+            await designer.saveCanvas();
+            console.log('设计保存完成（移动端），等待5秒后跳转...');
+            
+            // 延迟5秒再跳转，让您有时间查看控制台日志
+            setTimeout(() => {
+                console.log('5秒后自动跳转...');
+                window.location.href = 'customize.html';
+            }, 5000);
+            
+        } catch (error) {
+            console.error('保存设计失败（移动端）:', error);
+            if (designer.showNotification) {
+                designer.showNotification('保存失败，请查看控制台', 'error');
+            }
+        }
     });
     
     // 初始化导出图片按钮

@@ -1,33 +1,17 @@
-// 注意：supabase.js 已更新为使用全局对象 document.supabase
-
 // 全局状态管理
 const appState = {
     currentUser: null,
     designs: [],
-    users: {},
-    // 移除 isSupabaseReady 标志，因为现在使用全局对象
+    users: {}
 };
 
 // 页面初始化
 async function initializeApp() {
     console.log('开始初始化应用...');
     
-    // 初始化应用
-    // 现在 supabase.js 会自动初始化并挂载到 document.supabase
-    
-    // 检查用户会话 - 添加错误处理
+    // 检查用户会话 - 从本地存储恢复
     try {
         let user = null;
-        // 尝试使用document.supabase.auth
-        try {
-            if (document.supabase && document.supabase.auth && typeof document.supabase.auth.getCurrentUser === 'function') {
-                user = document.supabase.auth.getCurrentUser();
-                console.log('通过supabase.auth获取用户');
-            }
-        } catch (e) {
-            console.error('调用supabase.auth.getCurrentUser出错:', e);
-            user = null;
-        }
         
         if (!user) {
             // 直接从 localStorage 恢复用户（更可靠的方式）
@@ -373,23 +357,13 @@ async function loginSuccess(user) {
         showToast(`欢迎回来，${user.name}！`);
     } catch (error) {
         console.error('登录成功处理错误:', error);
-        showToast('登录成功，但同步到 Supabase 失败');
+        showToast('登录成功！');
     }
 }
 
 // 退出登录
 async function logout() {
     try {
-        // 退出登录 - 添加错误处理
-        try {
-            if (document.supabase && document.supabase.auth && typeof document.supabase.auth.signOut === 'function') {
-                await document.supabase.auth.signOut();
-                console.log('成功调用supabase.auth.signOut');
-            }
-        } catch (error) {
-            console.error('退出登录出错:', error);
-        }
-        
         appState.currentUser = null;
         localStorage.removeItem('currentUser');
         
@@ -398,7 +372,7 @@ async function logout() {
         showToast('已退出登录');
     } catch (error) {
         console.error('退出登录错误:', error);
-        // 即使 Supabase 退出失败，仍然清除本地状态
+        // 清除本地状态
         appState.currentUser = null;
         localStorage.removeItem('currentUser');
         showLoginPage();
