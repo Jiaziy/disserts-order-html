@@ -275,20 +275,32 @@ function showCurrentStep() {
 // 渲染步骤3：确认订单
 function renderStep3() {
     const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.chocolate;
-    const selectedPackaging = data.packaging.find(pkg => pkg.id === customizeState.selectedPackaging);
     
-    // 计算总价
-    const basePrice = data.basePrice;
-    const packagingPrice = selectedPackaging ? selectedPackaging.price : 0;
-    const totalPrice = (basePrice + packagingPrice) * customizeState.quantity;
+    // 安全查找包装数据
+    let selectedPackaging = null;
+    let basePrice = 0;
+    let packagingPrice = 0;
+    let totalPrice = 0;
+    
+    if (data && data.packaging) {
+        selectedPackaging = data.packaging.find(pkg => pkg.id === customizeState.selectedPackaging);
+        basePrice = data.basePrice || 0;
+        packagingPrice = selectedPackaging ? selectedPackaging.price : 0;
+        totalPrice = (basePrice + packagingPrice) * customizeState.quantity;
+    }
+    
+    // 安全获取口味
+    let flavorText = '未选择';
+    if (data && data.flavors && data.flavors[customizeState.flavorIndex]) {
+        flavorText = data.flavors[customizeState.flavorIndex];
+    }
     
     // 更新订单摘要
     document.getElementById('summary-product-type').textContent = '巧克力';
     
     document.getElementById('summary-style').textContent = '-'; // 不再需要样式
     
-    document.getElementById('summary-flavor').textContent = 
-        data.flavors[customizeState.flavorIndex] || '未选择';
+    document.getElementById('summary-flavor').textContent = flavorText;
     
     document.getElementById('summary-custom-text').textContent = 
         customizeState.designData ? '已设计' : '无';
@@ -417,6 +429,18 @@ async function submitOrder() {
         // 即使出错，也尝试保存到本地
         try {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            // 手动计算总价，避免依赖 calculateTotalPrice 函数
+            const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.chocolate;
+            let totalPrice = 0;
+            
+            if (data && data.packaging) {
+                const pack = data.packaging.find(p => p.id === customizeState.selectedPackaging);
+                const basePrice = data.basePrice || 0;
+                const packPrice = pack ? pack.price : 0;
+                totalPrice = (basePrice + packPrice) * customizeState.quantity;
+            }
+            
             const fallbackOrder = {
                 id: 'order_' + Date.now(),
                 userId: currentUser?.id || 'anonymous',
@@ -427,7 +451,7 @@ async function submitOrder() {
                 quantity: customizeState.quantity,
                 selectedPackaging: customizeState.selectedPackaging,
                 designImage: customizeState.designImage,
-                totalPrice: calculateTotalPrice(),
+                totalPrice: totalPrice,
                 createTime: new Date().toISOString(),
                 status: 'pending'
             };
@@ -542,14 +566,21 @@ function validateCurrentStep() {
 
 // 计算总价
 function calculateTotalPrice() {
-    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.candy;
-    const style = data.styles.find(s => s.id === customizeState.selectedStyle);
+    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.chocolate;
+    
+    // 确保包装数据存在
+    if (!data || !data.packaging) {
+        console.error('产品数据不存在或包装数据缺失:', data);
+        return 0;
+    }
+    
+    // 查找选中的包装
     const pack = data.packaging.find(p => p.id === customizeState.selectedPackaging);
     
-    const stylePrice = style ? style.price : 0;
+    const basePrice = data.basePrice || 0;
     const packPrice = pack ? pack.price : 0;
     
-    return (stylePrice + packPrice) * customizeState.quantity;
+    return (basePrice + packPrice) * customizeState.quantity;
 }
 
 // 清除设计
