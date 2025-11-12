@@ -574,10 +574,10 @@ class SweetsDesigner {
                 setTimeout(() => {
                     // 检查是否存在导航管理器
                     if (window.NavigationManager) {
-                        window.NavigationManager.navigateTo('steps');
+                        window.NavigationManager.navigateTo('customize');
                     } else {
-                        // 如果没有导航管理器，尝试返回主页
-                        window.location.href = 'main.html';
+                        // 如果没有导航管理器，返回到定制页面（步骤页面）
+                        window.location.href = 'customize.html';
                     }
                 }, 8000);
                 
@@ -617,10 +617,10 @@ class SweetsDesigner {
                 setTimeout(() => {
                     // 检查是否存在导航管理器
                     if (window.NavigationManager) {
-                        window.NavigationManager.navigateTo('steps');
+                        window.NavigationManager.navigateTo('customize');
                     } else {
-                        // 如果没有导航管理器，尝试返回主页
-                        window.location.href = 'main.html';
+                        // 如果没有导航管理器，返回到定制页面（步骤页面）
+                        window.location.href = 'customize.html';
                     }
                 }, 8000);
                 
