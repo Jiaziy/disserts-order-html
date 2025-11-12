@@ -520,14 +520,13 @@ function validateCurrentStep() {
 
 // 计算总价
 function calculateTotalPrice() {
-    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.candy;
-    const style = data.styles.find(s => s.id === customizeState.selectedStyle);
+    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.chocolate;
     const pack = data.packaging.find(p => p.id === customizeState.selectedPackaging);
     
-    const stylePrice = style ? style.price : 0;
+    const basePrice = data.basePrice || 88;
     const packPrice = pack ? pack.price : 0;
     
-    return (stylePrice + packPrice) * customizeState.quantity;
+    return (basePrice + packPrice) * customizeState.quantity;
 }
 
 // 清除设计
