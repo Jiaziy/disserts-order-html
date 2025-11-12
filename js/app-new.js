@@ -935,79 +935,27 @@ function navigateToCustomize(type) {
     window.location.href = `customize.html?type=${type}`;
 }
 
-// 加载设计列表
+// 加载设计列表 - 负责触发gallery初始化
 function loadDesigns() {
     console.log('开始加载设计数据...');
     
-    const designsGrid = document.getElementById('designs-grid');
-    const emptyState = document.getElementById('empty-state');
-    
-    if (!designsGrid) {
-        console.error('未找到设计网格容器');
-        return;
-    }
-    
-    // 从本地存储加载设计数据（兼容两种存储键名）
-    const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
-    const designs = JSON.parse(localStorage.getItem('designs')) || [];
-    const allDesigns = [...sweetsDesigns, ...designs];
-    
-    console.log('从本地存储获取到的设计数据:', allDesigns);
-    
-    if (allDesigns.length === 0) {
-        designsGrid.innerHTML = '';
-        if (emptyState) {
-            emptyState.style.display = 'block';
-            emptyState.innerHTML = `
-                <i class="fas fa-palette"></i>
-                <h3>还没有设计作品</h3>
-                <p>开始您的第一个甜点设计吧！</p>
-                <button class="primary-btn" data-navigate="sweets-designer.html">
-                    开始设计
-                </button>
-            `;
+    // 检查是否在'我的设计'页面
+    if (window.location.pathname.includes('main.html')) {
+        const designsPage = document.getElementById('designs-page');
+        if (designsPage && designsPage.classList.contains('active')) {
+            console.log('在"我的设计"页面，触发gallery初始化');
+            
+            // 直接调用gallery初始化
+            if (typeof initializeGallery === 'function') {
+                initializeGallery();
+                console.log('Gallery初始化函数调用成功');
+            } else {
+                console.error('Gallery初始化函数未找到');
+            }
         }
-        return;
     }
     
-    // 隐藏空状态
-    if (emptyState) {
-        emptyState.style.display = 'none';
-    }
-    
-    // 生成设计卡片HTML
-    designsGrid.innerHTML = allDesigns.map((design, index) => {
-        const designName = design.name || design.designName || '未命名设计';
-        const createDate = design.createTime || design.created_at || design.date;
-        const formattedDate = createDate ? new Date(createDate).toLocaleDateString('zh-CN') : '未知日期';
-        const designType = design.type || design.dessertType || '甜点';
-        const imageData = design.imageData || design.canvasData;
-        
-        return `
-            <div class="design-card">
-                <div class="design-image">
-                    ${imageData ? 
-                        `<img src="${imageData}" alt="${designName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` :
-                        `<i class="fas fa-image" style="font-size: 32px; color: #999;"></i>`
-                    }
-                </div>
-                <div class="design-info">
-                    <div class="design-title">${designName}</div>
-                    <div class="design-meta">
-                        <span class="design-type">${designType}</span>
-                        <span class="design-date">${formattedDate}</span>
-                    </div>
-                    <div class="design-actions">
-                        <button class="primary" onclick="viewDesign(${index})">查看</button>
-                        <button class="secondary" onclick="editDesign(${index})">编辑</button>
-                        <button class="danger" onclick="deleteDesign(${index})">删除</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    console.log('设计列表生成完成');
+    console.log('设计数据加载调用完成');
 }
 
 // 查看设计详情

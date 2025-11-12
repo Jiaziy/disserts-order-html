@@ -556,5 +556,25 @@
     <script src="js/navigation-manager.js"></script>
     <script src="js/sweets-gallery.js"></script>
     <script src="js/app-new.js"></script>
+    
+    <!-- 页面加载完成后初始化gallery -->
+    <script>
+        // 确保页面完全加载后初始化gallery
+        window.addEventListener('load', function() {
+            // 检查是否在"我的设计"页面
+            const designsPage = document.getElementById('designs-page');
+            if (designsPage && designsPage.classList.contains('active')) {
+                console.log('检测到"我的设计"页面，初始化gallery...');
+                
+                // 延迟初始化，确保所有DOM元素都已加载
+                setTimeout(() => {
+                    if (typeof initializeGallery === 'function') {
+                        initializeGallery();
+                        console.log('Gallery初始化完成');
+                    }
+                }, 500);
+            }
+        });
+    </script>
 </body>
 </html>

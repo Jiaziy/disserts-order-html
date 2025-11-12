@@ -7,7 +7,7 @@ class SweetsGallery {
         this.filteredOrders = [];
         this.currentDesign = null;
         this.currentOrder = null;
-        this.currentTab = 'orders'; // 只显示订单，移除设计标签
+        this.currentTab = 'designs'; // 默认显示设计
         
         this.init();
     }
@@ -104,11 +104,25 @@ class SweetsGallery {
     }
 
     setupEventListeners() {
+        // 标签页切换
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tab = btn.getAttribute('data-tab');
+                this.switchTab(tab);
+            });
+        });
+
         // 搜索功能
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
-                this.filterOrders();
+                if (this.currentTab === 'designs') {
+                    this.filterDesigns();
+                } else {
+                    this.filterOrders();
+                }
             });
         }
 
@@ -116,7 +130,11 @@ class SweetsGallery {
         const sortFilter = document.getElementById('sort-filter');
         if (sortFilter) {
             sortFilter.addEventListener('change', () => {
-                this.sortOrders();
+                if (this.currentTab === 'designs') {
+                    this.sortDesigns();
+                } else {
+                    this.sortOrders();
+                }
             });
         }
 
@@ -140,8 +158,52 @@ class SweetsGallery {
         }
     }
 
+    /**
+     * 切换标签页
+     */
+    switchTab(tab) {
+        console.log('切换到标签页:', tab);
+        
+        // 更新当前标签页
+        this.currentTab = tab;
+        
+        // 更新按钮状态
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-tab') === tab) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // 根据标签页更新页面标题
+        const pageTitle = document.querySelector('.gallery-header h2');
+        if (pageTitle) {
+            if (tab === 'designs') {
+                pageTitle.textContent = '我的设计作品';
+            } else {
+                pageTitle.textContent = '我的订单';
+            }
+        }
+        
+        // 渲染相应内容
+        this.renderContent();
+        
+        // 清空搜索框
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        console.log('标签页切换完成，当前标签:', this.currentTab);
+    }
+
     renderContent() {
-        this.renderOrders();
+        if (this.currentTab === 'designs') {
+            this.renderDesigns();
+        } else {
+            this.renderOrders();
+        }
     }
 
     filterDesigns() {
