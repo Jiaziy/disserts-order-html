@@ -9,14 +9,19 @@ class DesignerRenderer {
         this.backgroundCanvas = null;
         this.backgroundCtx = null;
         
-        // 创建背景画布
-        this.createBackgroundCanvas();
+        // 不要立即创建背景画布，延迟到需要时再创建
     }
 
     /**
      * 创建背景画布
      */
     createBackgroundCanvas() {
+        // 确保designer.canvas已初始化
+        if (!this.designer.canvas) {
+            console.warn('主画布未初始化，无法创建背景画布');
+            return;
+        }
+        
         this.backgroundCanvas = document.createElement('canvas');
         this.backgroundCanvas.width = this.designer.canvas.width;
         this.backgroundCanvas.height = this.designer.canvas.height;
@@ -36,19 +41,18 @@ class DesignerRenderer {
         this.clearCanvas();
         
         // 1. 绘制背景（包含模板）
+        // 确保背景画布已创建，如果不存在则创建
+        if (!this.backgroundCanvas || !this.backgroundCtx) {
+            this.createBackgroundCanvas();
+        }
+        
         // 只在有背景画布时绘制，避免重复渲染模板
         if (this.backgroundCanvas && this.backgroundCtx) {
             this.designer.ctx.drawImage(this.backgroundCanvas, 0, 0);
         }
         
-        // 2. 使用元素管理器统一渲染所有元素（图片、文本等）
-        if (this.designer.elements) {
-            this.designer.elements.renderAllElements();
-        }
-        
-        // 3. 绘制当前的画笔痕迹（在最上层）
-        if (this.designer.isDrawing && this.designer.currentStep >= 0) {
-            // 如果有当前绘图状态，直接绘制当前画布内容
+        // 2. 绘制用户绘制的笔刷和橡皮擦内容（从历史状态中恢复）
+        if (this.designer.currentStep >= 0 && this.designer.history[this.designer.currentStep]) {
             const currentState = this.designer.history[this.designer.currentStep];
             if (currentState && currentState.canvasData) {
                 const currentCanvas = this.createCanvasFromData(currentState.canvasData);
@@ -56,6 +60,11 @@ class DesignerRenderer {
                     this.designer.ctx.drawImage(currentCanvas, 0, 0);
                 }
             }
+        }
+        
+        // 3. 使用元素管理器统一渲染所有元素（图片、文本等）
+        if (this.designer.elements) {
+            this.designer.elements.renderAllElements();
         }
     }
 

@@ -400,6 +400,102 @@
     box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
 }
 
+/* 巧克力口味选择样式 */
+.flavor-selection,
+.quantity-selection,
+.packaging-section {
+    background: white;
+    border-radius: 20px;
+    padding: 30px 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+}
+
+.flavor-selection h3,
+.quantity-selection h3,
+.packaging-section h3 {
+    font-size: 20px;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-weight: 600;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 12px;
+}
+
+.flavor-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.flavor-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 18px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.flavor-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    border-color: #8B4513;
+}
+
+.flavor-item.selected {
+    background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+    color: white;
+    border-color: #8B4513;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(139, 69, 19, 0.2);
+}
+
+/* 数量选择样式 */
+.quantity-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.quantity-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #e9ecef;
+    color: #2c3e50;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.quantity-btn:hover {
+    background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+    color: white;
+    border-color: #8B4513;
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(139, 69, 19, 0.2);
+}
+
+.quantity-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #8B4513;
+    min-width: 60px;
+    text-align: center;
+}
+
 .design-btn::before {
     content: '';
     position: absolute;

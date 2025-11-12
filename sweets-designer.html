@@ -32,6 +32,10 @@
                 try {
                     const designer = new SweetsDesigner();
                     window.sweetsDesigner = designer;
+                    
+                    // 初始化设计器（重要：设置画布和事件监听器）
+                    designer.init();
+                    
                     console.log('设计器初始化成功');
                 } catch (error) {
                     console.error('设计器初始化失败:', error);
@@ -261,9 +265,26 @@
     </div>
 
     <!-- JavaScript -->
+    <!-- 基础库 -->
     <script src="js/local-storage-manager.js"></script>
     <script src="js/storage-utils.js"></script>
     <script src="js/navigation-manager.js"></script>
-    <script src="js/sweets-designer.js"></script>
+    
+    <!-- 分块模块架构 - 按照依赖顺序加载 -->
+    <!-- 1. 基础元素模块 -->
+    <script src="js/designer-elements.js"></script>
+    <script src="js/designer-elements-manager.js"></script>
+    
+    <!-- 2. 功能模块 -->
+    <script src="js/designer-tools.js"></script>
+    <script src="js/designer-templates.js"></script>
+    <script src="js/designer-text.js"></script>
+    <script src="js/designer-images.js"></script>
+    <script src="js/designer-storage.js"></script>
+    <script src="js/designer-renderer.js"></script>
+    <script src="js/designer-events.js"></script>
+    
+    <!-- 3. 主控制器（依赖所有模块） -->
+    <script src="js/sweets-designer-modular.js"></script>
 </body>
 </html>

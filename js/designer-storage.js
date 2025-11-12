@@ -36,9 +36,9 @@ class DesignerStorage {
             canvasData: canvasData,
             backgroundCanvasData: backgroundCanvasData,
             templateSelected: this.designer.templates.isTemplateSelected(),
-            currentTemplateId: this.designer.templates.getCurrentTemplateId(),
+            currentTemplateId: this.designer.templates.getCurrentTemplate(),
             currentTool: this.designer.currentTool,
-            tools: this.designer.tools.getToolsState(),
+            tools: this.designer.tools.getToolState(),
             text: this.designer.text.getTextState(),
             images: this.designer.images.getImagesState(),
             renderer: this.designer.renderer.getRendererState()
@@ -148,7 +148,7 @@ class DesignerStorage {
         return {
             timestamp: new Date().toISOString(),
             templateSelected: this.designer.templates.isTemplateSelected(),
-            currentTemplateId: this.designer.templates.getCurrentTemplateId(),
+            currentTemplateId: this.designer.templates.getCurrentTemplate(),
             currentTool: this.designer.currentTool,
             textElements: this.designer.text.textElements,
             uploadedImage: this.designer.uploadedImage ? {

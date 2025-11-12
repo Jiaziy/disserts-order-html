@@ -37,18 +37,14 @@
             <div class="steps">
                 <div class="step-item active" data-step="1">
                     <div class="step-number">1</div>
-                    <div class="step-name">选择样式</div>
+                    <div class="step-name">定制内容</div>
                 </div>
                 <div class="step-item" data-step="2">
                     <div class="step-number">2</div>
-                    <div class="step-name">定制内容</div>
+                    <div class="step-name">选择包装与口味</div>
                 </div>
                 <div class="step-item" data-step="3">
                     <div class="step-number">3</div>
-                    <div class="step-name">选择包装</div>
-                </div>
-                <div class="step-item" data-step="4">
-                    <div class="step-number">4</div>
                     <div class="step-name">确认订单</div>
                 </div>
             </div>
@@ -58,24 +54,8 @@
         <main class="customize-content">
             <!-- 步骤内容下拉容器 -->
             <div class="steps-content-container">
-                <!-- 步骤1：选择样式 -->
+                <!-- 步骤1：甜点设计器 -->
                 <div id="step-1" class="step-content active">
-                <div class="step-header">
-                    <h2>选择<span id="product-type">糖果</span>样式</h2>
-                    <p>请点击选择一个样式</p>
-                </div>
-                
-                <div class="style-list" id="style-list">
-                    <!-- 样式列表将通过JavaScript动态生成 -->
-                </div>
-                
-                <div class="step-footer">
-                    <button class="btn next-btn" onclick="nextStep()">下一步</button>
-                </div>
-            </div>
-
-            <!-- 步骤2：甜点设计器 -->
-            <div id="step-2" class="step-content">
                 <div class="step-header">
                     <h2>甜点设计器</h2>
                     <p>使用我们的专业设计工具定制您的甜点</p>
@@ -154,19 +134,40 @@
                 </div>
                 
                 <div class="step-footer">
-                    <button class="btn prev-btn" onclick="prevStep()">上一步</button>
                     <button class="btn next-btn" onclick="nextStep()">下一步</button>
                 </div>
             </div>
 
-            <!-- 步骤3：选择包装 -->
-            <div id="step-3" class="step-content">
+            <!-- 步骤2：选择包装、口味与个数 -->
+            <div id="step-2" class="step-content">
                 <div class="step-header">
-                    <h2>选择包装</h2>
+                    <h2>选择包装与个数</h2>
                 </div>
                 
-                <div class="packaging-list" id="packaging-list">
-                    <!-- 包装选项将通过JavaScript动态生成 -->
+                <!-- 巧克力口味选择 -->
+                <div class="flavor-selection">
+                    <h3>选择巧克力口味</h3>
+                    <div class="flavor-options" id="flavor-options">
+                        <!-- 口味选项将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 巧克力个数选择 -->
+                <div class="quantity-selection">
+                    <h3>设置巧克力个数</h3>
+                    <div class="quantity-control">
+                        <button class="btn quantity-btn" onclick="changeQuantity(-1)">-</button>
+                        <span id="quantity" class="quantity-value">1</span>
+                        <button class="btn quantity-btn" onclick="changeQuantity(1)">+</button>
+                    </div>
+                </div>
+                
+                <!-- 包装选择 -->
+                <div class="packaging-section">
+                    <h3>选择包装样式</h3>
+                    <div class="packaging-list" id="packaging-list">
+                        <!-- 包装选项将通过JavaScript动态生成 -->
+                    </div>
                 </div>
                 
                 <div class="step-footer">
@@ -175,8 +176,8 @@
                 </div>
             </div>
 
-            <!-- 步骤4：确认订单 -->
-            <div id="step-4" class="step-content">
+            <!-- 步骤3：确认订单 -->
+            <div id="step-3" class="step-content">
                 <div class="step-header">
                     <h2>确认订单</h2>
                 </div>

@@ -74,13 +74,36 @@ class DesignerElementsManager {
      * 检查鼠标位置上的元素
      */
     getElementAtPosition(x, y) {
+        console.log(`=== 开始检查元素位置 ===`);
+        console.log(`鼠标坐标: x=${x.toFixed(1)}, y=${y.toFixed(1)}`);
+        console.log(`总元素数量: ${this.elements.length}`);
+        
         // 从后往前检查，优先选择顶层的元素
         for (let i = this.elements.length - 1; i >= 0; i--) {
             const element = this.elements[i];
-            if (element.isPointInElement(x, y)) {
+            
+            // 详细的调试信息
+            console.log(`检查元素 #${i}: ${element.type} (${element.id})`);
+            
+            const bounds = element.getBounds();
+            console.log(`元素位置: x=${element.x.toFixed(1)}, y=${element.y.toFixed(1)}, 缩放: ${element.scale}`);
+            console.log(`元素边界: 左上(${bounds.x.toFixed(1)},${bounds.y.toFixed(1)}) 右下(${(bounds.x + bounds.width).toFixed(1)},${(bounds.y + bounds.height).toFixed(1)})`);
+            console.log(`边界尺寸: ${bounds.width.toFixed(1)}x${bounds.height.toFixed(1)}`);
+            
+            const isInElement = element.isPointInElement(x, y);
+            console.log(`是否在元素范围内: ${isInElement}`);
+            
+            if (isInElement) {
+                console.log(`✓ 选中元素: ${element.id} (${element.type})`);
+                console.log(`=== 结束检查 ===`);
                 return element;
             }
+            
+            console.log('---');
         }
+        
+        console.log('✗ 没有找到任何元素');
+        console.log(`=== 结束检查 ===`);
         return null;
     }
 
@@ -88,12 +111,54 @@ class DesignerElementsManager {
      * 开始拖动元素
      */
     startDraggingElement(pos) {
+        console.log('开始拖动元素检查，位置:', pos);
+        
+        // 先检查是否有元素在鼠标位置
         const element = this.getElementAtPosition(pos.x, pos.y);
+        
         if (element) {
-            this.selectElement(element);
+            console.log(`找到元素: ${element.type} (${element.id})`);
+            
+            // 如果是图片或文本元素，先检查按钮区域（在选中元素之前）
+            if ((element.type === 'image' || element.type === 'text') && element.isPointInButtonArea) {
+                console.log('检查元素按钮区域');
+                const isInButtonArea = element.isPointInButtonArea(pos.x, pos.y);
+                
+                if (isInButtonArea) {
+                    console.log('在按钮区域，先处理按钮点击');
+                    
+                    // 选择这个元素，然后处理按钮点击
+                    this.selectElement(element);
+                    
+                    if (element.handleButtonClick) {
+                        const buttonClicked = element.handleButtonClick(pos.x, pos.y);
+                        if (buttonClicked) {
+                            console.log('按钮被点击，不进行拖动');
+                            return null;
+                        }
+                    }
+                }
+            }
+            
+            // 如果元素已经被选中，只需要检查是否允许拖动
+            if (this.selectedElement && this.selectedElement.id === element.id) {
+                console.log('元素已被选中');
+            } else {
+                // 选择新元素
+                this.selectElement(element);
+            }
+            
+            // 如果元素已经确认，不允许拖动
+            if (element.confirmed) {
+                console.log('元素已确认，不允许拖动');
+                return null;
+            }
+            
             element.startDrag(pos);
             return element;
         }
+        
+        console.log('没有找到任何元素');
         return null;
     }
 

@@ -886,6 +886,12 @@ loadDesignFromStorage() {
         // 如果点击空白区域，取消选中
         this.selectedTextElement = null;
         
+        // 确保工具状态正确
+        if (this.currentTool !== 'brush' && this.currentTool !== 'eraser' && this.currentTool !== 'shape') {
+            console.log('当前工具不是画笔工具，自动切换到画笔工具');
+            this.selectTool('brush');
+        }
+        
         // 其他情况正常开始绘图
         this.startDrawing(e);
     }
@@ -999,11 +1005,16 @@ loadDesignFromStorage() {
      * 开始绘图
      */
     startDrawing(e) {
-        // 检查是否已选择模板
-        if ((this.currentTool === 'brush' || this.currentTool === 'eraser') && !this.templateSelected) {
+        // 检查是否已选择模板 - 使用与工具模块一致的检查方式
+        const isTemplateSelected = this.templates ? this.templates.isTemplateSelected() : this.templateSelected;
+        
+        if ((this.currentTool === 'brush' || this.currentTool === 'eraser') && !isTemplateSelected) {
+            console.log('画笔工具无法开始绘图：未选择模板');
             this.showTemplateRequiredMessage();
             return;
         }
+        
+        console.log(`开始绘图，工具: ${this.currentTool}, 模板选择状态: ${isTemplateSelected}`);
         
         this.isDrawing = true;
         const pos = this.getMousePos(e);
@@ -1223,7 +1234,10 @@ loadDesignFromStorage() {
             // 清空点数组
             this.points = [];
             
-            console.log('绘图停止，状态已保存');
+            // 只有画笔和橡皮擦工具才记录绘图停止信息
+            if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
+                console.log(`绘图停止，工具: ${this.currentTool}, 状态已保存`);
+            }
         }
     }
 
@@ -1234,6 +1248,11 @@ loadDesignFromStorage() {
         console.log('选择工具:', tool);
         
         this.currentTool = tool;
+        
+        // 同步工具模块的工具状态
+        if (this.tools) {
+            this.tools.currentTool = tool;
+        }
         
         // 取消正在进行的拖动
         if (this.isDragging) {
@@ -3918,40 +3937,6 @@ loadDesignFromStorage() {
             const designNameElement = document.getElementById('design-name');
             const designName = designNameElement ? designNameElement.value.trim() : `设计_${new Date().toLocaleString()}`;
             
-            // 从localStorage获取用户信息
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            
-            // 创建订单数据
-            const orderData = {
-                id: 'order_' + Date.now(),
-                userId: currentUser?.id || 'anonymous',
-                userName: currentUser?.displayName || currentUser?.email || '匿名用户',
-                productType: this.dessertType,
-                designImage: canvasData,
-                designName: designName,
-                selectedStyle: this.currentTemplateId || 'circle',
-                size: 'M',
-                createTime: new Date().toISOString(),
-                status: 'pending'
-            };
-            
-            // 保存订单到订单页面
-            if (window.StorageUtils) {
-                // 使用StorageUtils保存订单
-                const savedOrder = await StorageUtils.addOrder(orderData);
-                if (!savedOrder) {
-                    // 降级保存到localStorage
-                    let orders = JSON.parse(localStorage.getItem('orders')) || [];
-                    orders.push(orderData);
-                    localStorage.setItem('orders', JSON.stringify(orders));
-                }
-            } else {
-                // 降级保存到localStorage
-                let orders = JSON.parse(localStorage.getItem('orders')) || [];
-                orders.push(orderData);
-                localStorage.setItem('orders', JSON.stringify(orders));
-            }
-            
             // 保存设计结果到localStorage，供步骤二页面使用
             const designResult = {
                 imageData: canvasData,
@@ -3972,7 +3957,7 @@ loadDesignFromStorage() {
             }
             
             // 显示成功消息
-            this.showNotification('设计已完成！已保存到我的设计和订单页面，正在返回定制页面...', 'success');
+            this.showNotification('设计已完成！已保存到我的设计，正在返回定制页面...', 'success');
             
             // 2秒后返回步骤二页面
             setTimeout(() => {

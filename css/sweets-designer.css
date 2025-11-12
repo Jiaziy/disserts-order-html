@@ -320,14 +320,18 @@ body {
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-md);
-    overflow: hidden;
+    overflow: auto;
     position: relative;
+    min-height: 600px;
 }
 
 #design-canvas {
-    max-width: 100%;
-    max-height: 100%;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
     background: var(--bg-primary);
+    box-shadow: var(--shadow-lg);
 }
 
 .canvas-controls {

@@ -88,13 +88,17 @@ class DesignerImages {
                         // 选中新添加的图片元素
                         this.designer.elements.selectElement(imageElement);
                         
-                        // 自动切换到图片工具
+                        // 自动切换到图片工具（同步两个工具状态）
                         this.designer.tools.selectTool('image');
+                        this.designer.currentTool = 'image';
+                        
+                        // 设置图片工具为拖拽模式，使用移动光标
+                        this.designer.canvas.style.cursor = 'move';
                         
                         // 显示线条编辑控制面板
                         this.showEdgeEditingPanel();
                         
-                        this.designer.showToast('线条提取完成！');
+                        this.designer.showToast('线条提取完成！现在可以拖动和缩放图片进行微调');
                         resolve();
                     }).catch(error => {
                         console.error('线条提取失败:', error);
@@ -459,8 +463,8 @@ class DesignerImages {
         // 仅重新渲染元素层，避免重绘背景
         this.designer.renderElementsOnly();
         
-        // 切换回画笔工具
-        this.designer.tools.selectTool('brush');
+        // 切换回画笔工具并重置鼠标状态
+        this.restoreBrushToolAfterElementAction();
         
         // 更新历史记录
         this.designer.saveState();
@@ -471,7 +475,7 @@ class DesignerImages {
             uploadInput.value = '';
         }
         
-        this.designer.showToast('图片已确认并固定到画布');
+        this.designer.showToast('图片已确认并固定到画布，可以继续使用笔刷');
     }
 
     /**
@@ -496,8 +500,8 @@ class DesignerImages {
         // 仅重新渲染元素层，避免重绘背景
         this.designer.renderElementsOnly();
         
-        // 切换回画笔工具
-        this.designer.tools.selectTool('brush');
+        // 切换回画笔工具并重置鼠标状态
+        this.restoreBrushToolAfterElementAction();
         
         // 清空上传input的值，允许再次上传同一张图片
         const uploadInput = document.getElementById('image-upload-input');
@@ -505,7 +509,7 @@ class DesignerImages {
             uploadInput.value = '';
         }
         
-        this.designer.showToast('图片上传已取消');
+        this.designer.showToast('图片上传已取消，可以继续使用笔刷');
     }
 
     /**
@@ -658,5 +662,172 @@ class DesignerImages {
             console.error('重新处理失败:', error);
             this.designer.showToast('重新处理失败，请重试');
         });
+    }
+
+    /**
+     * 获取图片模块状态
+     */
+    getImagesState() {
+        // 获取当前选中的图片元素
+        const selectedElement = this.designer.elements ? this.designer.elements.selectedElement : null;
+        let imageElement = null;
+        
+        if (selectedElement && selectedElement.type === 'image') {
+            imageElement = {
+                type: selectedElement.type,
+                id: selectedElement.id,
+                x: selectedElement.x || 0,
+                y: selectedElement.y || 0,
+                width: selectedElement.width || 0,
+                height: selectedElement.height || 0,
+                scale: selectedElement.scale || 1,
+                rotation: selectedElement.rotation || 0,
+                isProcessed: selectedElement.isProcessed || false
+            };
+        }
+        
+        return {
+            imageConfirmed: this.imageConfirmed,
+            originalImage: this.originalImage ? {
+                width: this.originalImage.width,
+                height: this.originalImage.height
+            } : null,
+            currentImage: imageElement
+        };
+    }
+
+    /**
+     * 设置图片模块状态
+     */
+    setImagesState(state) {
+        if (!state) return;
+        
+        // 恢复图片确认状态
+        this.imageConfirmed = state.imageConfirmed || false;
+        
+        // 恢复原始图片信息
+        if (state.originalImage) {
+            this.originalImage = {
+                width: state.originalImage.width,
+                height: state.originalImage.height
+            };
+        }
+        
+        // 如果有当前图片状态，尝试恢复
+        if (state.currentImage && this.designer.elements) {
+            // 这里可以实现更复杂的图片状态恢复逻辑
+            console.log('恢复图片状态:', state.currentImage);
+        }
+    }
+
+    /**
+     * 恢复笔刷工具状态（元素操作后调用）
+     */
+    restoreBrushToolAfterElementAction() {
+        console.log('正在恢复笔刷工具状态...');
+        
+        // 1. 切换回画笔工具
+        this.designer.tools.selectTool('brush');
+        
+        // 2. 重置鼠标状态
+        if (this.designer.events) {
+            this.designer.events.isMouseDown = false;
+            this.designer.events.lastMousePos = { x: 0, y: 0 };
+        }
+        
+        // 3. 重置拖动状态
+        this.designer.isDragging = false;
+        this.designer.isDraggingText = false;
+        
+        // 4. 重置当前工具状态
+        this.designer.currentTool = 'brush';
+        
+        // 5. 更新光标样式为画笔
+        if (this.designer.canvas) {
+            this.designer.canvas.style.cursor = 'crosshair';
+        }
+        
+        // 6. 强制刷新画布状态，确保鼠标事件能正确响应
+        setTimeout(() => {
+            if (this.designer.canvas) {
+                // 触发一个小的鼠标移动事件来更新光标状态
+                const event = new MouseEvent('mousemove', {
+                    clientX: 0,
+                    clientY: 0
+                });
+                this.designer.canvas.dispatchEvent(event);
+            }
+        }, 10);
+        
+        console.log('笔刷工具状态恢复完成');
+    }
+
+    /**
+     * 恢复笔刷工具状态（元素操作后调用）
+     */
+    restoreBrushToolAfterElementAction() {
+        console.log('正在恢复笔刷工具状态...');
+        
+        // 1. 切换回画笔工具
+        this.designer.tools.selectTool('brush');
+        
+        // 2. 重置鼠标状态
+        if (this.designer.events) {
+            this.designer.events.isMouseDown = false;
+            this.designer.events.lastMousePos = { x: 0, y: 0 };
+        }
+        
+        // 3. 重置拖动状态
+        this.designer.isDragging = false;
+        this.designer.isDraggingText = false;
+        
+        // 4. 重置当前工具状态
+        this.designer.currentTool = 'brush';
+        
+        // 5. 更新光标样式为画笔
+        if (this.designer.canvas) {
+            this.designer.canvas.style.cursor = 'crosshair';
+        }
+        
+        // 6. 强制刷新画布状态，确保鼠标事件能正确响应
+        setTimeout(() => {
+            if (this.designer.canvas) {
+                // 触发一个小的鼠标移动事件来更新光标状态
+                const event = new MouseEvent('mousemove', {
+                    clientX: 0,
+                    clientY: 0
+                });
+                this.designer.canvas.dispatchEvent(event);
+            }
+        }, 10);
+        
+        console.log('笔刷工具状态恢复完成');
+    }
+
+    /**
+     * 恢复图片状态（与setImagesState类似，供不同场景使用）
+     */
+    restoreImageState(imageState) {
+        if (!imageState) return;
+        
+        // 恢复上传的图片状态
+        if (imageState.original) {
+            // 这里可以恢复原始图片数据
+            console.log('恢复原始图片尺寸:', imageState.original.width, imageState.original.height);
+        }
+        
+        if (imageState.processed) {
+            // 这里可以恢复处理后的图片数据
+            console.log('恢复处理图片尺寸:', imageState.processed.width, imageState.processed.height);
+        }
+        
+        // 恢复位置和变换信息
+        if (imageState.position) {
+            this.x = imageState.position.x || 0;
+            this.y = imageState.position.y || 0;
+        }
+        
+        this.scale = imageState.scale || 1;
+        this.rotation = imageState.rotation || 0;
     }
 }

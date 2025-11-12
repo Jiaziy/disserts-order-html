@@ -27,7 +27,7 @@ class SweetsDesigner {
         this.currentColor = '#3D2314'; // 默认巧克力棕色
         this.brushSize = 5;
         this.dessertType = 'chocolate'; // 固定为巧克力类型
-        this.canvasSize = { width: 1024, height: 768 };
+        this.canvasSize = { width: 1440, height: 900 };
         this.currentTool = 'brush';
         this.templateSelected = false; // 跟踪是否已选择模板
         this.previewZoomLevel = 1; // 预览画布的缩放级别
@@ -48,9 +48,10 @@ class SweetsDesigner {
         this.renderer = null;
         this.events = null;
         this.storage = null;
+        this.elements = null; // 元素管理器
         
-        // 初始化模块
-        this.initModules();
+        // 延迟初始化模块，直到init()方法被调用
+        // this.initModules();
     }
 
     /**
@@ -64,7 +65,8 @@ class SweetsDesigner {
             typeof DesignerImages === 'undefined' ||
             typeof DesignerRenderer === 'undefined' ||
             typeof DesignerEvents === 'undefined' ||
-            typeof DesignerStorage === 'undefined') {
+            typeof DesignerStorage === 'undefined' ||
+            typeof DesignerElementsManager === 'undefined') {
             console.error('模块未正确加载，请检查脚本引用顺序');
             return;
         }
@@ -77,6 +79,7 @@ class SweetsDesigner {
         this.renderer = new DesignerRenderer(this);
         this.storage = new DesignerStorage(this);
         this.events = new DesignerEvents(this);
+        this.elements = new DesignerElementsManager(this);
         
         console.log('甜点设计器模块已初始化');
     }
@@ -98,19 +101,34 @@ class SweetsDesigner {
         this.ctx = this.canvas.getContext('2d');
         this.previewCtx = this.previewCanvas.getContext('2d');
         
-        // 设置画布尺寸
-        this.canvas.width = this.canvas.offsetWidth;
-        this.canvas.height = this.canvas.offsetHeight;
+        // 设置画布尺寸（使用预设尺寸）
+        this.canvas.width = this.canvasSize.width;
+        this.canvas.height = this.canvasSize.height;
         this.previewCanvas.width = this.previewCanvas.offsetWidth;
         this.previewCanvas.height = this.previewCanvas.offsetHeight;
         
-        // 初始化画布
-        this.clearCanvas();
-        this.clearPreview();
+        // 创建离屏画布用于存储绘制内容，防止笔画消失
+        this.offscreenCanvas = document.createElement('canvas');
+        this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+        
+        // 设置离屏画布尺寸与主画布一致
+        this.offscreenCanvas.width = this.canvas.width;
+        this.offscreenCanvas.height = this.canvas.height;
+        console.log('离屏画布创建完成，尺寸:', this.offscreenCanvas.width, '×', this.offscreenCanvas.height);
         
         // 设置初始样式
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // 现在初始化模块（确保画布已设置）
+        this.initModules();
+        
+        // 初始化事件监听器（必须在模块初始化后调用）
+        this.events.initEventListeners();
+        
+        // 初始化画布（在模块初始化之后）
+        this.clearCanvas();
+        this.clearPreview();
         
         // 初始化事件监听器
         this.initEventListeners();
@@ -169,15 +187,25 @@ class SweetsDesigner {
         }
         
         // 重置画布事件
-        const resetBtn = document.getElementById('reset-btn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
+        const resetViewBtn = document.getElementById('reset-view-btn');
+        if (resetViewBtn) {
+            resetViewBtn.addEventListener('click', () => {
+                // 这里应该是重置视图的逻辑，而不是重置画布
+                // this.renderer.resetCanvas();
+                console.log('重置视图按钮点击');
+            });
+        }
+        
+        // 清空画布事件
+        const clearCanvasBtn = document.getElementById('clear-canvas-action-btn');
+        if (clearCanvasBtn) {
+            clearCanvasBtn.addEventListener('click', () => {
                 this.renderer.resetCanvas();
             });
         }
         
         // 保存设计事件
-        const saveBtn = document.getElementById('save-btn');
+        const saveBtn = document.getElementById('save-design-btn');
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
                 this.storage.saveDesignToLocal();
@@ -209,6 +237,20 @@ class SweetsDesigner {
                 }
             });
         });
+        
+        // 模板选择事件
+        const templateButtons = document.querySelectorAll('.template-btn');
+        templateButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const templateType = e.target.dataset.template;
+                if (templateType) {
+                    this.templates.selectTemplate(templateType);
+                }
+            });
+        });
+        
+        // 事件监听器由designer-events.js处理，这里不需要重复绑定
+        // 事件处理逻辑通过events对象进行
         
         console.log('事件监听器已初始化');
     }
@@ -323,6 +365,35 @@ class SweetsDesigner {
     }
 
     /**
+     * 更新设计信息（用于模板和工具模块）
+     */
+    updateDesignInfo() {
+        // 更新设计信息显示
+        const designInfoElement = document.getElementById('design-info');
+        if (designInfoElement) {
+            let infoText = '';
+            
+            if (this.templates && this.templates.isTemplateSelected()) {
+                const templateName = this.templates.getCurrentTemplate();
+                infoText += `模板: ${templateName} | `;
+            }
+            
+            if (this.currentTool) {
+                infoText += `工具: ${this.currentTool} | `;
+            }
+            
+            if (this.brushSize) {
+                infoText += `画笔大小: ${this.brushSize}px`;
+            }
+            
+            designInfoElement.textContent = infoText || '开始设计...';
+        }
+        
+        // 更新UI状态
+        this.updateUI();
+    }
+
+    /**
      * 显示提示消息
      */
     showToast(message, duration = 3000) {
@@ -419,11 +490,65 @@ class SweetsDesigner {
         return {
             currentTool: this.currentTool,
             templateSelected: this.templates ? this.templates.isTemplateSelected() : false,
-            currentTemplateId: this.templates ? this.templates.getCurrentTemplateId() : null,
+            currentTemplateId: this.templates ? this.templates.getCurrentTemplate() : null,
             uploadedImage: this.uploadedImage ? true : false,
             imageConfirmed: this.imageConfirmed,
             textElementsCount: this.text ? this.text.textElements.length : 0
         };
+    }
+
+    /**
+     * 获取鼠标/触摸位置（带缩放处理）
+     */
+    getMousePos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        
+        // 计算画布的缩放比例
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
+        // 根据缩放比例映射鼠标坐标到画布坐标系
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+    }
+
+    /**
+     * 同步离屏画布
+     */
+    syncOffscreenCanvas() {
+        if (this.offscreenCanvas && this.offscreenCtx && this.ctx) {
+            try {
+                // 确保离屏画布尺寸与主画布一致
+                if (this.offscreenCanvas.width !== this.canvas.width || this.offscreenCanvas.height !== this.canvas.height) {
+                    this.offscreenCanvas.width = this.canvas.width;
+                    this.offscreenCanvas.height = this.canvas.height;
+                    console.log('离屏画布尺寸已同步:', this.offscreenCanvas.width, '×', this.offscreenCanvas.height);
+                }
+                
+                // 将主画布内容复制到离屏画布
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                this.offscreenCtx.putImageData(imageData, 0, 0);
+            } catch (error) {
+                console.error('同步离屏画布失败:', error);
+            }
+        }
+    }
+
+    /**
+     * 从离屏画布恢复内容
+     */
+    restoreFromOffscreen() {
+        if (this.offscreenCanvas && this.offscreenCtx && this.ctx) {
+            try {
+                // 将离屏画布内容复制回主画布
+                const imageData = this.offscreenCtx.getImageData(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+                this.ctx.putImageData(imageData, 0, 0);
+            } catch (error) {
+                console.error('从离屏画布恢复失败:', error);
+            }
+        }
     }
 
     /**

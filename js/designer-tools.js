@@ -20,6 +20,9 @@ class DesignerTools {
         
         this.currentTool = tool;
         
+        // 同步主设计器的工具状态
+        this.designer.currentTool = tool;
+        
         // 取消正在进行的拖动
         if (this.designer.isDragging) {
             this.designer.isDragging = false;
@@ -56,6 +59,16 @@ class DesignerTools {
             }
         }
         
+        // 显示工具切换提示
+        if (this.designer.events && this.designer.events.showToolSwitchedMessage) {
+            this.designer.events.showToolSwitchedMessage(tool);
+        }
+        
+        // 显示工具使用提示
+        if (this.designer.events && this.designer.events.showToolUsageHint) {
+            this.designer.events.showToolUsageHint(tool);
+        }
+        
         this.designer.updateDesignInfo();
     }
 
@@ -63,11 +76,16 @@ class DesignerTools {
      * 开始绘图
      */
     startDrawing(e) {
-        // 检查是否已选择模板
-        if ((this.currentTool === 'brush' || this.currentTool === 'eraser') && !this.designer.templateSelected) {
+        // 检查是否已选择模板 - 使用与主设计器一致的检查方式
+        const isTemplateSelected = this.designer.templates ? this.designer.templates.isTemplateSelected() : this.designer.templateSelected;
+        
+        if ((this.currentTool === 'brush' || this.currentTool === 'eraser') && !isTemplateSelected) {
+            console.log('画笔工具无法开始绘图：未选择模板');
             this.showTemplateRequiredMessage();
             return;
         }
+        
+        console.log(`开始绘图，工具: ${this.currentTool}, 模板选择状态: ${isTemplateSelected}`);
         
         this.designer.isDrawing = true;
         const pos = this.designer.getMousePos(e);
@@ -110,6 +128,12 @@ class DesignerTools {
     draw(e) {
         if (!this.designer.isDrawing) return;
         
+        // 确保工具状态同步
+        if (this.designer.currentTool !== this.currentTool) {
+            console.warn('工具状态不同步，正在修复:', this.designer.currentTool, '->', this.currentTool);
+            this.designer.currentTool = this.currentTool;
+        }
+        
         // 只有画笔和橡皮擦需要持续绘制
         if (this.currentTool !== 'brush' && this.currentTool !== 'eraser') {
             return;
@@ -129,17 +153,19 @@ class DesignerTools {
             this.designer.ctx.moveTo(this.designer.lastX, this.designer.lastY);
             this.designer.ctx.lineTo(currentX, currentY);
             
-            // 设置绘制属性
+            // 设置绘制属性 - 确保橡皮擦工具正确使用destination-out模式
             if (this.currentTool === 'brush') {
+                // 画笔模式 - 叠加内容
                 this.designer.ctx.strokeStyle = this.currentColor;
-                this.designer.ctx.globalCompositeOperation = 'source-over'; // 画笔模式：叠加内容
+                this.designer.ctx.globalCompositeOperation = 'source-over';
+                this.designer.ctx.lineWidth = this.brushSize;
             } else if (this.currentTool === 'eraser') {
-                // 橡皮擦模式 - 使用白色绘制并设置destination-out模式
+                // 橡皮擦模式 - 擦除内容
                 this.designer.ctx.strokeStyle = 'rgba(255,255,255,1)'; // 使用不透明白色
-                this.designer.ctx.globalCompositeOperation = 'destination-out'; // 橡皮擦模式：擦除内容
+                this.designer.ctx.globalCompositeOperation = 'destination-out';
+                this.designer.ctx.lineWidth = this.brushSize * 2; // 橡皮擦更大一些
             }
             
-            this.designer.ctx.lineWidth = this.currentTool === 'eraser' ? this.brushSize * 2 : this.brushSize;
             this.designer.ctx.lineCap = 'round';
             this.designer.ctx.lineJoin = 'round';
             this.designer.ctx.stroke();
@@ -155,7 +181,7 @@ class DesignerTools {
                     this.designer.offscreenCtx.strokeStyle = this.currentColor;
                     this.designer.offscreenCtx.globalCompositeOperation = 'source-over';
                 } else if (this.currentTool === 'eraser') {
-                    // 橡皮擦模式 - 使用白色绘制并设置destination-out模式
+                    // 橡皮擦模式 - 擦除内容
                     this.designer.offscreenCtx.strokeStyle = 'rgba(255,255,255,1)'; // 使用不透明白色
                     this.designer.offscreenCtx.globalCompositeOperation = 'destination-out';
                 }
@@ -198,7 +224,10 @@ class DesignerTools {
             // 清空点数组
             this.designer.points = [];
             
-            console.log('绘图停止，状态已保存');
+            // 只有画笔和橡皮擦工具才记录绘图停止信息
+            if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
+                console.log(`绘图停止，工具: ${this.currentTool}, 状态已保存`);
+            }
         }
     }
 

@@ -48,8 +48,9 @@ class DesignerText {
         // 选中新添加的文本元素
         this.designer.elements.selectElement(textElement);
         
-        // 切换到文本工具
+        // 切换到文本工具（同步两个工具状态）
         this.designer.tools.selectTool('text');
+        this.designer.currentTool = 'text';
         
         // 清空输入框
         const textInput = document.getElementById('text-input');
@@ -100,13 +101,23 @@ class DesignerText {
         }
         
         this.designer.elements.deleteSelectedElement();
-        this.designer.showToast('文本已删除');
+        
+        // 文本删除后恢复笔刷工具
+        this.restoreBrushToolAfterTextAction();
+        
+        this.designer.showToast('文本已删除，可以继续使用笔刷');
     }
 
     /**
      * 清空所有文本元素
      */
     clearAllText() {
+        // 检查元素管理器是否已初始化
+        if (!this.designer.elements || !this.designer.elements.getElementsByType) {
+            console.warn('元素管理器未初始化');
+            return;
+        }
+        
         // 过滤出文本元素并删除
         const textElements = this.designer.elements.getElementsByType('text');
         this.designer.elements.elements = this.designer.elements.elements.filter(
@@ -130,6 +141,15 @@ class DesignerText {
      * 获取文本状态
      */
     getTextState() {
+        // 检查元素管理器是否已初始化
+        if (!this.designer.elements || !this.designer.elements.getElementsByType) {
+            console.warn('元素管理器未初始化');
+            return {
+                textElements: [],
+                selectedTextElement: null
+            };
+        }
+        
         const textElements = this.designer.elements.getElementsByType('text');
         return {
             textElements: textElements,
@@ -151,5 +171,47 @@ class DesignerText {
                 this.designer.elements.selectElement(element);
             }
         }
+    }
+
+    /**
+     * 恢复笔刷工具状态（文本操作后调用）
+     */
+    restoreBrushToolAfterTextAction() {
+        console.log('正在恢复笔刷工具状态（文本操作后）...');
+        
+        // 1. 切换回画笔工具
+        this.designer.tools.selectTool('brush');
+        
+        // 2. 重置鼠标状态
+        if (this.designer.events) {
+            this.designer.events.isMouseDown = false;
+            this.designer.events.lastMousePos = { x: 0, y: 0 };
+        }
+        
+        // 3. 重置拖动状态
+        this.designer.isDragging = false;
+        this.designer.isDraggingText = false;
+        
+        // 4. 重置当前工具状态
+        this.designer.currentTool = 'brush';
+        
+        // 5. 更新光标样式为画笔
+        if (this.designer.canvas) {
+            this.designer.canvas.style.cursor = 'crosshair';
+        }
+        
+        // 6. 强制刷新画布状态，确保鼠标事件能正确响应
+        setTimeout(() => {
+            if (this.designer.canvas) {
+                // 触发一个小的鼠标移动事件来更新光标状态
+                const event = new MouseEvent('mousemove', {
+                    clientX: 0,
+                    clientY: 0
+                });
+                this.designer.canvas.dispatchEvent(event);
+            }
+        }, 10);
+        
+        console.log('笔刷工具状态恢复完成（文本操作后）');
     }
 }

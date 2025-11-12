@@ -39,22 +39,26 @@ class DesignerEvents {
     }
 
     /**
-     * 获取鼠标/触摸位置
+     * 获取鼠标/触摸位置（带缩放处理）
      */
     getMousePos(e) {
         const rect = this.designer.canvas.getBoundingClientRect();
         
+        // 计算画布的缩放比例
+        const scaleX = this.designer.canvas.width / rect.width;
+        const scaleY = this.designer.canvas.height / rect.height;
+        
         if (e.touches) {
             // 触摸事件
             return {
-                x: e.touches[0].clientX - rect.left,
-                y: e.touches[0].clientY - rect.top
+                x: (e.touches[0].clientX - rect.left) * scaleX,
+                y: (e.touches[0].clientY - rect.top) * scaleY
             };
         } else {
             // 鼠标事件
             return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
             };
         }
     }
@@ -69,23 +73,88 @@ class DesignerEvents {
         this.isMouseDown = true;
         this.lastMousePos = { ...pos };
         
-        // 根据当前工具类型处理不同的操作
+        console.log(`鼠标按下事件，当前工具: ${this.designer.currentTool}`);
+        
+        // 根据当前工具类型决定处理优先级
         switch (this.designer.currentTool) {
             case 'brush':
-                this.designer.tools.startDrawing(pos);
+            case 'eraser':
+                // 画笔和橡皮擦工具：直接开始绘图，不检查元素选择
+                console.log('画笔/橡皮擦工具，直接开始绘图');
+                
+                // 确保绘图状态正确重置
+                if (this.designer.isDragging || this.designer.isDraggingText) {
+                    this.designer.isDragging = false;
+                    this.designer.isDraggingText = false;
+                }
+                
+                this.designer.tools.startDrawing(e);
                 break;
+                
+            case 'shape':
+                // 形状工具：直接开始绘图
+                console.log('形状工具，直接开始绘图');
+                
+                // 确保绘图状态正确重置
+                if (this.designer.isDragging || this.designer.isDraggingText) {
+                    this.designer.isDragging = false;
+                    this.designer.isDraggingText = false;
+                }
+                
+                this.designer.tools.startDrawing(e);
+                break;
+                
             case 'text':
             case 'image':
-                // 统一使用元素管理器处理图片和文本的选择和拖动
+                // 文本和图片工具：先尝试选择元素
+                console.log('文本/图片工具，尝试选择元素');
                 const element = this.designer.elements.startDraggingElement(pos);
                 if (element) {
-                    // 如果选中了元素，切换到对应的工具
-                    this.designer.setCurrentTool(element.type);
+                    console.log(`成功选中元素: ${element.type}, 开始拖动`);
+                    // 如果选中了元素，保持当前工具类型，只设置拖动状态
+                    if (this.designer.elements.selectedElement) {
+                        this.designer.isDragging = true;
+                    }
+                    
+                    // 显示选中元素的提示
+                    this.showElementSelectedMessage(element.type);
+                } else {
+                    console.log('没有选中任何元素，取消选择');
+                    this.designer.elements.deselectElement();
+                    
+                    // 如果没有选中元素，并且点击了元素区域外，自动切换到画笔工具
+                    if (this.designer.currentTool === 'image' || this.designer.currentTool === 'text') {
+                        console.log('图片/文字工具区域外点击，切换到画笔工具');
+                        
+                        // 立即更新工具状态，确保后续操作使用正确的工具
+                        this.designer.currentTool = 'brush';
+                        this.designer.tools.currentTool = 'brush';
+                        
+                        // 更新UI按钮状态
+                        document.querySelectorAll('.tool-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        document.querySelector(`.tool-btn[data-tool="brush"]`)?.classList.add('active');
+                        
+                        // 更新光标样式
+                        this.designer.canvas.style.cursor = 'crosshair';
+                        
+                        // 显示工具切换提示
+                        this.showToolSwitchedMessage('brush');
+                        
+                        // 立即开始绘图，不再使用延迟
+                        this.designer.tools.startDrawing(e);
+                    }
                 }
                 break;
-            case 'shape':
-                this.designer.tools.startDrawing(pos);
-                break;
+                
+            default:
+                // 其他工具：先尝试选择元素
+                console.log('尝试选择元素');
+                const defaultElement = this.designer.elements.startDraggingElement(pos);
+                if (!defaultElement) {
+                    console.log('没有选中任何元素');
+                }
         }
         
         // 更新界面
@@ -104,8 +173,9 @@ class DesignerEvents {
             // 根据当前工具类型处理不同的操作
             switch (this.designer.currentTool) {
                 case 'brush':
+                case 'eraser':
                 case 'shape':
-                    this.designer.tools.draw(pos);
+                    this.designer.tools.draw(e);
                     break;
                 case 'text':
                 case 'image':
@@ -133,6 +203,7 @@ class DesignerEvents {
             // 根据当前工具类型处理不同的操作
             switch (this.designer.currentTool) {
                 case 'brush':
+                case 'eraser':
                 case 'shape':
                     this.designer.tools.stopDrawing();
                     this.designer.saveState();
@@ -173,11 +244,7 @@ class DesignerEvents {
         
         if (e.touches.length === 1) {
             // 单点触摸，模拟鼠标事件
-            const pos = this.getMousePos(e);
-            this.handleMouseDown(new MouseEvent('mousedown', {
-                clientX: e.touches[0].clientX,
-                clientY: e.touches[0].clientY
-            }));
+            this.handleMouseDown(e);
         }
     }
 
@@ -189,11 +256,7 @@ class DesignerEvents {
         
         if (e.touches.length === 1) {
             // 单点触摸，模拟鼠标事件
-            const pos = this.getMousePos(e);
-            this.handleMouseMove(new MouseEvent('mousemove', {
-                clientX: e.touches[0].clientX,
-                clientY: e.touches[0].clientY
-            }));
+            this.handleMouseMove(e);
         }
     }
 
@@ -289,5 +352,70 @@ class DesignerEvents {
         // 在实际应用中，应该移除所有事件监听器
         // 这里简化处理，在实际项目中需要完整清理
         window.removeEventListener('resize', this.handleResize.bind(this));
+    }
+
+    /**
+     * 显示元素选中状态提示
+     */
+    showElementSelectedMessage(elementType) {
+        const elementNames = {
+            'text': '文本',
+            'image': '图片'
+        };
+        
+        const name = elementNames[elementType] || elementType;
+        this.designer.showToast(`${name}已选中，可拖动调整位置，按Delete删除`);
+        
+        // 更新状态栏显示
+        this.updateStatusBar(`已选中${name} - 拖动调整位置，按Delete删除`);
+    }
+
+    /**
+     * 显示工具切换提示
+     */
+    showToolSwitchedMessage(toolType) {
+        const toolNames = {
+            'brush': '画笔',
+            'eraser': '橡皮擦',
+            'shape': '形状',
+            'text': '文本',
+            'image': '图片'
+        };
+        
+        const name = toolNames[toolType] || toolType;
+        this.designer.showToast(`已切换到${name}工具`);
+        
+        // 更新状态栏显示
+        this.updateStatusBar(`当前工具：${name}`);
+    }
+
+    /**
+     * 更新状态栏显示
+     */
+    updateStatusBar(message) {
+        // 查找状态栏元素 - 使用现有的状态元素
+        const currentToolSpan = document.getElementById('current-tool');
+        if (currentToolSpan) {
+            currentToolSpan.textContent = message;
+        } else {
+            // 如果状态栏不存在，在控制台显示
+            console.log(`状态: ${message}`);
+        }
+    }
+
+    /**
+     * 显示工具使用提示
+     */
+    showToolUsageHint(toolType) {
+        const hints = {
+            'brush': '点击并拖动使用画笔绘画',
+            'eraser': '点击并拖动擦除内容',
+            'shape': '点击并拖动绘制形状',
+            'text': '点击画布添加文本，点击文本元素可编辑',
+            'image': '点击画布添加图片，点击图片元素可调整'
+        };
+        
+        const hint = hints[toolType] || '请选择工具开始创作';
+        this.updateStatusBar(hint);
     }
 }

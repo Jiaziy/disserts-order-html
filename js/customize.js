@@ -2,27 +2,23 @@
 const customizeState = {
     currentStep: 1,
     productType: 'chocolate',
-    selectedStyle: null,
     flavorIndex: 0,
     customText: '',
     quantity: 1,
     selectedPackaging: null,
     designType: 'text',
     designImage: null,
+    designData: null,
     
     // 产品数据
     dataMap: {
         chocolate: {
-            styles: [
-                { id: 1, emoji: '🍫', name: '基础巧克力', price: 88 },
-                { id: 2, emoji: '🍩', name: '夹心巧克力', price: 108 },
-                { id: 3, emoji: '🍮', name: '造型巧克力', price: 128 }
-            ],
-            flavors: ['黑巧克力', '牛奶巧克力', '白巧克力', '坚果巧克力'],
+            flavors: ['黑巧克力', '牛奶巧克力', '白巧克力'],
             packaging: [
                 { id: 1, emoji: '🎁', name: '精美礼盒', price: 30 },
                 { id: 2, emoji: '📦', name: '普通包装', price: 0 }
-            ]
+            ],
+            basePrice: 88 // 默认基础价格
         }
     }
 };
@@ -90,9 +86,6 @@ function initData() {
     const data = customizeState.dataMap.chocolate;
     
     // 设置默认选择
-    if (data.styles.length > 0) {
-        customizeState.selectedStyle = data.styles[0].id;
-    }
     if (data.packaging.length > 1) {
         customizeState.selectedPackaging = data.packaging[1].id;
     } else if (data.packaging.length > 0) {
@@ -103,7 +96,7 @@ function initData() {
 // 更新步骤指示器
 function updateStepIndicator() {
     // 更新步骤数字
-    document.getElementById('step-indicator').textContent = `步骤 ${customizeState.currentStep}/4`;
+    document.getElementById('step-indicator').textContent = `步骤 ${customizeState.currentStep}/3`;
     
     // 更新步骤激活状态
     document.querySelectorAll('.step-item').forEach((item, index) => {
@@ -116,28 +109,12 @@ function updateStepIndicator() {
     });
 }
 
-// 渲染步骤1：选择样式
+// 渲染步骤1：定制内容
 function renderStep1() {
-    const styleList = document.getElementById('style-list');
-    const data = customizeState.dataMap.chocolate;
-    
-    styleList.innerHTML = data.styles.map(style => `
-        <div class="style-item ${customizeState.selectedStyle === style.id ? 'selected' : ''}" 
-             onclick="selectStyle(${style.id})">
-            <div class="style-emoji">${style.emoji}</div>
-            <span class="style-name">${style.name}</span>
-            <span class="style-price">¥${style.price}</span>
-        </div>
-    `).join('');
-}
-
-// 选择样式
-function selectStyle(styleId) {
-    customizeState.selectedStyle = styleId;
-    renderStep1();
-    
-    // 显示选中效果
-    showToast('样式选择成功');
+    // 检查是否有设计数据
+    if (customizeState.designData) {
+        updateDesignPreview();
+    }
 }
 
 // 打开甜点设计器
@@ -187,18 +164,38 @@ function checkDesignResult() {
     }
 }
 
-// 渲染步骤2：甜点设计器
+// 渲染步骤2：选择包装、口味与个数
 function renderStep2() {
-    // 检查是否有设计数据
-    if (customizeState.designData) {
-        updateDesignPreview();
-    }
+    renderFlavors();
+    renderPackaging();
+    // 更新数量显示
+    document.getElementById('quantity').textContent = customizeState.quantity;
 }
 
-// 渲染步骤3：选择包装
-function renderStep3() {
+// 渲染口味选项
+function renderFlavors() {
+    const flavorOptions = document.getElementById('flavor-options');
+    const data = customizeState.dataMap.chocolate;
+    
+    flavorOptions.innerHTML = data.flavors.map((flavor, index) => `
+        <div class="flavor-item ${customizeState.flavorIndex === index ? 'selected' : ''}" 
+             onclick="selectFlavor(${index})">
+            <span class="flavor-name">${flavor}</span>
+        </div>
+    `).join('');
+}
+
+// 选择口味
+function selectFlavor(flavorIndex) {
+    customizeState.flavorIndex = flavorIndex;
+    renderFlavors();
+    showToast('口味选择成功');
+}
+
+// 渲染包装选项
+function renderPackaging() {
     const packagingList = document.getElementById('packaging-list');
-    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.candy;
+    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.chocolate;
     
     packagingList.innerHTML = data.packaging.map(packaging => `
         <div class="packaging-item ${customizeState.selectedPackaging === packaging.id ? 'selected' : ''}" 
@@ -228,7 +225,7 @@ function changeQuantity(delta) {
 
 // 下一步
 function nextStep() {
-    if (customizeState.currentStep < 4) {
+    if (customizeState.currentStep < 3) {
         customizeState.currentStep++;
         updateStepIndicator();
         showCurrentStep();
@@ -268,30 +265,23 @@ function showCurrentStep() {
         case 3:
             renderStep3();
             break;
-        case 4:
-            renderStep4();
-            break;
     }
 }
 
-// 渲染步骤4：确认订单
-function renderStep4() {
-    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.candy;
-    const selectedStyle = data.styles.find(style => style.id === customizeState.selectedStyle);
+// 渲染步骤3：确认订单
+function renderStep3() {
+    const data = customizeState.dataMap[customizeState.productType] || customizeState.dataMap.chocolate;
     const selectedPackaging = data.packaging.find(pkg => pkg.id === customizeState.selectedPackaging);
     
     // 计算总价
-    const basePrice = selectedStyle ? selectedStyle.price : 0;
+    const basePrice = data.basePrice;
     const packagingPrice = selectedPackaging ? selectedPackaging.price : 0;
     const totalPrice = (basePrice + packagingPrice) * customizeState.quantity;
     
     // 更新订单摘要
-    document.getElementById('summary-product-type').textContent = 
-        customizeState.productType === 'candy' ? '糖果' : 
-        customizeState.productType === 'cookie' ? '曲奇' : '巧克力';
+    document.getElementById('summary-product-type').textContent = '巧克力';
     
-    document.getElementById('summary-style').textContent = 
-        selectedStyle ? selectedStyle.name : '未选择';
+    document.getElementById('summary-style').textContent = '-'; // 不再需要样式
     
     document.getElementById('summary-flavor').textContent = 
         data.flavors[customizeState.flavorIndex] || '未选择';
@@ -300,7 +290,7 @@ function renderStep4() {
         customizeState.designData ? '已设计' : '无';
     
     document.getElementById('summary-quantity').textContent = 
-        customizeState.quantity + '份';
+        customizeState.quantity + '个';
     
     document.getElementById('summary-packaging').textContent = 
         selectedPackaging ? selectedPackaging.name : '未选择';
@@ -359,10 +349,6 @@ function updateDesignPreview() {
 
 // 提交订单
 async function submitOrder() {
-    if (!customizeState.selectedStyle) {
-        showToast('请先选择产品样式');
-        return;
-    }
     
     try {
         // 获取当前用户信息
@@ -372,7 +358,6 @@ async function submitOrder() {
         const orderData = {
             user_id: currentUser?.id || 'anonymous',
             product_type: customizeState.productType,
-            selected_style: customizeState.selectedStyle,
             flavor_index: customizeState.flavorIndex,
             custom_text: customizeState.customText,
             quantity: customizeState.quantity,
@@ -390,7 +375,6 @@ async function submitOrder() {
             id: 'order_' + Date.now(),
             userId: currentUser?.id || 'anonymous',
             productType: customizeState.productType,
-            selectedStyle: customizeState.selectedStyle,
             flavorIndex: customizeState.flavorIndex,
             customText: customizeState.customText,
             quantity: customizeState.quantity,

@@ -100,31 +100,50 @@ class DesignerElement {
      * 开始拖动元素
      */
     startDrag(pos) {
+        console.log(`开始拖动元素 ${this.type}:`);
+        console.log(`元素位置: x=${this.x}, y=${this.y}`);
+        console.log(`鼠标位置: x=${pos.x}, y=${pos.y}`);
+        
         this.isDragging = true;
         this.dragOffset.x = pos.x - this.x;
         this.dragOffset.y = pos.y - this.y;
+        
+        console.log(`拖动偏移量: x=${this.dragOffset.x}, y=${this.dragOffset.y}`);
+        
         this.designer.canvas.style.cursor = 'move';
         
         // 通知设计器元素开始拖动
         if (this.designer.elements) {
             this.designer.elements.onElementDragStart(this);
         }
+        
+        console.log('拖动开始成功');
     }
 
     /**
      * 拖动元素
      */
     drag(pos) {
-        if (!this.isDragging) return;
+        if (!this.isDragging) {
+            console.log(`拖动失败: 元素 ${this.type} 的 isDragging = false`);
+            return;
+        }
+        
+        console.log(`拖动元素 ${this.type}: 鼠标位置 x=${pos.x}, y=${pos.y}`);
         
         // 如果正在绘图，不允许拖动元素
         if (this.designer.isDrawing) {
+            console.log('拖动失败: 正在绘图中，不允许拖动元素');
             return;
         }
         
         // 更新元素位置
+        const oldX = this.x;
+        const oldY = this.y;
         this.x = pos.x - this.dragOffset.x;
         this.y = pos.y - this.dragOffset.y;
+        
+        console.log(`位置更新: 从 (${oldX.toFixed(1)}, ${oldY.toFixed(1)}) 到 (${this.x.toFixed(1)}, ${this.y.toFixed(1)})`);
         
         // 限制元素在画布范围内
         this.constrainToCanvas();
@@ -133,6 +152,8 @@ class DesignerElement {
         if (this.designer.elements) {
             this.designer.elements.onElementDrag(this);
         }
+        
+        console.log('拖动更新成功');
     }
 
     /**
@@ -267,19 +288,67 @@ class ImageElement extends DesignerElement {
         this.originalHeight = config.height || 0;
         this.isProcessed = config.isProcessed || false;
         this.originalDataUrl = config.originalDataUrl || null;
+        
+        // 确认/取消状态
+        this.confirmed = false;
+        this.confirmationButtons = {
+            confirm: { x: 0, y: 0, width: 80, height: 30, text: '确定' },
+            cancel: { x: 0, y: 0, width: 80, height: 30, text: '取消' }
+        };
     }
 
     /**
-     * 检查鼠标是否在图片范围内
+     * 检查鼠标是否在元素范围内
      */
     isPointInElement(x, y) {
+        // 检查图片主体
         const scaledWidth = this.width * this.scale;
         const scaledHeight = this.height * this.scale;
         
-        return x >= this.x && 
+        const isInBounds = x >= this.x && 
                x <= this.x + scaledWidth && 
                y >= this.y && 
                y <= this.y + scaledHeight;
+        
+        // 调试信息
+        if (this.isSelected && !this.isDragging) {
+            console.log(`图片边界检查: x=${this.x.toFixed(1)}, y=${this.y.toFixed(1)}, 宽度=${scaledWidth.toFixed(1)}, 高度=${scaledHeight.toFixed(1)}`);
+            console.log(`鼠标位置: x=${x.toFixed(1)}, y=${y.toFixed(1)}`);
+            console.log(`是否在范围内: ${isInBounds}`);
+        }
+        
+        return isInBounds;
+    }
+
+    /**
+     * 检查鼠标是否在按钮区域内（单独调用，不干扰元素选择）
+     */
+    isPointInButtonArea(x, y) {
+        if (!this.isSelected) return false;
+        
+        if (this.isPointInButton(x, y, 'confirm')) {
+            console.log('鼠标在确认按钮上');
+            return true;
+        }
+        if (this.isPointInButton(x, y, 'cancel')) {
+            console.log('鼠标在取消按钮上');
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 检查鼠标是否在按钮范围内
+     */
+    isPointInButton(x, y, buttonType) {
+        const button = this.confirmationButtons[buttonType];
+        if (!button) return false;
+        
+        return x >= button.x && 
+               x <= button.x + button.width && 
+               y >= button.y && 
+               y <= button.y + button.height;
     }
 
     /**
@@ -324,10 +393,164 @@ class ImageElement extends DesignerElement {
         // 恢复原始合成模式
         this.designer.ctx.globalCompositeOperation = originalCompositeOperation;
         
-        // 如果元素被选中，绘制边框
-        if (this.isSelected) {
+        // 如果元素被选中，绘制边框和按钮
+        if (this.isSelected && !this.confirmed) {
             this.drawSelectionBox();
+            // 绘制确认取消按钮
+            this.drawConfirmationButtons();
         }
+    }
+
+    /**
+     * 绘制确认取消按钮
+     */
+    drawConfirmationButtons() {
+        const bounds = this.getBounds();
+        const buttonY = bounds.y + bounds.height + 10;
+        
+        // 确认按钮位置 - 调整为相对于文本中心位置
+        this.confirmationButtons.confirm.x = this.x - 90;
+        this.confirmationButtons.confirm.y = buttonY;
+        
+        // 取消按钮位置
+        this.confirmationButtons.cancel.x = this.x + 10;
+        this.confirmationButtons.cancel.y = buttonY;
+        
+        // 绘制确认按钮
+        this.drawButton('confirm');
+        
+        // 绘制取消按钮
+        this.drawButton('cancel');
+        
+        // 调试按钮位置
+        console.log(`文本按钮位置 - 确认: (${this.confirmationButtons.confirm.x.toFixed(1)}, ${this.confirmationButtons.confirm.y.toFixed(1)})`);
+        console.log(`文本按钮位置 - 取消: (${this.confirmationButtons.cancel.x.toFixed(1)}, ${this.confirmationButtons.cancel.y.toFixed(1)})`);
+    }
+
+    /**
+     * 绘制单个按钮
+     */
+    drawButton(buttonType) {
+        const button = this.confirmationButtons[buttonType];
+        
+        // 按钮背景
+        this.designer.ctx.fillStyle = buttonType === 'confirm' ? '#27ae60' : '#e74c3c';
+        this.designer.ctx.fillRect(button.x, button.y, button.width, button.height);
+        
+        // 按钮边框
+        this.designer.ctx.strokeStyle = '#2c3e50';
+        this.designer.ctx.lineWidth = 2;
+        this.designer.ctx.strokeRect(button.x, button.y, button.width, button.height);
+        
+        // 按钮文字
+        this.designer.ctx.fillStyle = 'white';
+        this.designer.ctx.font = '14px Arial';
+        this.designer.ctx.textAlign = 'center';
+        this.designer.ctx.textBaseline = 'middle';
+        this.designer.ctx.fillText(
+            button.text, 
+            button.x + button.width/2, 
+            button.y + button.height/2
+        );
+    }
+
+    /**
+     * 处理按钮点击
+     */
+    handleButtonClick(x, y) {
+        console.log(`=== 文本按钮点击检查 ===`);
+        console.log(`鼠标坐标: x=${x.toFixed(1)}, y=${y.toFixed(1)}`);
+        
+        const confirmButton = this.confirmationButtons.confirm;
+        const cancelButton = this.confirmationButtons.cancel;
+        
+        console.log(`确认按钮范围: (${confirmButton.x.toFixed(1)}, ${confirmButton.y.toFixed(1)}) 到 (${(confirmButton.x + confirmButton.width).toFixed(1)}, ${(confirmButton.y + confirmButton.height).toFixed(1)})`);
+        console.log(`取消按钮范围: (${cancelButton.x.toFixed(1)}, ${cancelButton.y.toFixed(1)}) 到 (${(cancelButton.x + cancelButton.width).toFixed(1)}, ${(cancelButton.y + cancelButton.height).toFixed(1)})`);
+        
+        if (this.isPointInButton(x, y, 'confirm')) {
+            console.log('✓ 点击确认按钮');
+            this.confirm();
+            return true;
+        }
+        
+        if (this.isPointInButton(x, y, 'cancel')) {
+            console.log('✓ 点击取消按钮');
+            this.cancel();
+            return true;
+        }
+        
+        console.log('✗ 没有点击任何按钮');
+        console.log(`=== 结束按钮检查 ===`);
+        return false;
+    }
+
+    /**
+     * 确认使用图片
+     */
+    confirm() {
+        console.log('确认使用图片');
+        this.confirmed = true;
+        
+        // 取消选择
+        if (this.designer.elements) {
+            this.designer.elements.deselectElement();
+        }
+        
+        // 保存状态
+        this.designer.saveState();
+        
+        // 显示确认消息
+        this.designer.showToast('图片已确认并固定');
+    }
+
+    /**
+     * 取消使用图片
+     */
+    cancel() {
+        console.log('取消使用图片');
+        
+        // 从元素管理器中删除元素
+        if (this.designer.elements) {
+            this.designer.elements.elements = this.designer.elements.elements.filter(
+                element => element.id !== this.id
+            );
+            this.designer.elements.deselectElement();
+        }
+        
+        // 重新渲染
+        this.designer.renderElementsOnly();
+        this.designer.saveState();
+        
+        // 清空上传input的值
+        const uploadInput = document.getElementById('image-upload-input');
+        if (uploadInput) {
+            uploadInput.value = '';
+        }
+        
+        this.designer.showToast('图片上传已取消');
+    }
+
+    /**
+     * 获取元素状态（用于保存和恢复）
+     */
+    getState() {
+        const state = super.getState();
+        state.confirmed = this.confirmed;
+        state.originalWidth = this.originalWidth;
+        state.originalHeight = this.originalHeight;
+        state.isProcessed = this.isProcessed;
+        return state;
+    }
+
+    /**
+     * 从状态恢复元素
+     */
+    setState(state) {
+        super.setState(state);
+        this.confirmed = state.confirmed || false;
+        this.originalWidth = state.originalWidth || this.width;
+        this.originalHeight = state.originalHeight || this.height;
+        this.isProcessed = state.isProcessed || false;
     }
 }
 
@@ -342,13 +565,20 @@ class TextElement extends DesignerElement {
         this.fontSize = config.fontSize || 24;
         this.fontFamily = config.fontFamily || 'Arial';
         this.color = config.color || '#3D2314';
+        
+        // 确认/取消状态
+        this.confirmed = false;
+        this.confirmationButtons = {
+            confirm: { x: 0, y: 0, width: 80, height: 30, text: '确定' },
+            cancel: { x: 0, y: 0, width: 80, height: 30, text: '取消' }
+        };
     }
 
     /**
-     * 检查鼠标是否在文本范围内
+     * 检查鼠标是否在元素范围内（不包含按钮区域）
      */
     isPointInElement(x, y) {
-        // 测量文本尺寸
+        // 只检查文本主体，不检查按钮区域
         this.designer.ctx.font = `${this.fontSize * this.scale}px ${this.fontFamily}`;
         const metrics = this.designer.ctx.measureText(this.text);
         const textHeight = this.fontSize * this.scale;
@@ -359,7 +589,47 @@ class TextElement extends DesignerElement {
         const top = this.y - textHeight / 2 - padding;
         const bottom = this.y + textHeight / 2 + padding;
         
-        return x >= left && x <= right && y >= top && y <= bottom;
+        const isInBounds = x >= left && x <= right && y >= top && y <= bottom;
+        
+        // 调试信息
+        if (this.isSelected && !this.isDragging) {
+            console.log(`文本边界检查: x=${this.x.toFixed(1)}, y=${this.y.toFixed(1)}, 宽度=${metrics.width.toFixed(1)}, 高度=${textHeight.toFixed(1)}`);
+            console.log(`鼠标位置: x=${x.toFixed(1)}, y=${y.toFixed(1)}`);
+            console.log(`是否在范围内: ${isInBounds}`);
+        }
+        
+        return isInBounds;
+    }
+
+    /**
+     * 检查鼠标是否在按钮区域内（单独调用，不干扰元素选择）
+     */
+    isPointInButtonArea(x, y) {
+        if (!this.isSelected) return false;
+        
+        if (this.isPointInButton(x, y, 'confirm')) {
+            console.log('鼠标在确认按钮上');
+            return true;
+        }
+        if (this.isPointInButton(x, y, 'cancel')) {
+            console.log('鼠标在取消按钮上');
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 检查鼠标是否在按钮范围内
+     */
+    isPointInButton(x, y, buttonType) {
+        const button = this.confirmationButtons[buttonType];
+        if (!button) return false;
+        
+        return x >= button.x && 
+               x <= button.x + button.width && 
+               y >= button.y && 
+               y <= button.y + button.height;
     }
 
     /**
@@ -400,9 +670,165 @@ class TextElement extends DesignerElement {
         
         this.designer.ctx.restore();
         
-        // 如果元素被选中，绘制边框
-        if (this.isSelected) {
+        // 如果元素被选中，绘制边框和按钮
+        if (this.isSelected && !this.confirmed) {
             this.drawSelectionBox();
+            // 绘制确认取消按钮
+            this.drawConfirmationButtons();
         }
+    }
+
+    /**
+     * 绘制确认取消按钮
+     */
+    drawConfirmationButtons() {
+        const bounds = this.getBounds();
+        const buttonY = bounds.y + bounds.height + 10;
+        
+        // 确认按钮位置 - 调整为相对于文本中心位置
+        this.confirmationButtons.confirm.x = this.x - 90;
+        this.confirmationButtons.confirm.y = buttonY;
+        
+        // 取消按钮位置
+        this.confirmationButtons.cancel.x = this.x + 10;
+        this.confirmationButtons.cancel.y = buttonY;
+        
+        // 绘制确认按钮
+        this.drawButton('confirm');
+        
+        // 绘制取消按钮
+        this.drawButton('cancel');
+        
+        // 调试按钮位置
+        console.log(`文本按钮位置 - 确认: (${this.confirmationButtons.confirm.x.toFixed(1)}, ${this.confirmationButtons.confirm.y.toFixed(1)})`);
+        console.log(`文本按钮位置 - 取消: (${this.confirmationButtons.cancel.x.toFixed(1)}, ${this.confirmationButtons.cancel.y.toFixed(1)})`);
+    }
+
+    /**
+     * 绘制单个按钮
+     */
+    drawButton(buttonType) {
+        const button = this.confirmationButtons[buttonType];
+        
+        // 按钮背景
+        this.designer.ctx.fillStyle = buttonType === 'confirm' ? '#27ae60' : '#e74c3c';
+        this.designer.ctx.fillRect(button.x, button.y, button.width, button.height);
+        
+        // 按钮边框
+        this.designer.ctx.strokeStyle = '#2c3e50';
+        this.designer.ctx.lineWidth = 2;
+        this.designer.ctx.strokeRect(button.x, button.y, button.width, button.height);
+        
+        // 按钮文字
+        this.designer.ctx.fillStyle = 'white';
+        this.designer.ctx.font = '14px Arial';
+        this.designer.ctx.textAlign = 'center';
+        this.designer.ctx.textBaseline = 'middle';
+        this.designer.ctx.fillText(
+            button.text, 
+            button.x + button.width/2, 
+            button.y + button.height/2
+        );
+    }
+
+    /**
+     * 处理按钮点击
+     */
+    handleButtonClick(x, y) {
+        console.log(`=== 文本按钮点击检查 ===`);
+        console.log(`鼠标坐标: x=${x.toFixed(1)}, y=${y.toFixed(1)}`);
+        
+        const confirmButton = this.confirmationButtons.confirm;
+        const cancelButton = this.confirmationButtons.cancel;
+        
+        console.log(`确认按钮范围: (${confirmButton.x.toFixed(1)}, ${confirmButton.y.toFixed(1)}) 到 (${(confirmButton.x + confirmButton.width).toFixed(1)}, ${(confirmButton.y + confirmButton.height).toFixed(1)})`);
+        console.log(`取消按钮范围: (${cancelButton.x.toFixed(1)}, ${cancelButton.y.toFixed(1)}) 到 (${(cancelButton.x + cancelButton.width).toFixed(1)}, ${(cancelButton.y + cancelButton.height).toFixed(1)})`);
+        
+        if (this.isPointInButton(x, y, 'confirm')) {
+            console.log('✓ 点击确认按钮');
+            this.confirm();
+            return true;
+        }
+        
+        if (this.isPointInButton(x, y, 'cancel')) {
+            console.log('✓ 点击取消按钮');
+            this.cancel();
+            return true;
+        }
+        
+        console.log('✗ 没有点击任何按钮');
+        console.log(`=== 结束按钮检查 ===`);
+        return false;
+    }
+
+    /**
+     * 确认使用文本
+     */
+    confirm() {
+        console.log('确认使用文本');
+        this.confirmed = true;
+        
+        // 取消选择
+        if (this.designer.elements) {
+            this.designer.elements.deselectElement();
+        }
+        
+        // 保存状态
+        this.designer.saveState();
+        
+        // 显示确认消息
+        this.designer.showToast('文本已确认并固定');
+    }
+
+    /**
+     * 取消使用文本
+     */
+    cancel() {
+        console.log('取消使用文本');
+        
+        // 从元素管理器中删除元素
+        if (this.designer.elements) {
+            this.designer.elements.elements = this.designer.elements.elements.filter(
+                element => element.id !== this.id
+            );
+            this.designer.elements.deselectElement();
+        }
+        
+        // 重新渲染
+        this.designer.renderElementsOnly();
+        this.designer.saveState();
+        
+        // 清空文本输入框
+        const textInput = document.getElementById('text-input');
+        if (textInput) {
+            textInput.value = '';
+        }
+        
+        this.designer.showToast('文本添加已取消');
+    }
+
+    /**
+     * 获取元素状态（用于保存和恢复）
+     */
+    getState() {
+        const state = super.getState();
+        state.confirmed = this.confirmed;
+        state.text = this.text;
+        state.fontSize = this.fontSize;
+        state.fontFamily = this.fontFamily;
+        state.color = this.color;
+        return state;
+    }
+
+    /**
+     * 从状态恢复元素
+     */
+    setState(state) {
+        super.setState(state);
+        this.confirmed = state.confirmed || false;
+        this.text = state.text || '';
+        this.fontSize = state.fontSize || 24;
+        this.fontFamily = state.fontFamily || 'Arial';
+        this.color = state.color || '#3D2314';
     }
 }
