@@ -292,6 +292,16 @@ class LocalStorageManager {
     saveDesigns(designs) {
         try {
             localStorage.setItem(this.STORAGE_KEYS.DESIGNS, JSON.stringify(designs));
+            
+            // 调试：检查保存是否成功
+            const savedCount = designs.length;
+            console.log(`设计保存成功: ${savedCount} 个设计已保存到 ${this.STORAGE_KEYS.DESIGNS}`);
+            
+            // 同时保存到旧键名以确保兼容性
+            const oldDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            const allDesigns = [...oldDesigns, ...designs];
+            localStorage.setItem('sweetsDesigns', JSON.stringify(allDesigns));
+            
             return true;
         } catch (error) {
             console.error('保存设计数据失败:', error);

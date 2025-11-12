@@ -51,11 +51,30 @@ class SweetsGallery {
                     data: design.canvasData || design.data,
                     type: design.dessertType || design.type || 'chocolate'
                 }));
+            } else if (window.StorageManager) {
+                // 使用新的StorageManager获取设计数据
+                const designs = window.StorageManager.getDesigns();
+                console.log('从StorageManager获取设计数据:', designs);
+                // 统一数据字段
+                return designs.map(design => ({
+                    ...design,
+                    data: design.canvasData || design.data,
+                    type: design.dessertType || design.type || 'chocolate'
+                }));
             } else {
-                // 降级方案 - 兼容两种存储键名
+                // 降级方案 - 兼容所有存储键名
                 const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
                 const designs = JSON.parse(localStorage.getItem('designs')) || [];
-                const allDesigns = [...sweetsDesigns, ...designs];
+                const sweets_designs = JSON.parse(localStorage.getItem('sweets_designs')) || [];
+                const allDesigns = [...sweetsDesigns, ...designs, ...sweets_designs];
+                
+                console.log('从本地存储加载设计数据:', {
+                    sweetsDesigns: sweetsDesigns.length,
+                    designs: designs.length,
+                    sweets_designs: sweets_designs.length,
+                    total: allDesigns.length
+                });
+                
                 // 统一数据字段
                 return allDesigns.map(design => ({
                     ...design,
