@@ -4552,3 +4552,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // 这里不再重复加载，避免数据被覆盖
     console.log('设计器页面初始化完成，数据加载由designer.init()处理');
 });
+        const defaultColor = colorSwatches[0].dataset.color;
+        designer.selectColor(defaultColor);
+    
+    
+    // 设置默认画笔大小
+    if (sizeOptions.length > 0 && designer && designer.selectBrushSize) {
+        const defaultSize = parseInt(sizeOptions[1].dataset.size);
+        designer.selectBrushSize(defaultSize);
+    }
+    
+    // 初始化巧克力设计
+    if (designer && designer.initChocolateDesign) {
+        designer.initChocolateDesign();
+    }
+
+
+// 导出全局方法供HTML使用
+window.undo = () => designer?.undo();
+window.redo = () => designer?.redo();
+window.clearCanvas = () => designer?.clearCanvas();
+window.saveDesign = () => designer?.saveCanvas();
+window.exportDesign = () => designer?.exportCanvas();
+window.exportWithTemplate = () => designer?.exportWithTemplate();
+window.generatePreview = () => designer?.updatePreview();
+window.designComplete = () => designer?.designComplete();
+window.submitDesign = () => designer?.submitDesign();
+
+window.saveToMyDesigns = () => designer?.saveToMyDesigns();
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDesigner();
+    // 延迟一下，确保designer对象已经创建
+    setTimeout(initializeTools, 100);
+    
+    // 注意：设计数据的加载现在在designer.init()方法中处理
+    // 这里不再重复加载，避免数据被覆盖
+    console.log('设计器页面初始化完成，数据加载由designer.init()处理');
+});

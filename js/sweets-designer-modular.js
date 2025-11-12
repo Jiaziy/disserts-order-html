@@ -208,7 +208,7 @@ class SweetsDesigner {
         const saveBtn = document.getElementById('save-design-btn');
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
-                this.storage.saveDesignToLocal();
+                this.saveDesignToLibrary();
             });
         }
         
@@ -548,6 +548,92 @@ class SweetsDesigner {
             } catch (error) {
                 console.error('从离屏画布恢复失败:', error);
             }
+        }
+    }
+
+    /**
+     * 保存设计到设计库，并8秒后返回步骤页面
+     */
+    saveDesignToLibrary() {
+        try {
+            // 先保存设计到本地存储
+            const savedDesign = this.storage.saveDesignToLocal();
+            
+            if (savedDesign) {
+                // 保存成功，显示提示信息
+                this.showToast('设计已保存到设计库，8秒后返回步骤页面');
+                
+                // 禁用保存按钮，防止重复点击
+                const saveBtn = document.getElementById('save-design-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = '保存中...';
+                }
+                
+                // 8秒后返回步骤页面
+                setTimeout(() => {
+                    // 检查是否存在导航管理器
+                    if (window.NavigationManager) {
+                        window.NavigationManager.navigateTo('steps');
+                    } else {
+                        // 如果没有导航管理器，尝试返回主页
+                        window.location.href = 'main.html';
+                    }
+                }, 8000);
+                
+                return true;
+            } else {
+                this.showToast('保存设计失败，请重试');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('保存设计到设计库失败:', error);
+            this.showToast('保存设计失败，请重试');
+            return false;
+        }
+    }
+
+    /**
+     * 保存设计到设计库，并8秒后返回步骤页面
+     */
+    saveDesignToLibrary() {
+        try {
+            // 先保存设计到本地存储
+            const savedDesign = this.storage.saveDesignToLocal();
+            
+            if (savedDesign) {
+                // 保存成功，显示提示信息
+                this.showToast('设计已保存到设计库，8秒后返回步骤页面');
+                
+                // 禁用保存按钮，防止重复点击
+                const saveBtn = document.getElementById('save-design-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = '保存中...';
+                }
+                
+                // 8秒后返回步骤页面
+                setTimeout(() => {
+                    // 检查是否存在导航管理器
+                    if (window.NavigationManager) {
+                        window.NavigationManager.navigateTo('steps');
+                    } else {
+                        // 如果没有导航管理器，尝试返回主页
+                        window.location.href = 'main.html';
+                    }
+                }, 8000);
+                
+                return true;
+            } else {
+                this.showToast('保存设计失败，请重试');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('保存设计到设计库失败:', error);
+            this.showToast('保存设计失败，请重试');
+            return false;
         }
     }
 
