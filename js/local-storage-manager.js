@@ -87,14 +87,31 @@ class LocalStorageManager {
                 migrationLog.push(`总共迁移 ${migratedDesigns.length} 个设计到新格式`);
             }
             
-            // 迁移订单数据
+            // 迁移订单数据 - 添加数据优化和错误处理
             const oldOrders = localStorage.getItem(this.STORAGE_KEYS.COMPATIBILITY.ORDERS_OLD);
             if (oldOrders) {
                 try {
                     const orders = JSON.parse(oldOrders);
                     if (Array.isArray(orders)) {
-                        this.saveOrders(orders);
-                        migrationLog.push(`迁移 ${orders.length} 个订单到新格式`);
+                        // 优化订单数据，避免过大
+                        const optimizedOrders = orders.map(order => {
+                            // 只保留核心字段，移除大体积数据
+                            return {
+                                id: order.id || order._id,
+                                userId: order.userId || order.user_id,
+                                productType: order.productType || 'chocolate',
+                                quantity: order.quantity || 1,
+                                totalPrice: order.totalPrice || order.total_price || 0,
+                                status: order.status || 'pending',
+                                createTime: order.createTime || order.created_at || new Date().toISOString()
+                            };
+                        });
+                        
+                        if (this.saveOrders(optimizedOrders)) {
+                            migrationLog.push(`迁移 ${optimizedOrders.length} 个订单到新格式`);
+                        } else {
+                            migrationLog.push(`订单迁移失败，数据量可能过大`);
+                        }
                     }
                 } catch (e) {
                     console.warn('无法解析旧订单数据:', e);
@@ -311,11 +328,14 @@ class LocalStorageManager {
             
             designs.push(standardizedDesign);
             
-            if (this.saveDesigns(designs)) {
+            const saveSuccess = this.saveDesigns(designs);
+            if (saveSuccess) {
+                console.log(`设计添加成功: ${standardizedDesign.id}`);
                 return standardizedDesign;
+            } else {
+                console.error('设计保存失败');
+                return null;
             }
-            
-            return null;
         } catch (error) {
             console.error('添加设计失败:', error);
             return null;
@@ -431,9 +451,73 @@ class LocalStorageManager {
      */
     saveOrders(orders) {
         try {
-            localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+            // 优化订单数据 - 保留完整字段但限制大小
+            const optimizedOrders = orders.map(order => {
+                const optimized = {
+                    id: order.id || order._id,
+                    userId: order.userId || order.user_id,
+                    productType: order.productType || 'chocolate',
+                    quantity: order.quantity || 1,
+                    totalPrice: order.totalPrice || order.total_price || 0,
+                    status: order.status || 'pending',
+                    createTime: order.createTime || order.created_at || new Date().toISOString(),
+                    // 保留显示必要的字段
+                    flavorIndex: order.flavorIndex || 0,
+                    selectedPackaging: order.selectedPackaging || '',
+                    // 保留关键信息，但限制大小
+                    customText: (order.customText && order.customText.length > 200) 
+                        ? order.customText.substring(0, 200) + '...' 
+                        : order.customText || '',
+                    // 简化客户信息
+                    customerInfo: {
+                        name: order.customerInfo?.name || '',
+                        email: order.customerInfo?.email || ''
+                    }
+                };
+                
+                // 检查数据大小
+                const jsonSize = JSON.stringify(optimized).length;
+                if (jsonSize > 5000) { // 5KB限制
+                    console.warn(`订单 ${optimized.id} 数据过大 (${jsonSize} bytes)，进行优化`);
+                    // 进一步简化
+                    delete optimized.customerInfo;
+                    delete optimized.customText;
+                }
+                
+                return optimized;
+            });
+            
+            localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(optimizedOrders));
+            console.log(`成功保存 ${optimizedOrders.length} 个订单`);
             return true;
         } catch (error) {
+            if (error.name === 'QuotaExceededError') {
+                console.warn('存储配额不足，尝试清理旧数据后重试');
+                
+                // 清理策略：保留最近50个订单
+                const recentOrders = orders.slice(-50);
+                
+                // 进一步简化保存的数据
+                const minimalOrders = recentOrders.map(order => ({
+                    id: order.id || order._id,
+                    userId: order.userId || order.user_id,
+                    productType: order.productType || 'chocolate',
+                    quantity: order.quantity || 1,
+                    totalPrice: order.totalPrice || order.total_price || 0,
+                    status: order.status || 'pending',
+                    createTime: order.createTime || order.created_at || new Date().toISOString()
+                }));
+                
+                try {
+                    localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(minimalOrders));
+                    console.warn(`已清理旧订单，保留最近的 ${minimalOrders.length} 个订单`);
+                    return true;
+                } catch (retryError) {
+                    console.error('重试保存仍然失败:', retryError);
+                    return false;
+                }
+            }
+            
             console.error('保存订单数据失败:', error);
             return false;
         }
