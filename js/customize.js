@@ -503,18 +503,12 @@ function showCurrentStep() {
 function validateCurrentStep() {
     switch (customizeState.currentStep) {
         case 1:
-            if (!customizeState.selectedStyle) {
-                showToast('请先选择样式');
-                return false;
-            }
-            break;
-        case 2:
             if (!customizeState.designData) {
                 showToast('请先完成甜点设计');
                 return false;
             }
             break;
-        case 3:
+        case 2:
             if (!customizeState.selectedPackaging) {
                 showToast('请选择包装');
                 return false;
