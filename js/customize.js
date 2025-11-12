@@ -225,6 +225,10 @@ function changeQuantity(delta) {
 
 // 下一步
 function nextStep() {
+    if (!validateCurrentStep()) {
+        return;
+    }
+    
     if (customizeState.currentStep < 3) {
         customizeState.currentStep++;
         updateStepIndicator();
@@ -512,20 +516,23 @@ function showCurrentStep() {
 function validateCurrentStep() {
     switch (customizeState.currentStep) {
         case 1:
-            if (!customizeState.selectedStyle) {
-                showToast('请先选择样式');
+            // 步骤1验证：检查是否已完成设计
+            if (!customizeState.designData) {
+                showToast('请先完成甜点设计再继续下一步');
                 return false;
             }
             break;
         case 2:
-            if (!customizeState.designData) {
-                showToast('请先完成甜点设计');
+            // 步骤2验证：检查是否已选择包装
+            if (!customizeState.selectedPackaging) {
+                showToast('请先选择包装样式再继续下一步');
                 return false;
             }
             break;
         case 3:
-            if (!customizeState.selectedPackaging) {
-                showToast('请选择包装');
+            // 步骤3验证：检查数量是否有效
+            if (customizeState.quantity < 1) {
+                showToast('请设置有效的巧克力数量');
                 return false;
             }
             break;
