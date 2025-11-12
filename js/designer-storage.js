@@ -177,8 +177,33 @@ class DesignerStorage {
      * 保存设计到本地存储
      */
     saveDesignToLocal(name = '') {
+        // 检查是否有设计内容
+        const context = this.designer.canvas.getContext('2d');
+        const imageData = context.getImageData(0, 0, this.designer.canvas.width, this.designer.canvas.height).data;
+        let isEmpty = true;
+        
+        for (let i = 0; i < imageData.length; i += 4) {
+            // 检查是否有非透明像素（α通道大于0）或非白色像素
+            if (imageData[i + 3] > 0 || 
+                !(imageData[i] === 255 && imageData[i + 1] === 255 && imageData[i + 2] === 255)) {
+                isEmpty = false;
+                break;
+            }
+        }
+        
+        if (isEmpty) {
+            this.designer.showToast('请先在画布上创建设计！');
+            return null;
+        }
+        
         if (!name) {
-            name = 'design_' + new Date().toISOString().replace(/[:.]/g, '-');
+            // 尝试获取设计名称
+            const designNameElement = document.getElementById('design-name');
+            name = designNameElement ? designNameElement.value.trim() : '';
+            
+            if (!name) {
+                name = 'design_' + new Date().toISOString().replace(/[:.]/g, '-');
+            }
         }
         
         try {

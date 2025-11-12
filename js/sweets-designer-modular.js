@@ -212,6 +212,14 @@ class SweetsDesigner {
             });
         }
         
+        // 设计完成事件
+        const designCompleteBtn = document.getElementById('design-complete-btn');
+        if (designCompleteBtn) {
+            designCompleteBtn.addEventListener('click', () => {
+                this.designComplete();
+            });
+        }
+        
         // 撤销重做事件
         const undoBtn = document.getElementById('undo-btn');
         if (undoBtn) {
@@ -548,6 +556,74 @@ class SweetsDesigner {
             } catch (error) {
                 console.error('从离屏画布恢复失败:', error);
             }
+        }
+    }
+
+    /**
+     * 设计完成 - 保存设计并返回定制页面
+     */
+    async designComplete() {
+        try {
+            // 检查设计是否为空
+            const context = this.canvas.getContext('2d');
+            const imageData = context.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+            let isEmpty = true;
+            
+            for (let i = 0; i < imageData.length; i += 4) {
+                // 检查是否有非透明像素（α通道大于0）或非白色像素
+                if (imageData[i + 3] > 0 || 
+                    !(imageData[i] === 255 && imageData[i + 1] === 255 && imageData[i + 2] === 255)) {
+                    isEmpty = false;
+                    break;
+                }
+            }
+            
+            if (isEmpty) {
+                alert('请先在画布上创建设计！');
+                return;
+            }
+            
+            // 获取画布数据
+            const canvasData = this.canvas.toDataURL('image/png');
+            
+            // 获取设计名称
+            const designNameElement = document.getElementById('design-name');
+            const designName = designNameElement ? designNameElement.value.trim() : `设计_${new Date().toLocaleString()}`;
+            
+            // 保存设计结果到localStorage，供定制页面使用
+            const designResult = {
+                imageData: canvasData,
+                designName: designName,
+                dessertType: this.dessertType,
+                createTime: new Date().toISOString(),
+                shape: this.templates.getCurrentTemplate() || 'circle',
+                size: 'M',
+                status: 'completed'
+            };
+            
+            // 优先使用StorageUtils保存设计结果
+            if (window.StorageUtils) {
+                StorageUtils.saveDesignResult(designResult);
+            } else {
+                // 降级保存设计结果
+                localStorage.setItem('sweetsDesignResult', JSON.stringify(designResult));
+            }
+            
+            // 显示成功消息
+            this.showToast('设计已完成！已保存，正在返回定制页面...', 'success');
+            
+            // 2秒后返回定制页面
+            setTimeout(() => {
+                if (window.navigationManager) {
+                    window.navigationManager.navigateTo('customize.html?step=2');
+                } else {
+                    window.location.href = 'customize.html?step=2';
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('设计完成失败:', error);
+            this.showToast('设计完成失败，请重试');
         }
     }
 
