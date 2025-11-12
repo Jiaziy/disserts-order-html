@@ -503,7 +503,7 @@ class SweetsGallery {
         return `
             <div class="order-card" data-id="${order.id}">
                 <div class="order-image">
-                    <img src="${order.designImage || 'images/default-order.png'}" alt="${order.productType}">
+                    <img src="${order.designImage || 'images/default-order.svg'}" alt="${order.productType}">
                 </div>
                 <div class="order-info">
                     <div class="order-title">${order.productType} - ${order.selectedStyle}</div>

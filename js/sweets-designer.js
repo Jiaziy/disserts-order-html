@@ -3673,6 +3673,65 @@ loadDesignFromStorage() {
     }
 
     /**
+     * 确保设计保存到设计库（我的设计页面）
+     */
+    ensureDesignSavedToLibrary(designResult) {
+        try {
+            console.log('确保设计保存到设计库...');
+            
+            // 获取当前设计数据，确保包含所有必要字段
+            const designData = {
+                id: 'design_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                userId: 'anonymous',
+                userName: '匿名用户',
+                name: designResult.designName,
+                description: '',
+                canvasData: designResult.imageData,
+                dessertType: designResult.dessertType,
+                elements: '[]',
+                imageData: null,
+                imagePosition: { x: 0, y: 0 },
+                imageScale: 1,
+                imageConfirmed: false,
+                textElements: [],
+                points: [],
+                shape: designResult.shape,
+                templateSelected: false,
+                createTime: designResult.createTime,
+                createdAt: designResult.createTime,
+                status: 'saved',
+                data: designResult.imageData,
+                type: designResult.dessertType
+            };
+            
+            // 保存到所有可能的存储键，确保兼容性
+            const existingDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            existingDesigns.push(designData);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(existingDesigns));
+            
+            // 同时保存到其他兼容键名
+            const altDesigns = JSON.parse(localStorage.getItem('designs')) || [];
+            altDesigns.push(designData);
+            localStorage.setItem('designs', JSON.stringify(altDesigns));
+            
+            // 使用StorageManager保存（如果可用）
+            if (window.StorageManager) {
+                window.StorageManager.addDesign(designData);
+            }
+            
+            // 使用StorageUtils保存（如果可用）
+            if (window.StorageUtils) {
+                window.StorageUtils.addDesign(designData);
+            }
+            
+            console.log('设计已成功保存到设计库，数量:', existingDesigns.length);
+            
+        } catch (error) {
+            console.error('确保设计保存到设计库失败:', error);
+        }
+    }
+
+    /**
      * 导出画布内容
      * @param {string} format - 导出格式，支持 'png', 'jpeg', 'webp'
      * @param {boolean} withTemplate - 是否包含模板底图
@@ -3928,16 +3987,41 @@ loadDesignFromStorage() {
     async designComplete() {
         try {
             // 先保存设计到用户设计库（我的设计页面）
+            console.log('开始保存设计到设计库...');
             await this.saveCanvas();
             
-            // 获取画布数据
-            const canvasData = this.canvas.toDataURL('image/png');
+            // 验证设计是否已保存到设计库
+            console.log('验证设计保存状态...');
+            let savedDesigns = [];
+            
+            if (window.StorageManager) {
+                savedDesigns = window.StorageManager.getDesigns();
+                console.log('StorageManager 设计库数量:', savedDesigns.length);
+            } else if (window.StorageUtils) {
+                savedDesigns = window.StorageUtils.getDesigns();
+                console.log('StorageUtils 设计库数量:', savedDesigns.length);
+            } else {
+                // 检查所有可能的存储键
+                const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                const designs = JSON.parse(localStorage.getItem('designs')) || [];
+                const sweets_designs = JSON.parse(localStorage.getItem('sweets_designs')) || [];
+                savedDesigns = [...sweetsDesigns, ...designs, ...sweets_designs];
+                
+                console.log('本地存储设计库数量:', {
+                    sweetsDesigns: sweetsDesigns.length,
+                    designs: designs.length,
+                    sweets_designs: sweets_designs.length,
+                    total: savedDesigns.length
+                });
+            }
+            
+            // 获取画布数据用于设计结果
             
             // 获取设计名称
             const designNameElement = document.getElementById('design-name');
             const designName = designNameElement ? designNameElement.value.trim() : `设计_${new Date().toLocaleString()}`;
             
-            // 保存设计结果到localStorage，供步骤二页面使用
+            // 同时保存设计结果到临时存储（供定制页面使用）和设计库（供我的设计页面使用）
             const designResult = {
                 imageData: canvasData,
                 designName: designName,
@@ -3948,13 +4032,18 @@ loadDesignFromStorage() {
                 status: 'completed'
             };
             
-            // 优先使用StorageUtils保存设计结果
+            // 确保设计同时保存到临时存储和设计库
+            console.log('同时保存设计结果到临时存储和设计库...');
+            
+            // 1. 保存到临时存储（供定制页面使用）
             if (window.StorageUtils) {
                 StorageUtils.saveDesignResult(designResult);
             } else {
-                // 降级保存设计结果
                 localStorage.setItem('sweetsDesignResult', JSON.stringify(designResult));
             }
+            
+            // 2. 保存到设计库（供我的设计页面使用）- 确保使用正确的键名
+            this.ensureDesignSavedToLibrary(designResult);
             
             // 显示成功消息
             this.showNotification('设计已完成！已保存到我的设计，正在返回定制页面...', 'success');

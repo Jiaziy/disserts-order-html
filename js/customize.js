@@ -32,10 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 初始化定制页面
 function initCustomizePage() {
-    // 从URL参数获取产品类型，默认使用chocolate
-    const urlParams = new URLSearchParams(window.location.search);
-    const productType = urlParams.get('type') || 'chocolate';
-    
     // 强制使用chocolate类型
     customizeState.productType = 'chocolate';
     updateProductTypeDisplay();
@@ -120,6 +116,15 @@ function renderStep1() {
 // 打开甜点设计器
 function openSweetsDesigner() {
     try {
+        // 检查是否有设计数据需要编辑
+        if (customizeState.designData) {
+            // 保存设计数据到临时存储，供设计器页面加载
+            localStorage.setItem('currentEditDesign', JSON.stringify(customizeState.designData));
+            console.log('设计数据已保存，准备传递给设计器');
+        } else {
+            console.log('没有设计数据，将打开空白设计器');
+        }
+        
         // 创建轻量级的状态副本，排除大体积数据
         const lightweightState = {
             currentStep: customizeState.currentStep,
@@ -129,7 +134,6 @@ function openSweetsDesigner() {
             quantity: customizeState.quantity,
             selectedPackaging: customizeState.selectedPackaging,
             designType: customizeState.designType,
-            // 不包含设计图片数据，这些数据可以通过其他方式传递
             hasDesignData: !!customizeState.designData
         };
         
@@ -162,11 +166,11 @@ function checkDesignResult() {
             // 如果是字符串，需要解析
             const designData = typeof savedDesign === 'string' ? JSON.parse(savedDesign) : savedDesign;
             
-            // 检查图片数据大小，避免过大
+            // 检查图片数据是否有效且不过大（保持原始数据用于预览）
             if (designData.imageData && designData.imageData.length > 500000) { // 约500KB
-                console.warn('设计图片数据过大，使用压缩版本');
-                // 如果图片数据过大，可以在这里添加压缩逻辑或使用占位符
-                designData.imageData = null; // 或者使用缩略图
+                console.warn('设计图片数据过大，但保留用于预览');
+                // 不设置为null，保留原始数据用于预览
+                // designData.imageData 保持不变
             }
             
             // 更新定制状态
@@ -399,22 +403,6 @@ async function submitOrder() {
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         
         // 创建订单数据
-        const orderData = {
-            user_id: currentUser?.id || 'anonymous',
-            product_type: customizeState.productType,
-            flavor_index: customizeState.flavorIndex,
-            custom_text: customizeState.customText,
-            quantity: customizeState.quantity,
-            selected_packaging: customizeState.selectedPackaging,
-            design_image: customizeState.designImage,
-            total_price: calculateTotalPrice(),
-            customer_info: {
-                name: currentUser?.name || '',
-                email: currentUser?.email || ''
-            }
-        };
-        
-        // 确保订单数据正确保存到本地存储
         const newOrder = {
             id: 'order_' + Date.now(),
             userId: currentUser?.id || 'anonymous',
@@ -429,21 +417,12 @@ async function submitOrder() {
             status: 'pending'
         };
         
-        // 合并Supabase返回的数据（如果有）
-        if (newOrder) {
-            Object.assign(fallbackOrder, {
-                id: newOrder.id || fallbackOrder.id,
-                userId: newOrder.user_id || fallbackOrder.userId,
-                createTime: newOrder.created_at || fallbackOrder.createTime
-            });
-        }
-        
         // 保存到本地存储
         let orders = JSON.parse(localStorage.getItem('orders')) || [];
-        orders.push(fallbackOrder);
+        orders.push(newOrder);
         localStorage.setItem('orders', JSON.stringify(orders));
         
-        console.log('订单已保存:', fallbackOrder);
+        console.log('订单已保存:', newOrder);
         showToast('订单提交成功！');
         
         // 2秒后返回主页
@@ -473,7 +452,6 @@ async function submitOrder() {
                 id: 'order_' + Date.now(),
                 userId: currentUser?.id || 'anonymous',
                 productType: customizeState.productType,
-                selectedStyle: customizeState.selectedStyle,
                 flavorIndex: customizeState.flavorIndex,
                 customText: customizeState.customText,
                 quantity: customizeState.quantity,

@@ -133,6 +133,11 @@ class SweetsDesigner {
         // 初始化事件监听器
         this.initEventListeners();
         
+        // 延迟加载设计数据，确保画布完全初始化
+        setTimeout(() => {
+            this.loadDesignFromStorage();
+        }, 300);
+        
         // 初始化UI
         this.updateUI();
         
@@ -560,6 +565,89 @@ class SweetsDesigner {
     }
 
     /**
+     * 从本地存储加载设计数据
+     */
+    loadDesignFromStorage() {
+        try {
+            // 检查是否有编辑设计数据
+            const editDesignData = localStorage.getItem('currentEditDesign');
+            if (editDesignData) {
+                console.log('检测到编辑设计数据，正在加载...');
+                const designData = JSON.parse(editDesignData);
+                this.loadDesign(designData);
+                
+                // 加载完成后清理临时存储
+                localStorage.removeItem('currentEditDesign');
+                console.log('编辑设计已加载，临时存储已清理');
+            } else {
+                console.log('没有检测到编辑设计数据，使用空白设计器');
+            }
+        } catch (error) {
+            console.error('加载设计数据失败:', error);
+        }
+    }
+
+    /**
+     * 加载设计数据到画布
+     */
+    loadDesign(designData) {
+        try {
+            if (!designData || !designData.imageData) {
+                console.log('设计数据为空，无法加载');
+                return;
+            }
+
+            console.log('正在加载设计数据:', designData);
+            
+            // 创建图片对象
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    // 清空画布
+                    this.clearCanvas();
+                    
+                    // 绘制图片到画布
+                    const ctx = this.canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 更新UI状态
+                    this.updateUI();
+                    
+                    // 设置设计名称
+                    if (designData.designName) {
+                        const designNameElement = document.getElementById('design-name');
+                        if (designNameElement) {
+                            designNameElement.value = designData.designName;
+                        }
+                    }
+                    
+                    // 设置甜点类型
+                    if (designData.dessertType) {
+                        this.dessertType = designData.dessertType;
+                    }
+                    
+                    console.log('设计数据加载成功');
+                    this.showToast('设计已加载完成，可以继续编辑');
+                } catch (error) {
+                    console.error('绘制设计图片失败:', error);
+                    this.showToast('加载设计失败，请重试');
+                }
+            };
+            
+            img.onerror = (error) => {
+                console.error('加载设计图片失败:', error);
+                this.showToast('加载设计图片失败');
+            };
+            
+            img.src = designData.imageData;
+            
+        } catch (error) {
+            console.error('加载设计失败:', error);
+            this.showToast('加载设计失败，请重试');
+        }
+    }
+
+    /**
      * 设计完成 - 保存设计并返回定制页面
      */
     async designComplete() {
@@ -609,8 +697,37 @@ class SweetsDesigner {
                 localStorage.setItem('sweetsDesignResult', JSON.stringify(designResult));
             }
             
-            // 显示成功消息
-            this.showToast('设计已完成！已保存，正在返回定制页面...', 'success');
+            // 同时保存到设计库
+            if (window.StorageManager) {
+                // 构建设计库保存的数据格式
+                const designLibraryData = {
+                    id: 'design_' + Date.now(),
+                    userId: 'current',
+                    userName: '当前用户',
+                    name: designName,
+                    description: '甜点设计作品',
+                    canvasData: canvasData,
+                    dessertType: this.dessertType,
+                    elements: JSON.stringify([]), // 可以存储设计元素信息
+                    imagePosition: { x: 0, y: 0 },
+                    imageScale: 1,
+                    createTime: new Date().toISOString(),
+                    status: 'completed'
+                };
+                
+                // 保存到设计库
+                const savedDesign = window.StorageManager.addDesign(designLibraryData);
+                if (savedDesign) {
+                    console.log('设计已保存到设计库:', savedDesign.id);
+                    this.showToast('设计已完成！已保存到设计库，正在返回定制页面...', 'success');
+                } else {
+                    console.warn('保存到设计库失败，但设计结果已保存');
+                    this.showToast('设计已完成！已保存，正在返回定制页面...', 'success');
+                }
+            } else {
+                console.warn('StorageManager未找到，设计结果已保存但未添加到设计库');
+                this.showToast('设计已完成！已保存，正在返回定制页面...', 'success');
+            }
             
             // 2秒后返回定制页面
             setTimeout(() => {
@@ -641,4 +758,6 @@ class SweetsDesigner {
 }
 
 // 全局访问
-window.SweetsDesigner = SweetsDesigner;
+if (typeof window !== 'undefined') {
+    window.SweetsDesigner = SweetsDesigner;
+}
