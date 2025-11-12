@@ -223,15 +223,6 @@ function changeQuantity(delta) {
     }
 }
 
-// 下一步
-function nextStep() {
-    if (customizeState.currentStep < 3) {
-        customizeState.currentStep++;
-        updateStepIndicator();
-        showCurrentStep();
-    }
-}
-
 // 上一步
 function prevStep() {
     if (customizeState.currentStep > 1) {

@@ -7,7 +7,7 @@ class SweetsGallery {
         this.filteredOrders = [];
         this.currentDesign = null;
         this.currentOrder = null;
-        this.currentTab = 'orders'; // 只显示订单，移除设计标签
+        this.currentTab = 'designs'; // 显示设计标签
         
         this.init();
     }
@@ -141,7 +141,11 @@ class SweetsGallery {
     }
 
     renderContent() {
-        this.renderOrders();
+        if (this.currentTab === 'designs') {
+            this.renderDesigns();
+        } else {
+            this.renderOrders();
+        }
     }
 
     filterDesigns() {

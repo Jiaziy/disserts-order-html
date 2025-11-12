@@ -552,16 +552,76 @@ class SweetsDesigner {
     }
 
     /**
+     * 保存设计到"我的设计"页面
+     */
+    saveToMyDesigns(designData) {
+        try {
+            // 优先使用StorageUtils
+            if (window.StorageUtils) {
+                return StorageUtils.addDesign(designData);
+            } else {
+                // 降级方案 - 直接保存到本地存储
+                const designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                designs.push(designData);
+                localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                return designData;
+            }
+        } catch (error) {
+            console.error('保存到我的设计失败:', error);
+            return null;
+        }
+    }
+
+    /**
      * 保存设计到设计库，并8秒后返回步骤页面
      */
     saveDesignToLibrary() {
         try {
-            // 先保存设计到本地存储
-            const savedDesign = this.storage.saveDesignToLocal();
+            // 获取画布数据
+            const canvasData = this.renderer.getCanvasData();
             
-            if (savedDesign) {
+            // 创建设计数据
+            const designData = {
+                id: 'design_' + Date.now(),
+                userId: 'current',
+                userName: '当前用户',
+                name: '设计_' + new Date().toLocaleString(),
+                description: '自定义设计',
+                canvasData: canvasData,
+                dessertType: 'chocolate',
+                elements: '[]',
+                imagePosition: { x: 0, y: 0 },
+                imageScale: 1,
+                createTime: new Date().toISOString(),
+                status: 'saved',
+                type: 'chocolate',
+                data: canvasData,
+                createdAt: new Date().toISOString()
+            };
+            
+            // 保存设计到"我的设计"页面
+            const savedToMyDesigns = this.saveToMyDesigns(designData);
+            
+            if (savedToMyDesigns) {
+                // 保存设计结果到步骤页面
+                const designResult = {
+                    imageData: canvasData,
+                    designName: designData.name,
+                    dessertType: designData.dessertType,
+                    shape: '圆形',
+                    size: 'M',
+                    createTime: new Date().toISOString()
+                };
+                
+                // 保存设计结果，供步骤页面使用
+                if (window.StorageUtils) {
+                    StorageUtils.saveDesignResult(designResult);
+                } else {
+                    localStorage.setItem('sweetsDesignResult', JSON.stringify(designResult));
+                }
+                
                 // 保存成功，显示提示信息
-                this.showToast('设计已保存到设计库，8秒后返回步骤页面');
+                this.showToast('设计已保存到我的设计，8秒后返回定制页面');
                 
                 // 禁用保存按钮，防止重复点击
                 const saveBtn = document.getElementById('save-design-btn');
@@ -595,16 +655,76 @@ class SweetsDesigner {
     }
 
     /**
+     * 保存设计到"我的设计"页面
+     */
+    saveToMyDesigns(designData) {
+        try {
+            // 优先使用StorageUtils
+            if (window.StorageUtils) {
+                return StorageUtils.addDesign(designData);
+            } else {
+                // 降级方案 - 直接保存到本地存储
+                const designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+                designs.push(designData);
+                localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                return designData;
+            }
+        } catch (error) {
+            console.error('保存到我的设计失败:', error);
+            return null;
+        }
+    }
+
+    /**
      * 保存设计到设计库，并8秒后返回步骤页面
      */
     saveDesignToLibrary() {
         try {
-            // 先保存设计到本地存储
-            const savedDesign = this.storage.saveDesignToLocal();
+            // 获取画布数据
+            const canvasData = this.renderer.getCanvasData();
             
-            if (savedDesign) {
+            // 创建设计数据
+            const designData = {
+                id: 'design_' + Date.now(),
+                userId: 'current',
+                userName: '当前用户',
+                name: '设计_' + new Date().toLocaleString(),
+                description: '自定义设计',
+                canvasData: canvasData,
+                dessertType: 'chocolate',
+                elements: '[]',
+                imagePosition: { x: 0, y: 0 },
+                imageScale: 1,
+                createTime: new Date().toISOString(),
+                status: 'saved',
+                type: 'chocolate',
+                data: canvasData,
+                createdAt: new Date().toISOString()
+            };
+            
+            // 保存设计到"我的设计"页面
+            const savedToMyDesigns = this.saveToMyDesigns(designData);
+            
+            if (savedToMyDesigns) {
+                // 保存设计结果到步骤页面
+                const designResult = {
+                    imageData: canvasData,
+                    designName: designData.name,
+                    dessertType: designData.dessertType,
+                    shape: '圆形',
+                    size: 'M',
+                    createTime: new Date().toISOString()
+                };
+                
+                // 保存设计结果，供步骤页面使用
+                if (window.StorageUtils) {
+                    StorageUtils.saveDesignResult(designResult);
+                } else {
+                    localStorage.setItem('sweetsDesignResult', JSON.stringify(designResult));
+                }
+                
                 // 保存成功，显示提示信息
-                this.showToast('设计已保存到设计库，8秒后返回步骤页面');
+                this.showToast('设计已保存到我的设计，8秒后返回定制页面');
                 
                 // 禁用保存按钮，防止重复点击
                 const saveBtn = document.getElementById('save-design-btn');
