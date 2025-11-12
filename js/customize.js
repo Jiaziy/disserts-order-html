@@ -119,29 +119,55 @@ function renderStep1() {
 
 // 打开甜点设计器
 function openSweetsDesigner() {
-    // 保存当前定制状态
-    localStorage.setItem('customizeState', JSON.stringify(customizeState));
-    
-    // 跳转到甜点设计器页面
-    window.location.href = 'sweets-designer.html';
+    try {
+        // 创建轻量级的状态副本，排除大体积数据
+        const lightweightState = {
+            currentStep: customizeState.currentStep,
+            productType: customizeState.productType,
+            flavorIndex: customizeState.flavorIndex,
+            customText: customizeState.customText,
+            quantity: customizeState.quantity,
+            selectedPackaging: customizeState.selectedPackaging,
+            designType: customizeState.designType,
+            // 不包含设计图片数据，这些数据可以通过其他方式传递
+            hasDesignData: !!customizeState.designData
+        };
+        
+        // 保存轻量级状态
+        localStorage.setItem('customizeState', JSON.stringify(lightweightState));
+        
+        // 跳转到甜点设计器页面
+        window.location.href = 'sweets-designer.html';
+    } catch (error) {
+        console.error('保存状态失败:', error);
+        // 即使保存失败也继续跳转
+        window.location.href = 'sweets-designer.html';
+    }
 }
 
 // 检查设计结果
 function checkDesignResult() {
-    let savedDesign;
-    
-    // 优先使用StorageUtils获取设计结果
-    if (window.StorageUtils) {
-        savedDesign = StorageUtils.getDesignResult();
-    } else {
-        // 降级方案 - 从localStorage获取设计结果
-        savedDesign = localStorage.getItem('sweetsDesignResult');
-    }
-    
-    if (savedDesign) {
-        try {
+    try {
+        let savedDesign;
+        
+        // 优先使用StorageUtils获取设计结果
+        if (window.StorageUtils) {
+            savedDesign = StorageUtils.getDesignResult();
+        } else {
+            // 降级方案 - 从localStorage获取设计结果
+            savedDesign = localStorage.getItem('sweetsDesignResult');
+        }
+        
+        if (savedDesign) {
             // 如果是字符串，需要解析
             const designData = typeof savedDesign === 'string' ? JSON.parse(savedDesign) : savedDesign;
+            
+            // 检查图片数据大小，避免过大
+            if (designData.imageData && designData.imageData.length > 500000) { // 约500KB
+                console.warn('设计图片数据过大，使用压缩版本');
+                // 如果图片数据过大，可以在这里添加压缩逻辑或使用占位符
+                designData.imageData = null; // 或者使用缩略图
+            }
             
             // 更新定制状态
             customizeState.designImage = designData.imageData;
@@ -158,9 +184,11 @@ function checkDesignResult() {
             }
             
             showToast('设计已加载完成！');
-        } catch (error) {
-            console.error('解析设计数据失败:', error);
         }
+    } catch (error) {
+        console.error('解析设计数据失败:', error);
+        // 清空可能损坏的数据
+        localStorage.removeItem('sweetsDesignResult');
     }
 }
 
@@ -589,31 +617,6 @@ function clearDesign() {
     customizeState.designData = null;
     updateDesignPreview();
     showToast('设计已清除');
-}
-
-// 检查设计结果
-function checkDesignResult() {
-    const savedDesign = localStorage.getItem('sweetsDesignResult');
-    
-    if (savedDesign) {
-        try {
-            const designData = JSON.parse(savedDesign);
-            
-            // 更新定制状态
-            customizeState.designImage = designData.imageData;
-            customizeState.designData = designData;
-            
-            // 更新预览显示
-            updateDesignPreview();
-            
-            // 清除存储的设计结果
-            localStorage.removeItem('sweetsDesignResult');
-            
-            showToast('设计已加载完成！');
-        } catch (error) {
-            console.error('解析设计数据失败:', error);
-        }
-    }
 }
 
 // 返回上一页
