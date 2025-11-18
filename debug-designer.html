@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设计器调试工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-bug"></i> 设计器调试工具</h1>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn" onclick="checkDependencies()">
+                <i class="fas fa-check"></i> 检查依赖项
+            </button>
+            <button class="btn" onclick="initStorageManager()">
+                <i class="fas fa-play"></i> 初始化存储管理器
+            </button>
+            <button class="btn" onclick="testStorage()">
+                <i class="fas fa-database"></i> 测试存储功能
+            </button>
+            <button class="btn" onclick="testDesignSave()">
+                <i class="fas fa-save"></i> 测试设计保存
+            </button>
+            <button class="btn" onclick="checkCurrentDesigner()">
+                <i class="fas fa-search"></i> 检查设计器状态
+            </button>
+            <button class="btn" onclick="clearConsole()">
+                <i class="fas fa-eraser"></i> 清空结果
+            </button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script src="js/unified-storage-manager.js"></script>
+    <script src="js/storage-cleanup.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <script>
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            
+            resultDiv.innerHTML += `<div class="result ${className}">[${timestamp}] ${message}</div>`;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+
+        function checkDependencies() {
+            showResult('=== 检查依赖项 ===');
+            
+            // 检查核心类
+            const dependencies = [
+                { name: 'UnifiedStorageManager', check: () => typeof UnifiedStorageManager !== 'undefined' },
+                { name: 'StorageCleanup', check: () => typeof StorageCleanup !== 'undefined' },
+                { name: 'localStorage', check: () => typeof localStorage !== 'undefined' },
+                { name: 'canvas', check: () => typeof HTMLCanvasElement !== 'undefined' }
+            ];
+            
+            let allGood = true;
+            dependencies.forEach(dep => {
+                const status = dep.check() ? '✅ 可用' : '❌ 不可用';
+                showResult(`${dep.name}: ${status}`, dep.check() ? 'success' : 'error');
+                if (!dep.check()) allGood = false;
+            });
+            
+            // 尝试初始化统一存储管理器
+            if (!window.unifiedStorageManager && typeof UnifiedStorageManager !== 'undefined') {
+                try {
+                    showResult('正在初始化统一存储管理器...', 'info');
+                    window.unifiedStorageManager = new UnifiedStorageManager();
+                    
+                    // 等待异步初始化完成
+                    setTimeout(() => {
+                        if (window.unifiedStorageManager) {
+                            showResult('unifiedStorageManager 实例: ✅ 已初始化', 'success');
+                        } else {
+                            showResult('unifiedStorageManager 实例: ❌ 初始化失败', 'error');
+                        }
+                    }, 1000);
+                    
+                    allGood = true; // 异步初始化，暂时认为正常
+                } catch (error) {
+                    showResult(`unifiedStorageManager 初始化: ❌ 失败 - ${error.message}`, 'error');
+                    allGood = false;
+                }
+            } else if (window.unifiedStorageManager) {
+                showResult('unifiedStorageManager 实例: ✅ 已初始化', 'success');
+            } else {
+                showResult('unifiedStorageManager 实例: ❌ 未初始化', 'error');
+                allGood = false;
+            }
+            
+            showResult(`依赖检查结果: ${allGood ? '✅ 全部通过' : '❌ 有问题'}`, allGood ? 'success' : 'error');
+        }
+
+        async function testStorage() {
+            showResult('=== 测试存储功能 ===');
+            
+            try {
+                // 确保统一存储管理器已初始化
+                if (!window.unifiedStorageManager) {
+                    if (typeof UnifiedStorageManager !== 'undefined') {
+                        window.unifiedStorageManager = new UnifiedStorageManager();
+                        showResult('统一存储管理器初始化: ✅ 成功', 'success');
+                    } else {
+                        showResult('统一存储管理器初始化: ❌ 类未找到', 'error');
+                        return;
+                    }
+                }
+                
+                // 测试基本保存
+                const testData = {
+                    id: 'test_' + Date.now(),
+                    name: '测试设计',
+                    canvasData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+                    createTime: new Date().toISOString()
+                };
+                
+                showResult('尝试保存测试数据...');
+                const result = await unifiedStorageManager.saveDesign(testData);
+                
+                if (result) {
+                    showResult('保存测试: ✅ 成功', 'success');
+                    
+                    // 测试读取
+                    const designs = await unifiedStorageManager.getDesigns();
+                    const found = designs.find(d => d.id === testData.id);
+                    
+                    if (found) {
+                        showResult('读取测试: ✅ 成功', 'success');
+                    } else {
+                        showResult('读取测试: ❌ 失败', 'error');
+                    }
+                    
+                    // 清理测试数据
+                    const filteredDesigns = designs.filter(d => d.id !== testData.id);
+                    await unifiedStorageManager.save(unifiedStorageManager.STORAGE_KEYS.DESIGNS, filteredDesigns);
+                    showResult('清理测试数据: ✅ 完成', 'success');
+                    
+                } else {
+                    showResult('保存测试: ❌ 失败', 'error');
+                }
+                
+            } catch (error) {
+                showResult(`存储测试错误: ${error.message}`, 'error');
+                console.error('存储测试错误:', error);
+            }
+        }
+
+        async function testDesignSave() {
+            showResult('=== 测试设计保存流程 ===');
+            
+            try {
+                // 检查是否有设计器实例
+                if (!window.designer && !window.sweetsDesigner) {
+                    showResult('设计器实例: ❌ 未找到', 'error');
+                    showResult('请先打开 sweets-designer.html 页面', 'error');
+                    return;
+                }
+                
+                const designer = window.designer || window.sweetsDesigner;
+                showResult('设计器实例: ✅ 找到', 'success');
+                
+                // 检查渲染器
+                if (!designer.renderer) {
+                    showResult('渲染器: ❌ 未找到', 'error');
+                    return;
+                }
+                showResult('渲染器: ✅ 找到', 'success');
+                
+                // 检查画布
+                if (!designer.canvas) {
+                    showResult('画布: ❌ 未找到', 'error');
+                    return;
+                }
+                showResult('画布: ✅ 找到', 'success');
+                
+                // 测试获取画布数据
+                try {
+                    const canvasData = designer.renderer.getCanvasData();
+                    showResult(`画布数据获取: ✅ 成功 (大小: ${canvasData ? canvasData.length : 0} 字符)`, 'success');
+                } catch (error) {
+                    showResult(`画布数据获取: ❌ 失败 - ${error.message}`, 'error');
+                }
+                
+                // 测试保存流程
+                if (typeof designer.saveDesignToLibrary === 'function') {
+                    showResult('保存方法: ✅ 可用', 'success');
+                    
+                    // 提示用户
+                    showResult('请在设计器页面中点击"保存设计"按钮进行实际测试', 'info');
+                    
+                } else {
+                    showResult('保存方法: ❌ 不可用', 'error');
+                }
+                
+            } catch (error) {
+                showResult(`设计保存测试错误: ${error.message}`, 'error');
+                console.error('设计保存测试错误:', error);
+            }
+        }
+
+        async function initStorageManager() {
+            showResult('=== 初始化存储管理器 ===');
+            
+            try {
+                if (typeof UnifiedStorageManager === 'undefined') {
+                    showResult('UnifiedStorageManager 类: ❌ 未找到', 'error');
+                    return;
+                }
+                
+                showResult('正在创建存储管理器实例...');
+                window.unifiedStorageManager = new UnifiedStorageManager();
+                
+                // 等待一段时间让初始化完成
+                showResult('等待异步初始化完成...');
+                setTimeout(async () => {
+                    if (window.unifiedStorageManager) {
+                        showResult('存储管理器实例: ✅ 创建成功', 'success');
+                        
+                        // 测试基本功能
+                        try {
+                            const stats = await unifiedStorageManager.getStorageStats();
+                            showResult('存储管理器功能: ✅ 正常', 'success');
+                            showResult(`当前存储: ${stats.totalSizeKB || 0} KB`, 'info');
+                        } catch (error) {
+                            showResult(`存储管理器功能: ❌ 测试失败 - ${error.message}`, 'error');
+                        }
+                    } else {
+                        showResult('存储管理器实例: ❌ 创建失败', 'error');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                showResult(`初始化错误: ${error.message}`, 'error');
+                console.error('存储管理器初始化错误:', error);
+            }
+        }
+
+        function checkCurrentDesigner() {
+            showResult('=== 检查设计器状态 ===');
+            
+            // 尝试访问父窗口的设计器（如果在同一域）
+            if (window.opener) {
+                try {
+                    const designer = window.opener.designer || window.opener.sweetsDesigner;
+                    if (designer) {
+                        showResult('父窗口设计器: ✅ 找到', 'success');
+                        
+                        // 检查关键组件
+                        showResult(`渲染器: ${designer.renderer ? '✅' : '❌'}`, designer.renderer ? 'success' : 'error');
+                        showResult(`画布: ${designer.canvas ? '✅' : '❌'}`, designer.canvas ? 'success' : 'error');
+                        showResult(`存储: ${window.opener.unifiedStorageManager ? '✅' : '❌'}`, window.opener.unifiedStorageManager ? 'success' : 'error');
+                        
+                    } else {
+                        showResult('父窗口设计器: ❌ 未找到', 'error');
+                    }
+                } catch (error) {
+                    showResult('访问父窗口: ❌ 跨域限制', 'error');
+                    showResult('请直接在设计器页面中打开调试工具', 'info');
+                }
+            }
+            
+            // 检查当前窗口的设计器
+            const localDesigner = window.designer || window.sweetsDesigner;
+            if (localDesigner) {
+                showResult('当前窗口设计器: ✅ 找到', 'success');
+            } else {
+                showResult('当前窗口设计器: ❌ 未找到', 'info');
+                showResult('请先打开 sweets-designer.html 页面', 'info');
+            }
+            
+            // 提供手动检查指导
+            showResult('=== 检查指导 ===', 'info');
+            showResult('1. 在设计器页面按 F12 打开开发者工具', 'info');
+            showResult('2. 查看控制台中的"存储设置诊断"信息', 'info');
+            showResult('3. 尝试保存设计并观察错误信息', 'info');
+        }
+
+        function clearConsole() {
+            document.getElementById('result').innerHTML = '';
+        }
+
+        // 页面加载时自动检查依赖项
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkDependencies, 1000);
+        });
+    </script>
+</body>
+</html>

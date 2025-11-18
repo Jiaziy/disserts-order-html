@@ -102,11 +102,22 @@ class StorageUtils {
     }
 
     /**
-     * 保存设计列表
+     * 保存设计列表 - 带存储空间管理
      */
     static saveDesigns(designs) {
         try {
-            localStorage.setItem(this.STORAGE_KEYS.DESIGNS, JSON.stringify(designs));
+            const dataStr = JSON.stringify(designs);
+            
+            // 检查存储空间是否足够
+            if (!this.checkStorageSpace(dataStr.length)) {
+                // 空间不足，清理旧数据
+                this.cleanupOldData();
+                
+                // 再次尝试保存
+                localStorage.setItem(this.STORAGE_KEYS.DESIGNS, dataStr);
+            } else {
+                localStorage.setItem(this.STORAGE_KEYS.DESIGNS, dataStr);
+            }
             return true;
         } catch (error) {
             console.error('保存设计数据失败:', error);
@@ -238,6 +249,8 @@ class StorageUtils {
     static saveLastDesignImage(imageData) {
         try {
             localStorage.setItem(this.STORAGE_KEYS.LAST_DESIGN_IMAGE, imageData);
+            // 保存图片时间戳用于后续清理
+            localStorage.setItem('lastDesignImageTime', Date.now().toString());
             return true;
         } catch (error) {
             console.error('保存最后设计图片失败:', error);
@@ -273,11 +286,22 @@ class StorageUtils {
     }
 
     /**
-     * 保存设计结果
+     * 保存设计结果 - 带存储空间管理
      */
     static saveDesignResult(result) {
         try {
-            localStorage.setItem(this.STORAGE_KEYS.DESIGN_RESULT, JSON.stringify(result));
+            const dataStr = JSON.stringify(result);
+            
+            // 检查存储空间是否足够
+            if (!this.checkStorageSpace(dataStr.length)) {
+                // 空间不足，清理旧数据
+                this.cleanupOldData();
+                
+                // 再次尝试保存
+                localStorage.setItem(this.STORAGE_KEYS.DESIGN_RESULT, dataStr);
+            } else {
+                localStorage.setItem(this.STORAGE_KEYS.DESIGN_RESULT, dataStr);
+            }
             return true;
         } catch (error) {
             console.error('保存设计结果失败:', error);
@@ -376,6 +400,123 @@ class StorageUtils {
     }
 
     /**
+     * 检查存储空间是否足够
+     * @param {number} requiredSize 需要存储的数据大小（字节）
+     * @returns {boolean} 是否足够空间
+     */
+    static checkStorageSpace(requiredSize) {
+        try {
+            // 获取当前已使用的存储空间
+            let usedSpace = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                usedSpace += key.length + value.length;
+            }
+            
+            // 估算剩余空间（本地存储通常有5MB限制）
+            const maxSpace = 5 * 1024 * 1024; // 5MB
+            const remainingSpace = maxSpace - usedSpace;
+            
+            return remainingSpace >= requiredSize;
+        } catch (error) {
+            console.warn('检查存储空间失败，继续尝试保存:', error);
+            return true; // 如果检查失败，仍然尝试保存
+        }
+    }
+
+    /**
+     * 清理旧数据以释放存储空间
+     */
+    static cleanupOldData() {
+        try {
+            console.log('存储空间不足，开始清理旧数据...');
+            
+            // 1. 清理旧的设计数据
+            const designs = this.getDesigns();
+            if (designs.length > 100) { // 保留最多100个设计
+                // 按创建时间排序，保留最新的100个
+                designs.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+                const designsToKeep = designs.slice(0, 100);
+                localStorage.setItem(this.STORAGE_KEYS.DESIGNS, JSON.stringify(designsToKeep));
+                console.log(`清理了 ${designs.length - 100} 个旧设计`);
+            }
+            
+            // 2. 清理旧的设计结果
+            const designResult = this.getDesignResult();
+            if (designResult && designResult.timestamp) {
+                const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000; // 一周前
+                if (new Date(designResult.timestamp).getTime() < oneWeekAgo) {
+                    this.clearDesignResult();
+                    console.log('清理了过期的设计结果');
+                }
+            }
+            
+            // 3. 清理旧订单数据
+            const orders = this.getOrders();
+            if (orders.length > 50) { // 保留最多50个订单
+                // 按创建时间排序，保留最新的50个
+                orders.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+                const ordersToKeep = orders.slice(0, 50);
+                localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(ordersToKeep));
+                console.log(`清理了 ${orders.length - 50} 个旧订单`);
+            }
+            
+            // 4. 清理旧图片数据（最大的空间占用者）
+            const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000; // 一天前
+            const lastDesignImage = this.getLastDesignImage();
+            if (lastDesignImage) {
+                const imageData = localStorage.getItem('lastDesignImageTime');
+                if (imageData && JSON.parse(imageData) < oneDayAgo) {
+                    this.saveLastDesignImage('');
+                    localStorage.removeItem('lastDesignImageTime');
+                    console.log('清理了过期的设计图片');
+                }
+            }
+            
+            console.log('存储空间清理完成');
+            
+        } catch (error) {
+            console.error('清理旧数据失败:', error);
+        }
+    }
+
+    /**
+     * 获取存储使用统计信息
+     */
+    static getStorageStats() {
+        try {
+            let totalSize = 0;
+            const stats = {
+                totalKeys: localStorage.length,
+                totalSize: 0,
+                byKey: {}
+            };
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                const size = key.length + value.length;
+                
+                stats.byKey[key] = {
+                    size: size,
+                    sizeKB: (size / 1024).toFixed(2) + ' KB'
+                };
+                totalSize += size;
+            }
+            
+            stats.totalSize = totalSize;
+            stats.totalSizeKB = (totalSize / 1024).toFixed(2) + ' KB';
+            stats.remainingSpace = ((5 * 1024 * 1024 - totalSize) / 1024).toFixed(2) + ' KB';
+            
+            return stats;
+        } catch (error) {
+            console.error('获取存储统计失败:', error);
+            return null;
+        }
+    }
+
+    /**
      * 清除所有应用数据
      */
     static clearAllAppData() {
@@ -385,6 +526,7 @@ class StorageUtils {
             });
             // 也清除旧的兼容键
             localStorage.removeItem('designs');
+            console.log('所有应用数据已清除');
             return true;
         } catch (error) {
             console.error('清除应用数据失败:', error);

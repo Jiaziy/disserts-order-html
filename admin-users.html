@@ -650,8 +650,8 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- 引入本地存储管理器 -->
-    <script src="js/local-storage-manager.js"></script>
+    <!-- 引入统一存储管理器 -->
+    <script src="js/unified-storage-manager.js"></script>
     <script>
         // 用户管理逻辑
         document.addEventListener('DOMContentLoaded', async function() {
@@ -829,8 +829,20 @@
         // 从本地存储获取用户数据
         async function getUsersFromLocalStorage() {
             try {
-                // 从本地存储管理器获取用户数据
-                const users = localStorageManager.getUsers() || [];
+                // 从本地存储管理器获取用户数据，兼容不同访问方式
+                let manager;
+                if (typeof localStorageManager !== 'undefined') {
+                    manager = localStorageManager;
+                } else if (typeof window.StorageManager !== 'undefined') {
+                    manager = window.StorageManager;
+                } else if (typeof document.localStorageManager !== 'undefined') {
+                    manager = document.localStorageManager;
+                } else {
+                    // 如果都未定义，重新创建实例
+                    manager = new LocalStorageManager();
+                }
+                
+                const users = manager.getUsers() || [];
                 
                 // 处理用户数据格式，确保兼容性
                 return users.map(user => {
@@ -857,7 +869,20 @@
         // 计算用户的订单数量
         function calculateUserOrderCount(userId) {
             try {
-                const orders = localStorageManager.getOrders() || [];
+                // 从本地存储管理器获取订单数据，兼容不同访问方式
+                let manager;
+                if (typeof localStorageManager !== 'undefined') {
+                    manager = localStorageManager;
+                } else if (typeof window.StorageManager !== 'undefined') {
+                    manager = window.StorageManager;
+                } else if (typeof document.localStorageManager !== 'undefined') {
+                    manager = document.localStorageManager;
+                } else {
+                    // 如果都未定义，重新创建实例
+                    manager = new LocalStorageManager();
+                }
+                
+                const orders = manager.getOrders() || [];
                 return orders.filter(order => {
                     const orderUserId = order.userId || order.user_id;
                     return orderUserId === userId;
@@ -871,8 +896,20 @@
         // 从本地存储获取用户数据
         async function getUsersFromLocalStorage() {
             try {
-                // 从本地存储管理器获取用户数据
-                const users = localStorageManager.getUsers() || [];
+                // 从本地存储管理器获取用户数据，兼容不同访问方式
+                let manager;
+                if (typeof localStorageManager !== 'undefined') {
+                    manager = localStorageManager;
+                } else if (typeof window.StorageManager !== 'undefined') {
+                    manager = window.StorageManager;
+                } else if (typeof document.localStorageManager !== 'undefined') {
+                    manager = document.localStorageManager;
+                } else {
+                    // 如果都未定义，重新创建实例
+                    manager = new LocalStorageManager();
+                }
+                
+                const users = manager.getUsers() || [];
                 
                 // 处理用户数据格式，确保兼容性
                 return users.map(user => {
@@ -899,7 +936,20 @@
         // 计算用户的订单数量
         function calculateUserOrderCount(userId) {
             try {
-                const orders = localStorageManager.getOrders() || [];
+                // 从本地存储管理器获取订单数据，兼容不同访问方式
+                let manager;
+                if (typeof localStorageManager !== 'undefined') {
+                    manager = localStorageManager;
+                } else if (typeof window.StorageManager !== 'undefined') {
+                    manager = window.StorageManager;
+                } else if (typeof document.localStorageManager !== 'undefined') {
+                    manager = document.localStorageManager;
+                } else {
+                    // 如果都未定义，重新创建实例
+                    manager = new LocalStorageManager();
+                }
+                
+                const orders = manager.getOrders() || [];
                 return orders.filter(order => {
                     const orderUserId = order.userId || order.user_id;
                     return orderUserId === userId;

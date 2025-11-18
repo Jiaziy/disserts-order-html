@@ -591,12 +591,17 @@ body {
     margin-top: 60px;
     padding: 30px;
     min-height: calc(100vh - 60px);
+    margin-bottom: 40px;
+    overflow-y: visible;
 }
 
 .page-content {
     display: none;
     max-width: 1200px;
     margin: 0 auto;
+    min-height: calc(100vh - 120px);
+    overflow-y: visible;
+    padding-bottom: 60px;
 }
 
 .page-content.active {
@@ -820,6 +825,9 @@ body {
     .main-content {
         margin-left: 0;
         padding: 20px;
+        margin-top: 60px;
+        min-height: calc(100vh - 60px);
+        margin-bottom: 40px;
     }
     
     .top-navbar {
@@ -856,6 +864,8 @@ body {
 @media (max-width: 480px) {
     .main-content {
         padding: 15px;
+        min-height: calc(100vh - 60px);
+        margin-bottom: 40px;
     }
     
     .banner {

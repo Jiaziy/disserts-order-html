@@ -71,6 +71,35 @@ class SweetsDesigner {
             return;
         }
         
+        // 检查统一存储管理器是否已加载
+        if (typeof UnifiedStorageManager === 'undefined') {
+            console.warn('统一存储管理器未加载，将使用备用存储方案');
+        }
+        
+        // 初始化统一存储管理器
+        if (typeof UnifiedStorageManager !== 'undefined') {
+            window.unifiedStorageManager = new UnifiedStorageManager();
+            console.log('统一存储管理器已初始化');
+            
+            // 检查是否需要执行存储清理
+            const lastCleanup = localStorage.getItem('sweets_last_cleanup');
+            const now = Date.now();
+            const ONE_WEEK = 7 * 24 * 60 * 60 * 1000; // 一周
+            
+            if (!lastCleanup || (now - parseInt(lastCleanup)) > ONE_WEEK) {
+                console.log('执行定期存储清理...');
+                setTimeout(async () => {
+                    if (window.StorageCleanup) {
+                        const cleanup = new StorageCleanup();
+                        await cleanup.performCleanup();
+                        localStorage.setItem('sweets_last_cleanup', now.toString());
+                    }
+                }, 2000); // 延迟2秒执行，避免阻塞初始化
+            }
+        } else {
+            console.warn('统一存储管理器未加载，将使用备用存储方案');
+        }
+        
         // 创建模块实例
         this.tools = new DesignerTools(this);
         this.templates = new DesignerTemplates(this);
@@ -137,6 +166,10 @@ class SweetsDesigner {
         this.updateUI();
         
         console.log('甜点设计器已初始化');
+        
+        // 诊断信息
+        this.diagnoseStorageSetup();
+        
         this.showToast('甜点设计器已准备就绪');
     }
 
@@ -207,8 +240,28 @@ class SweetsDesigner {
         // 保存设计事件
         const saveBtn = document.getElementById('save-design-btn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                this.saveDesignToLibrary();
+            saveBtn.addEventListener('click', async () => {
+                console.log('保存设计按钮被点击');
+                
+                // 防止重复点击
+                if (saveBtn.disabled) {
+                    console.log('保存按钮已禁用，跳过点击');
+                    return;
+                }
+                
+                // 立即禁用按钮
+                saveBtn.disabled = true;
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = '保存中...';
+                
+                try {
+                    await this.saveDesignToLibrary();
+                } catch (error) {
+                    console.error('保存设计失败:', error);
+                    // 恢复按钮状态
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+                }
             });
         }
         
@@ -554,33 +607,174 @@ class SweetsDesigner {
     /**
      * 保存设计到"我的设计"页面
      */
-    saveToMyDesigns(designData) {
+    async saveToMyDesigns(designData) {
+        console.log('saveToMyDesigns 开始执行，设计数据:', designData.name);
+        
         try {
-            // 优先使用StorageUtils
-            if (window.StorageUtils) {
-                return StorageUtils.addDesign(designData);
+            // 优先使用统一存储管理器
+            if (window.unifiedStorageManager) {
+                console.log('使用统一存储管理器保存设计');
+                let result = false;
+                try {
+                    // 直接保存，不使用优化和压缩
+                    const designs = await unifiedStorageManager.getDesigns();
+                    designs.push(designData);
+                    result = await unifiedStorageManager.save(unifiedStorageManager.STORAGE_KEYS.DESIGNS, designs, { 
+                        compress: false, 
+                        optimize: false 
+                    });
+                    console.log('统一存储管理器保存结果:', result);
+                } catch (error) {
+                    console.error('统一存储管理器保存失败:', error);
+                    this.showToast('保存设计失败: ' + error.message);
+                    return false;
+                }
+                return result;
+            }
+            // 备选方案：StorageUtils
+            else if (window.StorageUtils) {
+                console.log('使用 StorageUtils 保存设计');
+                const result = StorageUtils.addDesign(designData);
+                console.log('StorageUtils 保存结果:', result);
+                return result;
             } else {
-                // 降级方案 - 直接保存到本地存储
+                // 最后降级方案 - 直接保存到本地存储
+                console.log('使用降级方案保存设计');
                 const designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
                 designs.push(designData);
                 localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                console.log('降级方案保存成功');
                 return designData;
             }
         } catch (error) {
             console.error('保存到我的设计失败:', error);
+            console.error('错误类型:', error.name);
+            console.error('错误信息:', error.message);
+            
+            // 如果是配额错误，尝试清理旧数据后重试
+            if (error.name === 'QuotaExceededError' || error.message.includes('STORAGE_QUOTA_EXCEEDED') || error.message.includes('quota')) {
+                console.log('存储空间不足，尝试清理旧数据...');
+                try {
+                    const result = await this.performCleanupAndRetry(designData);
+                    console.log('清理重试成功:', result);
+                    return result;
+                } catch (cleanupError) {
+                    console.error('清理重试失败:', cleanupError);
+                    this.showToast('存储空间不足，请清理旧设计后重试');
+                    return null;
+                }
+            }
+            
+            // 其他类型的错误
+            this.showToast('保存设计失败: ' + error.message);
             return null;
         }
     }
 
     /**
-     * 保存设计到设计库，并8秒后返回步骤页面
+     * 清理旧数据并重试保存
      */
-    saveDesignToLibrary() {
+    async performCleanupAndRetry(designData) {
         try {
-            // 获取画布数据
-            const canvasData = this.renderer.getCanvasData();
+            // 优先使用存储清理工具
+            if (window.StorageCleanup) {
+                console.log('使用存储清理工具进行清理...');
+                const cleanup = new StorageCleanup();
+                await cleanup.performCleanup();
+                
+                // 清理完成后，再次尝试保存
+                if (window.unifiedStorageManager) {
+                    return await unifiedStorageManager.saveDesign(designData);
+                }
+            }
+            // 如果有统一存储管理器，使用其自动清理功能
+            else if (window.unifiedStorageManager) {
+                await unifiedStorageManager.performAutomaticCleanup();
+                return await unifiedStorageManager.saveDesign(designData);
+            }
             
-            // 创建设计数据
+            // 最后的降级方案 - 手动清理
+            console.log('使用手动清理方案...');
+            
+            // 清理所有可能的设计存储键
+            const storageKeys = ['sweetsDesigns', 'sweets_designs', 'designs'];
+            
+            for (const key of storageKeys) {
+                try {
+                    const designs = JSON.parse(localStorage.getItem(key)) || [];
+                    
+                    // 保留最新的30个设计（更激进的清理）
+                    if (designs.length > 30) {
+                        const sortedDesigns = designs.sort((a, b) => 
+                            new Date(b.createTime || 0) - new Date(a.createTime || 0)
+                        );
+                        const designsToKeep = sortedDesigns.slice(0, 30);
+                        
+                        localStorage.setItem(key, JSON.stringify(designsToKeep));
+                        console.log(`清理了 ${key} 中的 ${designs.length - 30} 个旧设计`);
+                    }
+                } catch (error) {
+                    console.warn(`清理 ${key} 失败:`, error);
+                }
+            }
+            
+            // 再次尝试保存到统一存储
+            if (window.unifiedStorageManager) {
+                return await unifiedStorageManager.saveDesign(designData);
+            }
+            
+            // 最后的降级方案
+            const designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            designs.push(designData);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+            
+            return designData;
+        } catch (error) {
+            console.error('清理重试失败:', error);
+            this.showToast('存储空间严重不足，请手动清理浏览器数据');
+            throw error;
+        }
+    }
+
+    /**
+     * 保存设计到设计库，并2秒后返回步骤页面
+     */
+    async saveDesignToLibrary() {
+        console.log('saveDesignToLibrary方法开始执行');
+        try {
+            // 检查渲染器是否已初始化
+            if (!this.renderer) {
+                console.error('渲染器未初始化，无法保存设计');
+                this.showToast('设计器未完全加载，请刷新页面后重试');
+                return false;
+            }
+            
+            // 检查画布是否存在
+            if (!this.canvas) {
+                console.error('画布未找到，无法保存设计');
+                this.showToast('画布未找到，请刷新页面后重试');
+                return false;
+            }
+            
+            // 获取画布数据
+            let canvasData;
+            try {
+                canvasData = this.renderer.getCanvasData();
+                console.log('画布数据获取成功，大小:', canvasData ? canvasData.length : 0, '字符');
+            } catch (error) {
+                console.error('获取画布数据失败:', error);
+                this.showToast('无法获取画布数据，请重试');
+                return false;
+            }
+            
+            // 检查画布数据是否有效
+            if (!canvasData || canvasData.length < 100) {
+                console.warn('画布数据可能为空或无效，大小:', canvasData ? canvasData.length : 0);
+                this.showToast('画布数据为空，请先进行绘制后再保存');
+                return false;
+            }
+            
+            // 创建设计数据（优化数据大小）
             const designData = {
                 id: 'design_' + Date.now(),
                 userId: 'current',
@@ -593,14 +787,20 @@ class SweetsDesigner {
                 imagePosition: { x: 0, y: 0 },
                 imageScale: 1,
                 createTime: new Date().toISOString(),
-                status: 'saved',
-                type: 'chocolate',
-                data: canvasData,
-                createdAt: new Date().toISOString()
+                status: 'saved'
             };
             
             // 保存设计到"我的设计"页面
-            const savedToMyDesigns = this.saveToMyDesigns(designData);
+            let savedToMyDesigns;
+            try {
+                console.log('开始保存设计到存储...', designData.name);
+                savedToMyDesigns = await this.saveToMyDesigns(designData);
+                console.log('设计保存结果:', savedToMyDesigns ? '成功' : '失败');
+            } catch (error) {
+                console.error('保存设计时发生错误:', error);
+                this.showToast('保存设计失败: ' + error.message);
+                return false;
+            }
             
             if (savedToMyDesigns) {
                 // 保存设计结果到步骤页面
@@ -621,25 +821,164 @@ class SweetsDesigner {
                 }
                 
                 // 保存成功，显示提示信息
-                this.showToast('设计已保存到我的设计，8秒后返回定制页面');
-                
-                // 禁用保存按钮，防止重复点击
-                const saveBtn = document.getElementById('save-design-btn');
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.textContent = '保存中...';
+                console.log('设计保存成功，即将显示toast消息');
+                try {
+                    this.showToast('设计已保存到我的设计，2秒后返回定制页面');
+                    console.log('toast消息显示成功');
+                } catch (error) {
+                    console.error('显示toast消息失败:', error);
                 }
                 
-                // 8秒后返回步骤页面
-                setTimeout(() => {
-                    // 检查是否存在导航管理器
-                    if (window.NavigationManager) {
-                        window.NavigationManager.navigateTo('customize');
-                    } else {
-                        // 如果没有导航管理器，返回到定制页面（步骤页面）
+                console.log('保存按钮已在事件处理中禁用');
+                
+                // 2秒后返回步骤页面
+                console.log('设置2秒延迟跳转...');
+                
+                // 检查并移除可能阻止跳转的事件监听器
+                console.log('检查页面卸载事件监听器...');
+                if (window.onbeforeunload) {
+                    console.log('发现beforeunload监听器，尝试移除');
+                    window.onbeforeunload = null;
+                }
+                
+                const timeoutId = setTimeout(() => {
+                    console.log('延迟结束，开始执行跳转到customize.html');
+                    console.log('当前页面URL:', window.location.href);
+                    
+                    try {
+                        // 清理可能的定时器
+                        for (let i = 1; i < 99999; i++) {
+                            clearTimeout(i);
+                        }
+                        
+                        // 强制跳转
                         window.location.href = 'customize.html';
+                        console.log('window.location.href 已调用');
+                    } catch (error) {
+                        console.error('直接跳转失败，尝试使用location.assign:', error);
+                        window.location.assign('customize.html');
+                        console.log('window.location.assign 已调用');
                     }
-                }, 8000);
+                }, 2000);
+                console.log('setTimeout已设置，ID:', timeoutId);
+                
+                // 立即测试跳转机制
+                console.log('测试：当前URL:', window.location.href);
+                console.log('测试：尝试直接跳转');
+                
+                // 检查是否是本地文件协议
+                const isLocalFile = window.location.protocol === 'file:';
+                console.log('是否本地文件协议:', isLocalFile);
+                
+                if (isLocalFile) {
+                    console.log('本地文件协议，跳过自动跳转，显示手动跳转提示');
+                    // 显示手动跳转提示而不是自动跳转
+                    this.showToast('设计已保存！请手动点击"返回定制页面"按钮', 5000);
+                    
+                    // 创建返回按钮
+                    const returnBtn = document.createElement('div');
+                    returnBtn.innerHTML = `
+                        <div style="
+                            position: fixed;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            background: white;
+                            padding: 30px;
+                            border-radius: 15px;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                            text-align: center;
+                            z-index: 10000;
+                        ">
+                            <h3 style="margin: 0 0 20px 0; color: #333;">✅ 设计保存成功！</h3>
+                            <p style="margin: 0 0 20px 0; color: #666;">请点击下方按钮返回定制页面</p>
+                            <button onclick="window.location.href='customize.html'" style="
+                                background: #FF6B95;
+                                color: white;
+                                border: none;
+                                padding: 15px 30px;
+                                border-radius: 8px;
+                                font-size: 16px;
+                                cursor: pointer;
+                                font-weight: bold;
+                            ">返回定制页面</button>
+                        </div>
+                    `;
+                    returnBtn.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 9999;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+                    
+                    // 点击背景关闭
+                    returnBtn.addEventListener('click', function(e) {
+                        if (e.target === returnBtn) {
+                            returnBtn.remove();
+                        }
+                    });
+                    
+                    document.body.appendChild(returnBtn);
+                    
+                } else {
+                    // HTTP/HTTPS协议，正常跳转
+                    try {
+                        // 使用最激进的跳转方式
+                        console.log('尝试方式1: window.location.href');
+                        window.location.href = 'customize.html';
+                        
+                        // 延迟100ms尝试其他方式
+                        setTimeout(() => {
+                            console.log('尝试方式2: window.location.assign');
+                            window.location.assign('customize.html');
+                        }, 100);
+                        
+                        // 延迟200ms尝试replace
+                        setTimeout(() => {
+                            console.log('尝试方式3: window.location.replace');
+                            window.location.replace('customize.html');
+                        }, 200);
+                        
+                        // 延迟300ms尝试强制跳转
+                        setTimeout(() => {
+                            console.log('尝试方式4: window.open');
+                            window.open('customize.html', '_self');
+                        }, 300);
+                        
+                        // 延迟400ms尝试表单提交方式
+                        setTimeout(() => {
+                            console.log('尝试方式5: 表单提交');
+                            const form = document.createElement('form');
+                            form.method = 'GET';
+                            form.action = 'customize.html';
+                            document.body.appendChild(form);
+                            form.submit();
+                        }, 400);
+                        
+                        console.log('所有跳转方式已调用');
+                    } catch (error) {
+                        console.error('直接跳转失败:', error);
+                    }
+                }
+                
+                // 备用跳转方案：如果3秒后还没跳转，强制跳转
+                setTimeout(() => {
+                    if (window.location.href.includes('sweets-designer.html')) {
+                        console.log('3秒后仍未跳转，执行强制跳转');
+                        try {
+                            window.location.replace('customize.html');
+                            console.log('replace跳转调用成功');
+                        } catch (error) {
+                            console.error('replace跳转失败:', error);
+                        }
+                    }
+                }, 3000);
                 
                 return true;
             } else {
@@ -657,33 +996,174 @@ class SweetsDesigner {
     /**
      * 保存设计到"我的设计"页面
      */
-    saveToMyDesigns(designData) {
+    async saveToMyDesigns(designData) {
+        console.log('saveToMyDesigns 开始执行，设计数据:', designData.name);
+        
         try {
-            // 优先使用StorageUtils
-            if (window.StorageUtils) {
-                return StorageUtils.addDesign(designData);
+            // 优先使用统一存储管理器
+            if (window.unifiedStorageManager) {
+                console.log('使用统一存储管理器保存设计');
+                let result = false;
+                try {
+                    // 直接保存，不使用优化和压缩
+                    const designs = await unifiedStorageManager.getDesigns();
+                    designs.push(designData);
+                    result = await unifiedStorageManager.save(unifiedStorageManager.STORAGE_KEYS.DESIGNS, designs, { 
+                        compress: false, 
+                        optimize: false 
+                    });
+                    console.log('统一存储管理器保存结果:', result);
+                } catch (error) {
+                    console.error('统一存储管理器保存失败:', error);
+                    this.showToast('保存设计失败: ' + error.message);
+                    return false;
+                }
+                return result;
+            }
+            // 备选方案：StorageUtils
+            else if (window.StorageUtils) {
+                console.log('使用 StorageUtils 保存设计');
+                const result = StorageUtils.addDesign(designData);
+                console.log('StorageUtils 保存结果:', result);
+                return result;
             } else {
-                // 降级方案 - 直接保存到本地存储
+                // 最后降级方案 - 直接保存到本地存储
+                console.log('使用降级方案保存设计');
                 const designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
                 designs.push(designData);
                 localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+                console.log('降级方案保存成功');
                 return designData;
             }
         } catch (error) {
             console.error('保存到我的设计失败:', error);
+            console.error('错误类型:', error.name);
+            console.error('错误信息:', error.message);
+            
+            // 如果是配额错误，尝试清理旧数据后重试
+            if (error.name === 'QuotaExceededError' || error.message.includes('STORAGE_QUOTA_EXCEEDED') || error.message.includes('quota')) {
+                console.log('存储空间不足，尝试清理旧数据...');
+                try {
+                    const result = await this.performCleanupAndRetry(designData);
+                    console.log('清理重试成功:', result);
+                    return result;
+                } catch (cleanupError) {
+                    console.error('清理重试失败:', cleanupError);
+                    this.showToast('存储空间不足，请清理旧设计后重试');
+                    return null;
+                }
+            }
+            
+            // 其他类型的错误
+            this.showToast('保存设计失败: ' + error.message);
             return null;
         }
     }
 
     /**
-     * 保存设计到设计库，并8秒后返回步骤页面
+     * 清理旧数据并重试保存
      */
-    saveDesignToLibrary() {
+    async performCleanupAndRetry(designData) {
         try {
-            // 获取画布数据
-            const canvasData = this.renderer.getCanvasData();
+            // 优先使用存储清理工具
+            if (window.StorageCleanup) {
+                console.log('使用存储清理工具进行清理...');
+                const cleanup = new StorageCleanup();
+                await cleanup.performCleanup();
+                
+                // 清理完成后，再次尝试保存
+                if (window.unifiedStorageManager) {
+                    return await unifiedStorageManager.saveDesign(designData);
+                }
+            }
+            // 如果有统一存储管理器，使用其自动清理功能
+            else if (window.unifiedStorageManager) {
+                await unifiedStorageManager.performAutomaticCleanup();
+                return await unifiedStorageManager.saveDesign(designData);
+            }
             
-            // 创建设计数据
+            // 最后的降级方案 - 手动清理
+            console.log('使用手动清理方案...');
+            
+            // 清理所有可能的设计存储键
+            const storageKeys = ['sweetsDesigns', 'sweets_designs', 'designs'];
+            
+            for (const key of storageKeys) {
+                try {
+                    const designs = JSON.parse(localStorage.getItem(key)) || [];
+                    
+                    // 保留最新的30个设计（更激进的清理）
+                    if (designs.length > 30) {
+                        const sortedDesigns = designs.sort((a, b) => 
+                            new Date(b.createTime || 0) - new Date(a.createTime || 0)
+                        );
+                        const designsToKeep = sortedDesigns.slice(0, 30);
+                        
+                        localStorage.setItem(key, JSON.stringify(designsToKeep));
+                        console.log(`清理了 ${key} 中的 ${designs.length - 30} 个旧设计`);
+                    }
+                } catch (error) {
+                    console.warn(`清理 ${key} 失败:`, error);
+                }
+            }
+            
+            // 再次尝试保存到统一存储
+            if (window.unifiedStorageManager) {
+                return await unifiedStorageManager.saveDesign(designData);
+            }
+            
+            // 最后的降级方案
+            const designs = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
+            designs.push(designData);
+            localStorage.setItem('sweetsDesigns', JSON.stringify(designs));
+            
+            return designData;
+        } catch (error) {
+            console.error('清理重试失败:', error);
+            this.showToast('存储空间严重不足，请手动清理浏览器数据');
+            throw error;
+        }
+    }
+
+    /**
+     * 保存设计到设计库，并2秒后返回步骤页面
+     */
+    async saveDesignToLibrary() {
+        console.log('saveDesignToLibrary方法开始执行');
+        try {
+            // 检查渲染器是否已初始化
+            if (!this.renderer) {
+                console.error('渲染器未初始化，无法保存设计');
+                this.showToast('设计器未完全加载，请刷新页面后重试');
+                return false;
+            }
+            
+            // 检查画布是否存在
+            if (!this.canvas) {
+                console.error('画布未找到，无法保存设计');
+                this.showToast('画布未找到，请刷新页面后重试');
+                return false;
+            }
+            
+            // 获取画布数据
+            let canvasData;
+            try {
+                canvasData = this.renderer.getCanvasData();
+                console.log('画布数据获取成功，大小:', canvasData ? canvasData.length : 0, '字符');
+            } catch (error) {
+                console.error('获取画布数据失败:', error);
+                this.showToast('无法获取画布数据，请重试');
+                return false;
+            }
+            
+            // 检查画布数据是否有效
+            if (!canvasData || canvasData.length < 100) {
+                console.warn('画布数据可能为空或无效，大小:', canvasData ? canvasData.length : 0);
+                this.showToast('画布数据为空，请先进行绘制后再保存');
+                return false;
+            }
+            
+            // 创建设计数据（优化数据大小）
             const designData = {
                 id: 'design_' + Date.now(),
                 userId: 'current',
@@ -696,14 +1176,20 @@ class SweetsDesigner {
                 imagePosition: { x: 0, y: 0 },
                 imageScale: 1,
                 createTime: new Date().toISOString(),
-                status: 'saved',
-                type: 'chocolate',
-                data: canvasData,
-                createdAt: new Date().toISOString()
+                status: 'saved'
             };
             
             // 保存设计到"我的设计"页面
-            const savedToMyDesigns = this.saveToMyDesigns(designData);
+            let savedToMyDesigns;
+            try {
+                console.log('开始保存设计到存储...', designData.name);
+                savedToMyDesigns = await this.saveToMyDesigns(designData);
+                console.log('设计保存结果:', savedToMyDesigns ? '成功' : '失败');
+            } catch (error) {
+                console.error('保存设计时发生错误:', error);
+                this.showToast('保存设计失败: ' + error.message);
+                return false;
+            }
             
             if (savedToMyDesigns) {
                 // 保存设计结果到步骤页面
@@ -724,25 +1210,164 @@ class SweetsDesigner {
                 }
                 
                 // 保存成功，显示提示信息
-                this.showToast('设计已保存到我的设计，8秒后返回定制页面');
-                
-                // 禁用保存按钮，防止重复点击
-                const saveBtn = document.getElementById('save-design-btn');
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.textContent = '保存中...';
+                console.log('设计保存成功，即将显示toast消息');
+                try {
+                    this.showToast('设计已保存到我的设计，2秒后返回定制页面');
+                    console.log('toast消息显示成功');
+                } catch (error) {
+                    console.error('显示toast消息失败:', error);
                 }
                 
-                // 8秒后返回步骤页面
-                setTimeout(() => {
-                    // 检查是否存在导航管理器
-                    if (window.NavigationManager) {
-                        window.NavigationManager.navigateTo('customize');
-                    } else {
-                        // 如果没有导航管理器，返回到定制页面（步骤页面）
+                console.log('保存按钮已在事件处理中禁用');
+                
+                // 2秒后返回步骤页面
+                console.log('设置2秒延迟跳转...');
+                
+                // 检查并移除可能阻止跳转的事件监听器
+                console.log('检查页面卸载事件监听器...');
+                if (window.onbeforeunload) {
+                    console.log('发现beforeunload监听器，尝试移除');
+                    window.onbeforeunload = null;
+                }
+                
+                const timeoutId = setTimeout(() => {
+                    console.log('延迟结束，开始执行跳转到customize.html');
+                    console.log('当前页面URL:', window.location.href);
+                    
+                    try {
+                        // 清理可能的定时器
+                        for (let i = 1; i < 99999; i++) {
+                            clearTimeout(i);
+                        }
+                        
+                        // 强制跳转
                         window.location.href = 'customize.html';
+                        console.log('window.location.href 已调用');
+                    } catch (error) {
+                        console.error('直接跳转失败，尝试使用location.assign:', error);
+                        window.location.assign('customize.html');
+                        console.log('window.location.assign 已调用');
                     }
-                }, 8000);
+                }, 2000);
+                console.log('setTimeout已设置，ID:', timeoutId);
+                
+                // 立即测试跳转机制
+                console.log('测试：当前URL:', window.location.href);
+                console.log('测试：尝试直接跳转');
+                
+                // 检查是否是本地文件协议
+                const isLocalFile = window.location.protocol === 'file:';
+                console.log('是否本地文件协议:', isLocalFile);
+                
+                if (isLocalFile) {
+                    console.log('本地文件协议，跳过自动跳转，显示手动跳转提示');
+                    // 显示手动跳转提示而不是自动跳转
+                    this.showToast('设计已保存！请手动点击"返回定制页面"按钮', 5000);
+                    
+                    // 创建返回按钮
+                    const returnBtn = document.createElement('div');
+                    returnBtn.innerHTML = `
+                        <div style="
+                            position: fixed;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            background: white;
+                            padding: 30px;
+                            border-radius: 15px;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                            text-align: center;
+                            z-index: 10000;
+                        ">
+                            <h3 style="margin: 0 0 20px 0; color: #333;">✅ 设计保存成功！</h3>
+                            <p style="margin: 0 0 20px 0; color: #666;">请点击下方按钮返回定制页面</p>
+                            <button onclick="window.location.href='customize.html'" style="
+                                background: #FF6B95;
+                                color: white;
+                                border: none;
+                                padding: 15px 30px;
+                                border-radius: 8px;
+                                font-size: 16px;
+                                cursor: pointer;
+                                font-weight: bold;
+                            ">返回定制页面</button>
+                        </div>
+                    `;
+                    returnBtn.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 9999;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+                    
+                    // 点击背景关闭
+                    returnBtn.addEventListener('click', function(e) {
+                        if (e.target === returnBtn) {
+                            returnBtn.remove();
+                        }
+                    });
+                    
+                    document.body.appendChild(returnBtn);
+                    
+                } else {
+                    // HTTP/HTTPS协议，正常跳转
+                    try {
+                        // 使用最激进的跳转方式
+                        console.log('尝试方式1: window.location.href');
+                        window.location.href = 'customize.html';
+                        
+                        // 延迟100ms尝试其他方式
+                        setTimeout(() => {
+                            console.log('尝试方式2: window.location.assign');
+                            window.location.assign('customize.html');
+                        }, 100);
+                        
+                        // 延迟200ms尝试replace
+                        setTimeout(() => {
+                            console.log('尝试方式3: window.location.replace');
+                            window.location.replace('customize.html');
+                        }, 200);
+                        
+                        // 延迟300ms尝试强制跳转
+                        setTimeout(() => {
+                            console.log('尝试方式4: window.open');
+                            window.open('customize.html', '_self');
+                        }, 300);
+                        
+                        // 延迟400ms尝试表单提交方式
+                        setTimeout(() => {
+                            console.log('尝试方式5: 表单提交');
+                            const form = document.createElement('form');
+                            form.method = 'GET';
+                            form.action = 'customize.html';
+                            document.body.appendChild(form);
+                            form.submit();
+                        }, 400);
+                        
+                        console.log('所有跳转方式已调用');
+                    } catch (error) {
+                        console.error('直接跳转失败:', error);
+                    }
+                }
+                
+                // 备用跳转方案：如果3秒后还没跳转，强制跳转
+                setTimeout(() => {
+                    if (window.location.href.includes('sweets-designer.html')) {
+                        console.log('3秒后仍未跳转，执行强制跳转');
+                        try {
+                            window.location.replace('customize.html');
+                            console.log('replace跳转调用成功');
+                        } catch (error) {
+                            console.error('replace跳转失败:', error);
+                        }
+                    }
+                }, 3000);
                 
                 return true;
             } else {
@@ -755,6 +1380,42 @@ class SweetsDesigner {
             this.showToast('保存设计失败，请重试');
             return false;
         }
+    }
+
+    /**
+     * 诊断存储设置
+     */
+    diagnoseStorageSetup() {
+        console.log('=== 存储设置诊断 ===');
+        console.log('UnifiedStorageManager 类:', typeof UnifiedStorageManager);
+        console.log('unifiedStorageManager 实例:', window.unifiedStorageManager ? '已初始化' : '未初始化');
+        console.log('StorageUtils 类:', typeof StorageUtils);
+        console.log('localStorage 可用性:', typeof localStorage !== 'undefined' ? '可用' : '不可用');
+        
+        // 检查现有存储键
+        const storageKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.includes('sweets') || key.includes('design')) {
+                storageKeys.push(key);
+            }
+        }
+        console.log('相关存储键:', storageKeys);
+        
+        // 估算存储使用量
+        let totalSize = 0;
+        storageKeys.forEach(key => {
+            const value = localStorage.getItem(key);
+            totalSize += (key.length + value.length) * 2;
+        });
+        console.log('相关数据大小:', (totalSize / 1024).toFixed(2), 'KB');
+        
+        // 测试统一存储管理器功能
+        if (window.unifiedStorageManager) {
+            console.log('统一存储管理器配置:', unifiedStorageManager.config);
+        }
+        
+        console.log('=== 诊断完成 ===');
     }
 
     /**

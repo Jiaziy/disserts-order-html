@@ -645,8 +645,8 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- 引入本地存储管理器 -->
-    <script src="js/local-storage-manager.js"></script>
+    <!-- 引入统一存储管理器 -->
+    <script src="js/unified-storage-manager.js"></script>
     <script>
         // 全局变量
         let currentOrders = [];
@@ -791,8 +791,20 @@
         // 从本地存储获取订单数据
         async function getOrdersFromLocalStorage(filters = {}) {
             try {
-                // 从本地存储管理器获取订单数据
-                const orders = localStorageManager.getOrders() || [];
+                // 从本地存储管理器获取订单数据，兼容不同访问方式
+                let manager;
+                if (typeof localStorageManager !== 'undefined') {
+                    manager = localStorageManager;
+                } else if (typeof window.StorageManager !== 'undefined') {
+                    manager = window.StorageManager;
+                } else if (typeof document.localStorageManager !== 'undefined') {
+                    manager = document.localStorageManager;
+                } else {
+                    // 如果都未定义，重新创建实例
+                    manager = new LocalStorageManager();
+                }
+                
+                const orders = manager.getOrders() || [];
                 
                 // 转换数据格式以兼容前端显示
                 return orders.map(order => {

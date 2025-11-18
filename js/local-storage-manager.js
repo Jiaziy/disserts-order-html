@@ -50,6 +50,9 @@ class LocalStorageManager {
             // 初始化默认设置
             this.initializeDefaultSettings();
             
+            // 执行定期清理检查
+            this.performScheduledCleanup();
+            
             console.log('本地存储管理器初始化完成');
         } catch (error) {
             console.error('存储管理器初始化失败:', error);
@@ -431,10 +434,204 @@ class LocalStorageManager {
      */
     saveOrders(orders) {
         try {
-            localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+            // 检查存储配额，限制订单数量
+            const MAX_ORDERS = 1000; // 最大订单数量
+            
+            if (orders.length > MAX_ORDERS) {
+                // 如果订单数量超过限制，只保留最近的数据
+                const sortedOrders = orders.sort((a, b) => {
+                    const timeA = new Date(a.createdAt || a.createTime || 0);
+                    const timeB = new Date(b.createdAt || b.createTime || 0);
+                    return timeB - timeA; // 降序排列，最新的在前
+                });
+                
+                orders = sortedOrders.slice(0, MAX_ORDERS);
+                console.log(`订单数量超过限制，已保留最新的 ${MAX_ORDERS} 个订单`);
+            }
+            
+            // 优化数据大小：移除不必要的大字段
+            const optimizedOrders = orders.map(order => {
+                // 创建一个精简版的订单对象
+                const optimizedOrder = { ...order };
+                
+                // 限制designImage的大小（如果太大）
+                if (optimizedOrder.designImage && optimizedOrder.designImage.length > 10000) {
+                    optimizedOrder.designImage = null; // 移除过大的设计图片
+                }
+                
+                // 限制customText的长度
+                if (optimizedOrder.customText && optimizedOrder.customText.length > 500) {
+                    optimizedOrder.customText = optimizedOrder.customText.substring(0, 500) + '...';
+                }
+                
+                return optimizedOrder;
+            });
+            
+            localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(optimizedOrders));
             return true;
         } catch (error) {
             console.error('保存订单数据失败:', error);
+            
+            // 如果还是配额不足，尝试清理部分数据
+            if (error.name === 'QuotaExceededError') {
+                console.warn('存储配额不足，尝试清理部分数据...');
+                return this.handleStorageQuotaError();
+            }
+            
+            return false;
+        }
+    }
+
+    /**
+     * 处理存储配额不足错误
+     */
+    handleStorageQuotaError() {
+        try {
+            console.log('开始清理存储空间...');
+            
+            // 1. 清理旧的订单数据
+            const orders = this.getOrders();
+            if (orders.length > 500) {
+                // 只保留最近的500个订单
+                const sortedOrders = orders.sort((a, b) => {
+                    const timeA = new Date(a.createdAt || a.createTime || 0);
+                    const timeB = new Date(b.createdAt || b.createTime || 0);
+                    return timeB - timeA;
+                });
+                
+                const cleanedOrders = sortedOrders.slice(0, 500);
+                
+                // 进一步优化数据大小
+                const optimizedOrders = cleanedOrders.map(order => {
+                    const optimizedOrder = { ...order };
+                    
+                    // 移除所有大型数据字段
+                    delete optimizedOrder.designImage;
+                    delete optimizedOrder.canvasData;
+                    delete optimizedOrder.elements;
+                    
+                    // 限制文本长度
+                    if (optimizedOrder.customText) {
+                        optimizedOrder.customText = optimizedOrder.customText.substring(0, 200) + '...';
+                    }
+                    
+                    return optimizedOrder;
+                });
+                
+                localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(optimizedOrders));
+                console.log('清理完成：订单数据已精简');
+            }
+            
+            // 2. 清理设计数据
+            const designs = this.getDesigns();
+            if (designs.length > 200) {
+                // 只保留最近的设计
+                const sortedDesigns = designs.sort((a, b) => {
+                    const timeA = new Date(a.createdAt || a.createTime || 0);
+                    const timeB = new Date(b.createdAt || b.createTime || 0);
+                    return timeB - timeA;
+                });
+                
+                const cleanedDesigns = sortedDesigns.slice(0, 200);
+                
+                // 移除大字段
+                const optimizedDesigns = cleanedDesigns.map(design => {
+                    const optimizedDesign = { ...design };
+                    delete optimizedDesign.canvasData;
+                    delete optimizedDesign.imageData;
+                    return optimizedDesign;
+                });
+                
+                localStorage.setItem(this.STORAGE_KEYS.DESIGNS, JSON.stringify(optimizedDesigns));
+                console.log('清理完成：设计数据已精简');
+            }
+            
+            // 3. 清理旧的应用数据
+            localStorage.removeItem('sweets_last_design');
+            localStorage.removeItem('sweets_last_image');
+            
+            console.log('存储空间清理完成');
+            return true;
+            
+        } catch (error) {
+            console.error('清理存储空间失败:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 处理存储配额不足错误
+     */
+    handleStorageQuotaError() {
+        try {
+            console.log('开始清理存储空间...');
+            
+            // 1. 清理旧的订单数据
+            const orders = this.getOrders();
+            if (orders.length > 500) {
+                // 只保留最近的500个订单
+                const sortedOrders = orders.sort((a, b) => {
+                    const timeA = new Date(a.createdAt || a.createTime || 0);
+                    const timeB = new Date(b.createdAt || b.createTime || 0);
+                    return timeB - timeA;
+                });
+                
+                const cleanedOrders = sortedOrders.slice(0, 500);
+                
+                // 进一步优化数据大小
+                const optimizedOrders = cleanedOrders.map(order => {
+                    const optimizedOrder = { ...order };
+                    
+                    // 移除所有大型数据字段
+                    delete optimizedOrder.designImage;
+                    delete optimizedOrder.canvasData;
+                    delete optimizedOrder.elements;
+                    
+                    // 限制文本长度
+                    if (optimizedOrder.customText) {
+                        optimizedOrder.customText = optimizedOrder.customText.substring(0, 200) + '...';
+                    }
+                    
+                    return optimizedOrder;
+                });
+                
+                localStorage.setItem(this.STORAGE_KEYS.ORDERS, JSON.stringify(optimizedOrders));
+                console.log('清理完成：订单数据已精简');
+            }
+            
+            // 2. 清理设计数据
+            const designs = this.getDesigns();
+            if (designs.length > 200) {
+                // 只保留最近的设计
+                const sortedDesigns = designs.sort((a, b) => {
+                    const timeA = new Date(a.createdAt || a.createTime || 0);
+                    const timeB = new Date(b.createdAt || b.createTime || 0);
+                    return timeB - timeA;
+                });
+                
+                const cleanedDesigns = sortedDesigns.slice(0, 200);
+                
+                // 移除大字段
+                const optimizedDesigns = cleanedDesigns.map(design => {
+                    const optimizedDesign = { ...design };
+                    delete optimizedDesign.canvasData;
+                    delete optimizedDesign.imageData;
+                    return optimizedDesign;
+                });
+                
+                localStorage.setItem(this.STORAGE_KEYS.DESIGNS, JSON.stringify(optimizedDesigns));
+                console.log('清理完成：设计数据已精简');
+            }
+            
+            // 3. 清理旧的应用数据
+            localStorage.removeItem('sweets_last_design');
+            localStorage.removeItem('sweets_last_image');
+            
+            console.log('存储空间清理完成');
+            return true;
+            
+        } catch (error) {
+            console.error('清理存储空间失败:', error);
             return false;
         }
     }
@@ -625,6 +822,150 @@ class LocalStorageManager {
         } catch (error) {
             console.error('数据导入失败:', error);
             return false;
+        }
+    }
+
+    /**
+     * 执行定期清理检查
+     */
+    performScheduledCleanup() {
+        try {
+            const LAST_CLEANUP_KEY = 'sweets_last_cleanup';
+            const lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            const now = Date.now();
+            const ONE_DAY = 24 * 60 * 60 * 1000; // 24小时
+            
+            // 如果距离上次清理超过24小时，执行清理
+            if (!lastCleanup || (now - parseInt(lastCleanup)) > ONE_DAY) {
+                console.log('执行定期存储清理...');
+                
+                // 检查存储大小
+                const stats = this.getStorageStats();
+                
+                // 如果总大小超过1MB，或者数据量过大，执行清理
+                if (stats.totalSize > 1024 * 1024 || stats.orders > 800 || stats.designs > 300) {
+                    this.handleStorageQuotaError();
+                }
+                
+                // 清理超过30天的旧数据
+                this.cleanupOldData(30);
+                
+                // 更新清理时间
+                localStorage.setItem(LAST_CLEANUP_KEY, now.toString());
+                console.log('定期清理完成');
+            }
+            
+        } catch (error) {
+            console.warn('定期清理检查失败:', error);
+        }
+    }
+
+    /**
+     * 清理指定天数前的旧数据
+     */
+    cleanupOldData(days = 30) {
+        try {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - days);
+            
+            // 清理旧订单
+            const orders = this.getOrders();
+            const filteredOrders = orders.filter(order => {
+                const orderDate = new Date(order.createdAt || order.createTime || 0);
+                return orderDate >= cutoffDate;
+            });
+            
+            if (filteredOrders.length < orders.length) {
+                this.saveOrders(filteredOrders);
+                console.log(`清理了 ${orders.length - filteredOrders.length} 个超过 ${days} 天的旧订单`);
+            }
+            
+            // 清理旧设计
+            const designs = this.getDesigns();
+            const filteredDesigns = designs.filter(design => {
+                const designDate = new Date(design.createdAt || design.createTime || 0);
+                return designDate >= cutoffDate;
+            });
+            
+            if (filteredDesigns.length < designs.length) {
+                this.saveDesigns(filteredDesigns);
+                console.log(`清理了 ${designs.length - filteredDesigns.length} 个超过 ${days} 天的旧设计`);
+            }
+            
+        } catch (error) {
+            console.error('清理旧数据失败:', error);
+        }
+    }
+
+    /**
+     * 执行定期清理检查
+     */
+    performScheduledCleanup() {
+        try {
+            const LAST_CLEANUP_KEY = 'sweets_last_cleanup';
+            const lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            const now = Date.now();
+            const ONE_DAY = 24 * 60 * 60 * 1000; // 24小时
+            
+            // 如果距离上次清理超过24小时，执行清理
+            if (!lastCleanup || (now - parseInt(lastCleanup)) > ONE_DAY) {
+                console.log('执行定期存储清理...');
+                
+                // 检查存储大小
+                const stats = this.getStorageStats();
+                
+                // 如果总大小超过1MB，或者数据量过大，执行清理
+                if (stats.totalSize > 1024 * 1024 || stats.orders > 800 || stats.designs > 300) {
+                    this.handleStorageQuotaError();
+                }
+                
+                // 清理超过30天的旧数据
+                this.cleanupOldData(30);
+                
+                // 更新清理时间
+                localStorage.setItem(LAST_CLEANUP_KEY, now.toString());
+                console.log('定期清理完成');
+            }
+            
+        } catch (error) {
+            console.warn('定期清理检查失败:', error);
+        }
+    }
+
+    /**
+     * 清理指定天数前的旧数据
+     */
+    cleanupOldData(days = 30) {
+        try {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - days);
+            
+            // 清理旧订单
+            const orders = this.getOrders();
+            const filteredOrders = orders.filter(order => {
+                const orderDate = new Date(order.createdAt || order.createTime || 0);
+                return orderDate >= cutoffDate;
+            });
+            
+            if (filteredOrders.length < orders.length) {
+                this.saveOrders(filteredOrders);
+                console.log(`清理了 ${orders.length - filteredOrders.length} 个超过 ${days} 天的旧订单`);
+            }
+            
+            // 清理旧设计
+            const designs = this.getDesigns();
+            const filteredDesigns = designs.filter(design => {
+                const designDate = new Date(design.createdAt || design.createTime || 0);
+                return designDate >= cutoffDate;
+            });
+            
+            if (filteredDesigns.length < designs.length) {
+                this.saveDesigns(filteredDesigns);
+                console.log(`清理了 ${designs.length - filteredDesigns.length} 个超过 ${days} 天的旧设计`);
+            }
+            
+        } catch (error) {
+            console.error('清理旧数据失败:', error);
         }
     }
 }

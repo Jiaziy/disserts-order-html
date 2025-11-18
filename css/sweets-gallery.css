@@ -5,7 +5,8 @@
     margin: 80px auto 0;
     padding: 40px 30px;
     background: linear-gradient(135deg, #FFF8F0 0%, #FFF0F5 50%, #F8F9FA 100%);
-    min-height: calc(100vh - 80px);
+    min-height: calc(100vh - 140px);
+    margin-bottom: 60px;
 }
 
 /* 页面头部 */
@@ -645,6 +646,8 @@
     .gallery-container {
         padding: 20px 15px;
         margin-top: 60px;
+        margin-bottom: 40px;
+        min-height: calc(100vh - 100px);
     }
     
     .gallery-header h2 {

@@ -253,17 +253,23 @@
             z-index: 1000;
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            min-width: 0;
         }
 
         .nav-brand {
             display: flex;
             align-items: center;
             gap: 10px;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         .nav-brand h1 {
             font-size: 24px;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .nav-brand i {
@@ -273,10 +279,14 @@
         .nav-auth {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
-        .login-btn {
+        .landing-navbar .login-btn {
             padding: 10px 25px;
             background: white;
             color: #8B4513;
@@ -287,6 +297,9 @@
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
+            white-space: nowrap;
+            width: auto;
+            display: inline-block;
         }
 
         .login-btn:hover {
@@ -294,8 +307,8 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .register-btn {
-            padding: 10px 25px;
+        .landing-navbar .register-btn {
+            padding: 10px 20px;
             background: transparent;
             color: white;
             border: 2px solid white;
@@ -305,9 +318,13 @@
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .register-btn:hover {
+        .landing-navbar .register-btn:hover {
             background: white;
             color: #8B4513;
         }
@@ -344,12 +361,72 @@
             }
 
             .nav-auth {
-                gap: 10px;
+                gap: 8px;
             }
 
-            .login-btn, .register-btn {
-                padding: 8px 20px;
+            .landing-navbar .login-btn, 
+            .landing-navbar .register-btn {
+                padding: 8px 16px;
                 font-size: 14px;
+            }
+
+            .register-btn i {
+                font-size: 12px;
+            }
+
+            .landing-navbar {
+                padding: 0 15px;
+                height: auto;
+                min-height: 70px;
+            }
+
+            .nav-brand {
+                left: 15px;
+            }
+
+            .nav-auth {
+                right: 15px;
+            }
+
+            .nav-brand h1 {
+                font-size: 18px;
+            }
+
+            .nav-brand i {
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .landing-navbar {
+                padding: 0 10px;
+            }
+
+            .nav-brand {
+                left: 10px;
+            }
+
+            .nav-auth {
+                right: 10px;
+                gap: 6px;
+            }
+
+            .landing-navbar .login-btn, 
+            .landing-navbar .register-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .register-btn i {
+                display: none;
+            }
+
+            .nav-brand h1 {
+                font-size: 16px;
+            }
+
+            .nav-brand i {
+                font-size: 18px;
             }
         }
     </style>
@@ -364,10 +441,9 @@
         
         <div class="nav-auth">
             <a href="admin-login.html" class="register-btn" style="margin-right: 10px;">
-                <i class="fas fa-cog"></i> 管理员 
-            
+                <i class="fas fa-cog"></i> 管理员
+            </a>
             <a href="user-login.html" class="login-btn">登录</a>
-            <a href="user-login.html" class="register-btn">注册</a>
         </div>
     </nav>
 

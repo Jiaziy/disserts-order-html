@@ -25,14 +25,14 @@ class SweetsGallery {
     async loadDesigns() {
         try {
             // 使用本地存储获取设计数据
-            this.designs = this.loadDesignsFromLocalStorage();
+            this.designs = await this.loadDesignsFromLocalStorage();
             console.log('从本地存储加载设计数据:', this.designs.length, '个设计');
             
             this.filteredDesigns = [...this.designs];
         } catch (error) {
             console.error('加载设计失败:', error);
             // 降级到本地存储
-            this.designs = this.loadDesignsFromLocalStorage();
+            this.designs = await this.loadDesignsFromLocalStorage();
             this.filteredDesigns = [...this.designs];
         }
     }
@@ -40,26 +40,30 @@ class SweetsGallery {
     /**
      * 从本地存储加载设计数据
      */
-    loadDesignsFromLocalStorage() {
+    async loadDesignsFromLocalStorage() {
         try {
-            // 优先使用StorageUtils获取设计数据
-            if (window.StorageUtils) {
-                const designs = StorageUtils.getDesigns();
+            // 优先使用UnifiedStorageManager获取设计数据
+            if (window.UnifiedStorageManager) {
+                const storage = new window.UnifiedStorageManager();
+                const designs = await storage.getDesigns();
+                console.log('从统一存储管理器加载设计:', designs.length, '个设计');
                 // 统一数据字段
                 return designs.map(design => ({
                     ...design,
-                    data: design.canvasData || design.data,
+                    data: design.canvasData || design.data || design.designImage,
                     type: design.dessertType || design.type || 'chocolate'
                 }));
             } else {
-                // 降级方案 - 兼容两种存储键名
+                // 降级方案 - 兼容多种存储键名
                 const sweetsDesigns = JSON.parse(localStorage.getItem('sweetsDesigns')) || [];
                 const designs = JSON.parse(localStorage.getItem('designs')) || [];
-                const allDesigns = [...sweetsDesigns, ...designs];
+                const sweetsDesignsData = JSON.parse(localStorage.getItem('sweets_designs')) || [];
+                const allDesigns = [...sweetsDesigns, ...designs, ...sweetsDesignsData];
+                console.log('从本地存储加载设计:', allDesigns.length, '个设计');
                 // 统一数据字段
                 return allDesigns.map(design => ({
                     ...design,
-                    data: design.canvasData || design.data,
+                    data: design.canvasData || design.data || design.designImage,
                     type: design.dessertType || design.type || 'chocolate'
                 }));
             }
@@ -75,14 +79,14 @@ class SweetsGallery {
     async loadOrders() {
         try {
             // 使用本地存储获取订单数据
-            this.orders = this.loadOrdersFromLocalStorage();
+            this.orders = await this.loadOrdersFromLocalStorage();
             console.log('从本地存储加载订单数据:', this.orders.length, '个订单');
             
             this.filteredOrders = [...this.orders];
         } catch (error) {
             console.error('加载订单失败:', error);
             // 降级到本地存储
-            this.orders = this.loadOrdersFromLocalStorage();
+            this.orders = await this.loadOrdersFromLocalStorage();
             this.filteredOrders = [...this.orders];
         }
     }
@@ -90,12 +94,20 @@ class SweetsGallery {
     /**
      * 从本地存储加载订单数据
      */
-    loadOrdersFromLocalStorage() {
+    async loadOrdersFromLocalStorage() {
         try {
-            if (window.StorageUtils) {
-                return StorageUtils.getOrders();
+            if (window.UnifiedStorageManager) {
+                const storage = new window.UnifiedStorageManager();
+                const orders = await storage.getOrders();
+                console.log('从统一存储管理器加载订单:', orders.length, '个订单');
+                return orders;
             } else {
-                return JSON.parse(localStorage.getItem('orders')) || [];
+                // 兼容多种存储键名
+                const orders1 = JSON.parse(localStorage.getItem('orders')) || [];
+                const orders2 = JSON.parse(localStorage.getItem('sweets_orders')) || [];
+                const allOrders = [...orders1, ...orders2];
+                console.log('从本地存储加载订单:', allOrders.length, '个订单');
+                return allOrders;
             }
         } catch (error) {
             console.error('从本地存储加载订单失败:', error);

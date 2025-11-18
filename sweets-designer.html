@@ -263,8 +263,8 @@
 
     <!-- JavaScript -->
     <!-- 基础库 -->
-    <script src="js/local-storage-manager.js"></script>
-    <script src="js/storage-utils.js"></script>
+    <script src="js/unified-storage-manager.js"></script>
+    <script src="js/storage-cleanup.js"></script>
     <script src="js/navigation-manager.js"></script>
     
     <!-- 分块模块架构 - 按照依赖顺序加载 -->
@@ -283,5 +283,17 @@
     
     <!-- 3. 主控制器（依赖所有模块） -->
     <script src="js/sweets-designer-modular.js"></script>
+    <script>
+        // 页面加载完成后初始化设计器
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('开始初始化甜点设计器...');
+            try {
+                window.designer = new SweetsDesigner();
+                console.log('甜点设计器实例已创建');
+            } catch (error) {
+                console.error('创建设计器实例失败:', error);
+            }
+        });
+    </script>
 </body>
 </html>
